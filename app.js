@@ -20,9 +20,9 @@
     suggestControllers[id]?.abort();
     const controller=new AbortController();suggestControllers[id]=controller;
     const params=new URLSearchParams({
-      q:q+', Armenia',limit:'8',lang:suggestLang(q),
+      q:q+', Armenia',limit:'8',
       lat:'40.1792',lon:'44.4991',zoom:'12',
-      bbox:'43.4,38.8,46.7,41.3'
+      countrycode:'AM'
     });
     list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Որոնում…</span></div>';
     list.hidden=false;
