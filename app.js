@@ -57,7 +57,7 @@
   $('#serviceType').dispatchEvent(new Event('change'));
   const MIN_FARE=5000, RATE_PER_KM=1000;
   // Yandex Geosuggest key: add the restricted browser key here after deployment.
-  const YANDEX_SUGGEST_KEY=d8a07560-148f-4367-8030-f44477a2afbf';
+  const YANDEX_SUGGEST_KEY='d8a07560-148f-4367-8030-f44477a2afbf';
   const suggestTimers={pickup:null,destination:null};
   const suggestControllers={pickup:null,destination:null};
   const suggestLang=value=>/[\\u0530-\\u058F]/.test(value)?'hy':(/[\\u0400-\\u04FF]/.test(value)?'ru':'en');
