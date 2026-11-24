@@ -56,6 +56,50 @@
   $('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
   $('#serviceType').dispatchEvent(new Event('change'));
   const MIN_FARE=5000, RATE_PER_KM=1000;
+  // Yandex Geosuggest key: add the restricted browser key here after deployment.
+  const YANDEX_SUGGEST_KEY='PASTE_YANDEX_GEOSUGGEST_KEY_HERE';
+  const suggestTimers={pickup:null,destination:null};
+  const suggestControllers={pickup:null,destination:null};
+  const suggestLang=value=>/[\\u0530-\\u058F]/.test(value)?'hy':(/[\\u0400-\\u04FF]/.test(value)?'ru':'en');
+  async function loadAddressSuggestions(id){
+    const input=$('#'+id),list=$('#'+id+'Suggestions'),q=input.value.trim();
+    if(!list)return;
+    if(q.length<2||YANDEX_SUGGEST_KEY==='PASTE_YANDEX_GEOSUGGEST_KEY_HERE'){list.hidden=true;return}
+    suggestControllers[id]?.abort();
+    const controller=new AbortController();suggestControllers[id]=controller;
+    const params=new URLSearchParams({apikey:YANDEX_SUGGEST_KEY,text:q,lang:suggestLang(q),results:'8',countries:'am',print_address:'1',org_address_kind:'house'});
+    try{
+      const response=await fetch('https://suggest-maps.yandex.ru/v1/suggest?'+params.toString(),{signal:controller.signal});
+      if(!response.ok)throw Error('suggest');
+      const data=await response.json(),items=data.results||[];
+      if(input.value.trim()!==q)return;
+      list.innerHTML=items.map((item,index)=>{
+        const title=item.title?.text||'',subtitle=item.subtitle?.text||item.address?.formatted_address||'';
+        const kind=(item.tags||[]).includes('business')?'Կազմակերպություն':((item.tags||[]).includes('house')?'Հասցե':'Վայր');
+        return '<button type="button" class="suggestion-item" data-index="'+index+'"><span class="suggestion-main">'+esc(title)+'</span><span class="suggestion-sub">'+esc(subtitle||kind)+'</span></button>';
+      }).join('');
+      list._items=items;list.hidden=!items.length;
+    }catch(error){if(error.name!=='AbortError')list.hidden=true}
+  }
+  ['pickup','destination'].forEach(id=>{
+    const input=$('#'+id),list=$('#'+id+'Suggestions');
+    input.addEventListener('input',()=>{
+      clearTimeout(suggestTimers[id]);
+      suggestTimers[id]=setTimeout(()=>loadAddressSuggestions(id),280);
+    });
+    input.addEventListener('focus',()=>{if(input.value.trim().length>=2)loadAddressSuggestions(id)});
+    input.addEventListener('keydown',e=>{if(e.key==='Escape')list.hidden=true});
+    list.addEventListener('mousedown',e=>e.preventDefault());
+    list.addEventListener('click',e=>{
+      const button=e.target.closest('.suggestion-item');if(!button)return;
+      const item=list._items?.[Number(button.dataset.index)];if(!item)return;
+      const title=item.title?.text||'',subtitle=item.subtitle?.text||item.address?.formatted_address||'';
+      input.value=subtitle&& !title.includes(subtitle)?title+', '+subtitle:title;
+      list.hidden=true;input.dispatchEvent(new Event('change',{bubbles:true}));
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    input.addEventListener('blur',()=>setTimeout(()=>{list.hidden=true},160));
+  });
   let routeRequest=0, addressTimer;
   async function calculateRoute(automatic=false){
     const a=$('#pickup').value.trim(),b=$('#destination').value.trim();
