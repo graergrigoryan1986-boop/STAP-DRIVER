@@ -7,56 +7,8 @@
   const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
   const money=n=>Math.round(Number(n)||0).toLocaleString('hy-AM')+' ֏';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const notify=(msg)=>{const n=$('#toast');n.textContent=msg;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),3200)};
-  const stars=n=>'★'.repeat(Math.max(0,Math.min(5,Math.round(n||0))))+'☆'.repeat(5-Math.max(0,Math.min(5,Math.round(n||0))));
-  const user=()=>db.users.find(x=>x.id===db.current)||null;
-  const roleLabel=r=>({customer:'Հաճախորդ',driver:'Վարորդ',organization:'Կազմակերպություն'}[r]||r);
-  const statusLabel=s=>({'Նոր հայտ':'⏳ Սպասման մեջ','Սպասման մեջ':'⏳ Սպասման մեջ','Հաստատված':'✅ Հաստատված','Չեղարկված':'❌ Չեղարկված'}[s]||s);
-  function openModal(id){$('#'+id).classList.add('open');document.body.classList.add('locked')}
-  function closeModal(id){$('#'+id).classList.remove('open');if(!$('.modal.open'))document.body.classList.remove('locked')}
-  function switchAuth(role){selectedRole=role||'customer';$$('[data-role]').forEach(b=>b.classList.toggle('active',b.dataset.role===selectedRole));$('#registerRoleName').textContent=roleLabel(selectedRole);$('#registerExtra').innerHTML=selectedRole==='driver'?'<label>Վարորդական իրավունքի տվյալներ<input name="license" required placeholder="Համար / սերիա"></label><label>Վարորդական փորձ<select name="experience"><option>Մինչև 1 տարի</option><option>1–3 տարի</option><option>3–5 տարի</option><option>5+ տարի</option></select></label>':selectedRole==='organization'?'<label>Կազմակերպության անվանում<input name="company" required placeholder="Կազմակերպության անվանումը"></label><label>ՀՎՀՀ<input name="tax" placeholder="ՀՎՀՀ"></label>':'<label>Ծննդյան ամսաթիվ<input name="birth" type="date"></label>';$('#loginModal').classList.remove('open');openModal('registerModal')}
-  // Booking form is positioned near the top of the page, directly below the navigation.
-  $$('#booking').forEach(section=>section.style.scrollMarginTop='96px');
-  $$('a[href="#booking"]').forEach(a=>a.addEventListener('click',e=>{
-    e.preventDefault();
-    $('#booking').scrollIntoView({behavior:'smooth',block:'start'});
-    setTimeout(()=>$('#pickup')?.focus({preventScroll:true}),450);
-  }));
-  function render(){
-    const u=user();$('#navAuth').innerHTML=u?'<button class="nav-user" id="openDashboard"><span class="avatar">'+esc((u.company||u.name||'S').slice(0,1).toUpperCase())+'</span><span>'+esc(u.name||u.company)+'</span><b>Իմ էջը</b></button>':'<button class="nav-link" id="openLogin">Մուտք</button><button class="gold-btn small-btn" id="openRegister">Գրանցվել</button>';
-    $('#navAuth').querySelector('#openDashboard')?.addEventListener('click',()=>showDashboard());
-    $('#navAuth').querySelector('#openLogin')?.addEventListener('click',()=>openModal('loginModal'));
-    $('#navAuth').querySelector('#openRegister')?.addEventListener('click',()=>switchAuth('customer'));
-    $('#dashboardNav').hidden=!u;
-  }
-  function showDashboard(){
-    const u=user();if(!u)return;
-    const orders=db.orders.filter(o=>o.customerId===u.id||o.driverId===u.id||o.orgId===u.id);
-    const received=db.orders.filter(o=>o.driverId===u.id&&o.ratingFromCustomer);
-    const ratings=u.ratings||[];
-    const avg=ratings.length?(ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1):'—';
-    $('#dashboardContent').innerHTML='<div class="dash-top"><div><div class="eyebrow">ԱՆՁՆԱԿԱՆ ՏԱՐԱԾՔ</div><h2>'+esc(u.name||u.company)+'</h2><p>'+roleLabel(u.role)+' · '+esc(u.phone)+'</p></div><button class="outline-btn" id="logoutBtn">Դուրս գալ</button></div><div class="dash-grid"><article class="metric"><span>Վարկանիշ</span><strong>'+avg+' <small>/ 5</small></strong><em>'+stars(Number(avg)||0)+' · '+ratings.length+' գնահատական</em></article><article class="metric"><span>Հաշվեկշիռ</span><strong>'+money(u.balance||0)+'</strong><em>Առանձին հաշվեկշիռ</em></article><article class="metric"><span>Պատվերներ</span><strong>'+orders.length+'</strong><em>Ընդհանուր պատմություն</em></article></div><div class="dash-columns"><section class="panel"><div class="panel-head"><h3>Իմ պատվերները</h3><button class="text-gold" id="newOrderFromDash">+ Նոր պատվեր</button></div>'+(orders.length?orders.slice().reverse().map(o=>'<div class="order-row"><div><b>'+esc(o.from)+' → '+esc(o.to)+'</b><small>'+esc(o.dateLabel)+' · '+o.km+' կմ</small></div><strong>'+money(o.price)+'</strong><span class="status">'+esc(statusLabel(o.status))+'</span></div>').join(''):'<div class="empty-state">Դեռ պատվերներ չկան։ Ձեր առաջին պատվերը կարող եք ստեղծել այստեղից։</div>')+'</section><section class="panel"><div class="panel-head"><h3>Անձնական տվյալներ</h3><span class="secure-note">Պրոֆիլ</span></div><div class="profile-lines"><p><span>Անուն / կազմակերպություն</span><b>'+esc(u.name||u.company)+'</b></p><p><span>Էլ․ փոստ</span><b>'+esc(u.email)+'</b></p><p><span>Հեռախոս</span><b>'+esc(u.phone)+'</b></p><p><span>Հաշվի տեսակ</span><b>'+roleLabel(u.role)+'</b></p>'+(u.role==='driver'?'<p><span>Վարորդական տվյալներ</span><b>'+esc(u.license||'Նշված չէ')+'</b></p>':'')+(u.role==='organization'?'<p><span>ՀՎՀՀ</span><b>'+esc(u.tax||'Նշված չէ')+'</b></p>':'')+'</div><button class="outline-btn wide" id="editProfile">Խմբագրել տվյալները</button></section></div><div class="panel rating-panel"><div class="panel-head"><h3>Գնահատականներ</h3><span class="secure-note">1–5 աստղ</span></div><p class="muted">Հաճախորդներն ու վարորդները միմյանց գնահատում են ավարտված պատվերից հետո։ Այստեղ կցուցադրվեն ստացված կարծիքները։</p>'+(ratings.length?ratings.map(r=>'<div class="review"><b>'+stars(r.score)+'</b><span>'+esc(r.comment||'Գնահատական')+'</span></div>').join(''):'<div class="empty-state">Գնահատականներ դեռ չկան։ Ձեր վարկանիշը կձևավորվի իրական պատվերներից հետո։</div>')+'</div>';
-    openModal('dashboardModal');
-    $('#logoutBtn').onclick=()=>{db.current=null;save();closeModal('dashboardModal');render();notify('Դուք դուրս եք եկել հաշվից։')};
-    $('#newOrderFromDash').onclick=()=>{closeModal('dashboardModal');$('#booking').scrollIntoView({behavior:'smooth',block:'start'})};
-    $('#editProfile').onclick=()=>editProfile();
-  }
-  function editProfile(){const u=user();if(!u)return;$('#editProfileForm').innerHTML='<label>Անուն / կազմակերպության անվանում<input name="name" required value="'+esc(u.name||u.company||'')+'"></label><label>Հեռախոս<input name="phone" required value="'+esc(u.phone||'')+'"></label><label>Էլ․ փոստ<input name="email" type="email" required value="'+esc(u.email||'')+'"></label><button class="gold-btn wide" type="submit">Պահպանել</button>';openModal('editModal');$('#editProfileForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);u.name=f.get('name');if(u.role==='organization')u.company=u.name;u.phone=f.get('phone');u.email=f.get('email');save();closeModal('editModal');showDashboard();render();notify('Տվյալները պահպանվեցին այս սարքում։')}}
-  async function digest(s){if(window.crypto?.subtle){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}return btoa(unescape(encodeURIComponent(s)))}
-  $('#registerForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),email=String(f.get('email')).trim().toLowerCase();if(db.users.some(u=>u.email===email)){notify('Այս էլ․ փոստով հաշիվ արդեն կա։');return}const u={id:'u_'+Date.now(),role:selectedRole,name:f.get('name'),company:f.get('company')||'',phone:f.get('phone'),email,passwordHash:await digest(f.get('password')),license:f.get('license')||'',experience:f.get('experience')||'',tax:f.get('tax')||'',balance:0,ratings:[],createdAt:new Date().toISOString()};db.users.push(u);db.current=u.id;save();e.target.reset();closeModal('registerModal');render();notify('Հաշիվը ստեղծվեց ցուցադրական ռեժիմում։');showDashboard()});
-  $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),email=String(f.get('email')).trim().toLowerCase(),hash=await digest(f.get('password')),u=db.users.find(x=>x.email===email&&x.passwordHash===hash);if(!u){notify('Մուտքի տվյալները սխալ են։');return}db.current=u.id;save();closeModal('loginModal');render();showDashboard()});
-  $$('.auth-role').forEach(b=>b.addEventListener('click',()=>switchAuth(b.dataset.role)));
-  $('#openRegisterHero').onclick=()=>switchAuth('customer');
-  $('#openLoginHero').onclick=()=>openModal('loginModal');
-  $$('.modal-close').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal').id)));
-  $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal.open').forEach(m=>closeModal(m.id))});
-  $$('.mode-btn').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;$$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#scheduleFields').hidden=selectedMode!=='scheduled';$('#scheduledAt').required=selectedMode==='scheduled';}));
-  $('#serviceType').addEventListener('change',e=>{const v=e.target.value;$('#carSpecs').hidden=v!=='sober'; $('#destination').required=true;$('#calculateRoute').closest('.field').hidden=false;$('#bookingRateNote').textContent='Սակագին՝ 1 կմ = 1,000 ֏։ Վարորդը վարում է ձեր մեքենան։'});
-  $$('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
-  $('#serviceType').dispatchEvent(new Event('change'));
-  const MIN_FARE=5000, RATE_PER_KM=1000;
-  // Yandex Geosuggest key: add the restricted browser key here after deployment.
+
+  // Initialize address autocomplete before the rest of the page handlers.
   const YANDEX_SUGGEST_KEY='d8a07560-148f-4367-8030-f44477a2afbf';
   const suggestTimers={pickup:null,destination:null};
   const suggestControllers={pickup:null,destination:null};
@@ -119,6 +71,57 @@
     });
     input.addEventListener('blur',()=>setTimeout(()=>{list.hidden=true},160));
   });
+
+  const notify=(msg)=>{const n=$('#toast');n.textContent=msg;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),3200)};
+  const stars=n=>'★'.repeat(Math.max(0,Math.min(5,Math.round(n||0))))+'☆'.repeat(5-Math.max(0,Math.min(5,Math.round(n||0))));
+  const user=()=>db.users.find(x=>x.id===db.current)||null;
+  const roleLabel=r=>({customer:'Հաճախորդ',driver:'Վարորդ',organization:'Կազմակերպություն'}[r]||r);
+  const statusLabel=s=>({'Նոր հայտ':'⏳ Սպասման մեջ','Սպասման մեջ':'⏳ Սպասման մեջ','Հաստատված':'✅ Հաստատված','Չեղարկված':'❌ Չեղարկված'}[s]||s);
+  function openModal(id){$('#'+id).classList.add('open');document.body.classList.add('locked')}
+  function closeModal(id){$('#'+id).classList.remove('open');if(!$('.modal.open'))document.body.classList.remove('locked')}
+  function switchAuth(role){selectedRole=role||'customer';$$('[data-role]').forEach(b=>b.classList.toggle('active',b.dataset.role===selectedRole));$('#registerRoleName').textContent=roleLabel(selectedRole);$('#registerExtra').innerHTML=selectedRole==='driver'?'<label>Վարորդական իրավունքի տվյալներ<input name="license" required placeholder="Համար / սերիա"></label><label>Վարորդական փորձ<select name="experience"><option>Մինչև 1 տարի</option><option>1–3 տարի</option><option>3–5 տարի</option><option>5+ տարի</option></select></label>':selectedRole==='organization'?'<label>Կազմակերպության անվանում<input name="company" required placeholder="Կազմակերպության անվանումը"></label><label>ՀՎՀՀ<input name="tax" placeholder="ՀՎՀՀ"></label>':'<label>Ծննդյան ամսաթիվ<input name="birth" type="date"></label>';$('#loginModal').classList.remove('open');openModal('registerModal')}
+  // Booking form is positioned near the top of the page, directly below the navigation.
+  $$('#booking').forEach(section=>section.style.scrollMarginTop='96px');
+  $$('a[href="#booking"]').forEach(a=>a.addEventListener('click',e=>{
+    e.preventDefault();
+    $('#booking').scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(()=>$('#pickup')?.focus({preventScroll:true}),450);
+  }));
+  function render(){
+    const u=user();$('#navAuth').innerHTML=u?'<button class="nav-user" id="openDashboard"><span class="avatar">'+esc((u.company||u.name||'S').slice(0,1).toUpperCase())+'</span><span>'+esc(u.name||u.company)+'</span><b>Իմ էջը</b></button>':'<button class="nav-link" id="openLogin">Մուտք</button><button class="gold-btn small-btn" id="openRegister">Գրանցվել</button>';
+    $('#navAuth').querySelector('#openDashboard')?.addEventListener('click',()=>showDashboard());
+    $('#navAuth').querySelector('#openLogin')?.addEventListener('click',()=>openModal('loginModal'));
+    $('#navAuth').querySelector('#openRegister')?.addEventListener('click',()=>switchAuth('customer'));
+    $('#dashboardNav').hidden=!u;
+  }
+  function showDashboard(){
+    const u=user();if(!u)return;
+    const orders=db.orders.filter(o=>o.customerId===u.id||o.driverId===u.id||o.orgId===u.id);
+    const received=db.orders.filter(o=>o.driverId===u.id&&o.ratingFromCustomer);
+    const ratings=u.ratings||[];
+    const avg=ratings.length?(ratings.reduce((a,b)=>a+b.score,0)/ratings.length).toFixed(1):'—';
+    $('#dashboardContent').innerHTML='<div class="dash-top"><div><div class="eyebrow">ԱՆՁՆԱԿԱՆ ՏԱՐԱԾՔ</div><h2>'+esc(u.name||u.company)+'</h2><p>'+roleLabel(u.role)+' · '+esc(u.phone)+'</p></div><button class="outline-btn" id="logoutBtn">Դուրս գալ</button></div><div class="dash-grid"><article class="metric"><span>Վարկանիշ</span><strong>'+avg+' <small>/ 5</small></strong><em>'+stars(Number(avg)||0)+' · '+ratings.length+' գնահատական</em></article><article class="metric"><span>Հաշվեկշիռ</span><strong>'+money(u.balance||0)+'</strong><em>Առանձին հաշվեկշիռ</em></article><article class="metric"><span>Պատվերներ</span><strong>'+orders.length+'</strong><em>Ընդհանուր պատմություն</em></article></div><div class="dash-columns"><section class="panel"><div class="panel-head"><h3>Իմ պատվերները</h3><button class="text-gold" id="newOrderFromDash">+ Նոր պատվեր</button></div>'+(orders.length?orders.slice().reverse().map(o=>'<div class="order-row"><div><b>'+esc(o.from)+' → '+esc(o.to)+'</b><small>'+esc(o.dateLabel)+' · '+o.km+' կմ</small></div><strong>'+money(o.price)+'</strong><span class="status">'+esc(statusLabel(o.status))+'</span></div>').join(''):'<div class="empty-state">Դեռ պատվերներ չկան։ Ձեր առաջին պատվերը կարող եք ստեղծել այստեղից։</div>')+'</section><section class="panel"><div class="panel-head"><h3>Անձնական տվյալներ</h3><span class="secure-note">Պրոֆիլ</span></div><div class="profile-lines"><p><span>Անուն / կազմակերպություն</span><b>'+esc(u.name||u.company)+'</b></p><p><span>Էլ․ փոստ</span><b>'+esc(u.email)+'</b></p><p><span>Հեռախոս</span><b>'+esc(u.phone)+'</b></p><p><span>Հաշվի տեսակ</span><b>'+roleLabel(u.role)+'</b></p>'+(u.role==='driver'?'<p><span>Վարորդական տվյալներ</span><b>'+esc(u.license||'Նշված չէ')+'</b></p>':'')+(u.role==='organization'?'<p><span>ՀՎՀՀ</span><b>'+esc(u.tax||'Նշված չէ')+'</b></p>':'')+'</div><button class="outline-btn wide" id="editProfile">Խմբագրել տվյալները</button></section></div><div class="panel rating-panel"><div class="panel-head"><h3>Գնահատականներ</h3><span class="secure-note">1–5 աստղ</span></div><p class="muted">Հաճախորդներն ու վարորդները միմյանց գնահատում են ավարտված պատվերից հետո։ Այստեղ կցուցադրվեն ստացված կարծիքները։</p>'+(ratings.length?ratings.map(r=>'<div class="review"><b>'+stars(r.score)+'</b><span>'+esc(r.comment||'Գնահատական')+'</span></div>').join(''):'<div class="empty-state">Գնահատականներ դեռ չկան։ Ձեր վարկանիշը կձևավորվի իրական պատվերներից հետո։</div>')+'</div>';
+    openModal('dashboardModal');
+    $('#logoutBtn').onclick=()=>{db.current=null;save();closeModal('dashboardModal');render();notify('Դուք դուրս եք եկել հաշվից։')};
+    $('#newOrderFromDash').onclick=()=>{closeModal('dashboardModal');$('#booking').scrollIntoView({behavior:'smooth',block:'start'})};
+    $('#editProfile').onclick=()=>editProfile();
+  }
+  function editProfile(){const u=user();if(!u)return;$('#editProfileForm').innerHTML='<label>Անուն / կազմակերպության անվանում<input name="name" required value="'+esc(u.name||u.company||'')+'"></label><label>Հեռախոս<input name="phone" required value="'+esc(u.phone||'')+'"></label><label>Էլ․ փոստ<input name="email" type="email" required value="'+esc(u.email||'')+'"></label><button class="gold-btn wide" type="submit">Պահպանել</button>';openModal('editModal');$('#editProfileForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);u.name=f.get('name');if(u.role==='organization')u.company=u.name;u.phone=f.get('phone');u.email=f.get('email');save();closeModal('editModal');showDashboard();render();notify('Տվյալները պահպանվեցին այս սարքում։')}}
+  async function digest(s){if(window.crypto?.subtle){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}return btoa(unescape(encodeURIComponent(s)))}
+  $('#registerForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),email=String(f.get('email')).trim().toLowerCase();if(db.users.some(u=>u.email===email)){notify('Այս էլ․ փոստով հաշիվ արդեն կա։');return}const u={id:'u_'+Date.now(),role:selectedRole,name:f.get('name'),company:f.get('company')||'',phone:f.get('phone'),email,passwordHash:await digest(f.get('password')),license:f.get('license')||'',experience:f.get('experience')||'',tax:f.get('tax')||'',balance:0,ratings:[],createdAt:new Date().toISOString()};db.users.push(u);db.current=u.id;save();e.target.reset();closeModal('registerModal');render();notify('Հաշիվը ստեղծվեց ցուցադրական ռեժիմում։');showDashboard()});
+  $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),email=String(f.get('email')).trim().toLowerCase(),hash=await digest(f.get('password')),u=db.users.find(x=>x.email===email&&x.passwordHash===hash);if(!u){notify('Մուտքի տվյալները սխալ են։');return}db.current=u.id;save();closeModal('loginModal');render();showDashboard()});
+  $$('.auth-role').forEach(b=>b.addEventListener('click',()=>switchAuth(b.dataset.role)));
+  $('#openRegisterHero').onclick=()=>switchAuth('customer');
+  $('#openLoginHero').onclick=()=>openModal('loginModal');
+  $$('.modal-close').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal').id)));
+  $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal.open').forEach(m=>closeModal(m.id))});
+  $$('.mode-btn').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;$$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#scheduleFields').hidden=selectedMode!=='scheduled';$('#scheduledAt').required=selectedMode==='scheduled';}));
+  $('#serviceType').addEventListener('change',e=>{const v=e.target.value;$('#carSpecs').hidden=v!=='sober'; $('#destination').required=true;$('#calculateRoute').closest('.field').hidden=false;$('#bookingRateNote').textContent='Սակագին՝ 1 կմ = 1,000 ֏։ Վարորդը վարում է ձեր մեքենան։'});
+  $$('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
+  $('#serviceType').dispatchEvent(new Event('change'));
+  const MIN_FARE=5000, RATE_PER_KM=1000;
+  // Yandex Geosuggest key: add the restricted browser key here after deployment.
   let routeRequest=0, addressTimer;
   async function calculateRoute(automatic=false){
     const a=$('#pickup').value.trim(),b=$('#destination').value.trim();
