@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'index.html'\n      - 'app.js'
+      - 'index.html'
+      - 'app.js'
       - 'editor.html'
       - 'designs.html'
       - 'design-*.html'
