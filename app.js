@@ -139,30 +139,68 @@
     btn.disabled=true;btn.textContent='Հաշվարկվում է…';
     $('#routeHelp').textContent='Հասցեները որոնվում են․ խնդրում ենք սպասել…';
     $('#routeResult').hidden=true;
+    const fetchJson=async(url,timeout=12000)=>{
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+      try{
+        const response=await fetch(url,{signal:controller.signal,headers:{Accept:'application/json'}});
+        if(!response.ok)throw Error('HTTP '+response.status);
+        return await response.json();
+      }finally{clearTimeout(timer)}
+    };
     try{
-      const geo=async q=>{
-        const params=new URLSearchParams({q:q+', Yerevan, Armenia',limit:'1',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
-        const r=await fetch('https://photon.komoot.io/api/?'+params.toString(),{headers:{Accept:'application/json'}});
-        if(!r.ok)throw Error('Հասցեների որոնման ծառայությունը ժամանակավորապես անհասանելի է։');
-        const j=await r.json(),feature=j.features?.[0];
-        if(!feature?.geometry?.coordinates)throw Error('Հասցեն չգտնվեց։ Փորձեք գրել փողոցը և շենքի համարը։');
-        const [lon,lat]=feature.geometry.coordinates;
-        return {lon,lat};
+      const geo=async(q)=>{
+        const clean=q.replace(/,\s*(Հայաստան|Armenia|Հայաստանի Հանրապետություն)$/i,'').trim();
+        const language=/[\u0530-\u058F]/.test(clean)?'hy':/[\u0400-\u04FF]/.test(clean)?'ru':'en';
+        const variants=[clean,clean+', Yerevan',clean+', Armenia'];
+        let photonError=null;
+        for(const term of [...new Set(variants)]){
+          try{
+            const params=new URLSearchParams({q:term,limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:language});
+            const data=await fetchJson('https://photon.komoot.io/api/?'+params.toString());
+            const features=(data.features||[]).filter(x=>x.geometry?.coordinates?.length===2);
+            if(features.length){
+              const inArmenia=features.filter(x=>{
+                const p=x.properties||{};
+                return /armenia|հայաստան|армения/i.test([p.country,p.countrycode,p.state,p.city,p.county].join(' '));
+              });
+              const pool=inArmenia.length?inArmenia:features;
+              const chosen=pool.sort((x,y)=>{
+                const xp=x.properties||{},yp=y.properties||{};
+                const xs=(xp.city||'').toLowerCase().includes('yerevan')?0:1;
+                const ys=(yp.city||'').toLowerCase().includes('yerevan')?0:1;
+                return xs-ys;
+              })[0];
+              const [lon,lat]=chosen.geometry.coordinates;
+              return {lon,lat};
+            }
+          }catch(error){photonError=error}
+        }
+        // Backup geocoder if Photon is unavailable or has no result.
+        const params=new URLSearchParams({q:clean,format:'jsonv2',limit:'5',countrycodes:'am',addressdetails:'1',accept_language:language,viewbox:'44.20,40.35,44.75,40.00'});
+        const fallback=await fetchJson('https://nominatim.openstreetmap.org/search?'+params.toString());
+        if(fallback.length){
+          const [lon,lat]=[Number(fallback[0].lon),Number(fallback[0].lat)];
+          if(Number.isFinite(lon)&&Number.isFinite(lat))return {lon,lat};
+        }
+        if(photonError?.name==='AbortError')throw Error('Հասցեի որոնումը ուշանում է։ Փորձեք կրկին։');
+        throw Error('Հասցեն չգտնվեց։ Գրեք փողոցի անունը և շենքի համարը կամ ընտրեք առաջարկվող հասցեն։');
       };
       const p=await geo(a);
-      await new Promise(resolve=>setTimeout(resolve,350));
+      if(requestId!==routeRequest)return;
+      $('#routeHelp').textContent='Մեկնարկի հասցեն գտնվեց․ որոնվում է նպատակակետը…';
       const d=await geo(b);
       if(requestId!==routeRequest)return;
       $('#routeHelp').textContent='Հասցեները գտնվեցին․ հաշվարկվում է մեքենայի երթուղին…';
-      const url='https://router.project-osrm.org/route/v1/driving/'+p.lon+','+p.lat+';'+d.lon+','+d.lat+'?overview=false';
-      const r=await fetch(url);
-      if(!r.ok)throw Error('Երթուղու հաշվարկման ծառայությունը ժամանակավորապես անհասանելի է։');
-      const j=await r.json();
-      if(j.code!=='Ok'||!j.routes?.length)throw Error('Այս երկու հասցեների միջև մեքենայի երթուղի չգտնվեց։');
-      routeKm=Math.max(0.1,Math.round(j.routes[0].distance/1000*10)/10);
+      const routeUrl='https://router.project-osrm.org/route/v1/driving/'+p.lon+','+p.lat+';'+d.lon+','+d.lat+'?overview=false&alternatives=true&steps=false';
+      const route=await fetchJson(routeUrl,18000);
+      if(requestId!==routeRequest)return;
+      if(route.code!=='Ok'||!route.routes?.length)throw Error('Այս հասցեների միջև մեքենայի երթուղի չգտնվեց։ Ստուգեք հասցեները։');
+      const distance=route.routes[0].distance;
+      if(!Number.isFinite(distance)||distance<=0)throw Error('Երթուղու հեռավորությունը հնարավոր չեղավ որոշել։');
+      routeKm=Math.max(0.1,Math.round(distance/100)/10);
       const fare=Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM));
       routeText='Երթուղի՝ '+routeKm+' կմ';
-      $('#routeDistance').textContent=routeKm+' կմ';
+      $('#routeDistance').textContent=routeKm.toLocaleString('hy-AM')+' կմ';
       $('#routePrice').textContent=money(fare);
       $('#routeResult').hidden=false;
       $('#routeHelp').textContent='Հաշվարկը պատրաստ է։ Նվազագույն արժեքը՝ 5,000 ֏, սակագինը՝ 1,000 ֏/կմ։';
