@@ -9,45 +9,46 @@
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   // Initialize address autocomplete before the rest of the page handlers.
-  const YANDEX_SUGGEST_KEY='d8a07560-148f-4367-8030-f44477a2afbf';
+  // Browser-friendly autocomplete using Photon (OpenStreetMap data).
   const suggestTimers={pickup:null,destination:null};
   const suggestControllers={pickup:null,destination:null};
   const suggestLang=value=>value.split('').some(ch=>{const n=ch.codePointAt(0);return n>=0x0530&&n<=0x058F})?'hy':(value.split('').some(ch=>{const n=ch.codePointAt(0);return n>=0x0400&&n<=0x04FF})?'ru':'en');
   async function loadAddressSuggestions(id){
     const input=$('#'+id),list=$('#'+id+'Suggestions'),q=input.value.trim();
     if(!list)return;
-    if(q.length<2||YANDEX_SUGGEST_KEY==='PASTE_YANDEX_GEOSUGGEST_KEY_HERE'){list.hidden=true;return}
+    if(q.length<2){list.hidden=true;return}
     suggestControllers[id]?.abort();
     const controller=new AbortController();suggestControllers[id]=controller;
     const params=new URLSearchParams({
-      apikey:YANDEX_SUGGEST_KEY,text:q,lang:suggestLang(q),results:'8',
-      countries:'am',ll:'44.4991,40.1792',spn:'0.35,0.25',
-      types:'geo,biz',print_address:'1',org_address_kind:'house'
+      q:q+', Armenia',limit:'8',lang:suggestLang(q),
+      lat:'40.1792',lon:'44.4991',zoom:'12',
+      bbox:'43.4,38.8,46.7,41.3'
     });
     list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Որոնում…</span></div>';
     list.hidden=false;
     try{
-      const response=await fetch('https://suggest-maps.yandex.ru/v1/suggest?'+params.toString(),{signal:controller.signal});
-      const raw=await response.text();
-      if(!response.ok){
-        console.error('Yandex Geosuggest HTTP',response.status,raw);
-        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումների ծառայության սխալ ('+response.status+')</span><span class="suggestion-sub">Ստուգում ենք API բանալու թույլտվությունը։</span></div>';
-        return;
-      }
-      const data=JSON.parse(raw),items=Array.isArray(data.results)?data.results:[];
+      const response=await fetch('https://photon.komoot.io/api/?'+params.toString(),{
+        signal:controller.signal,headers:{Accept:'application/json'}
+      });
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const data=await response.json();
       if(input.value.trim()!==q)return;
-      list.innerHTML=items.map((item,index)=>{
-        const title=item.title?.text||'',subtitle=item.subtitle?.text||item.address?.formatted_address||'';
-        const kind=(item.tags||[]).includes('business')?'Կազմակերպություն':((item.tags||[]).includes('house')?'Հասցե':'Վայր');
-        return '<button type="button" class="suggestion-item" data-index="'+index+'"><span class="suggestion-main">'+esc(title)+'</span><span class="suggestion-sub">'+esc(subtitle||kind)+'</span></button>';
-      }).join('');
+      const items=Array.isArray(data.features)?data.features:[];
       list._items=items;
-      if(!items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Փորձեք գրել փողոցի կամ վայրի անունը ռուսերեն կամ անգլերեն։</span></div>';
+      list.innerHTML=items.map((feature,index)=>{
+        const p=feature.properties||{};
+        const title=p.name||p.street||p.city||p.district||'Վայր';
+        const address=[p.street&&p.name!==p.street?p.street:null,p.housenumber,p.district,p.city,p.state]
+          .filter(Boolean).join(', ');
+        const category=p.osm_value||p.osm_key||'Հասցե կամ վայր';
+        return '<button type="button" class="suggestion-item" data-index="'+index+'"><span class="suggestion-main">'+esc(title)+'</span><span class="suggestion-sub">'+esc(address||category)+'</span></button>';
+      }).join('');
+      if(!items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Փորձեք գրել փողոցի, շենքի կամ կազմակերպության անունը։</span></div>';
       list.hidden=false;
     }catch(error){
       if(error.name!=='AbortError'){
-        console.error('Yandex Geosuggest request failed:',error);
-        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Չհաջողվեց կապ հաստատել հուշումների ծառայության հետ</span><span class="suggestion-sub">Ստուգում ենք կապի և API թույլտվության կարգավորումները։</span></div>';
+        console.error('Photon autocomplete request failed:',error);
+        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Չհաջողվեց կապ հաստատել հուշումների ծառայության հետ</span><span class="suggestion-sub">'+esc(error.message||'Ստուգեք ինտերնետ կապը։')+'</span></div>';
         list.hidden=false;
       }
     }
@@ -56,17 +57,21 @@
     const input=$('#'+id),list=$('#'+id+'Suggestions');
     input.addEventListener('input',()=>{
       clearTimeout(suggestTimers[id]);
-      suggestTimers[id]=setTimeout(()=>loadAddressSuggestions(id),280);
+      suggestTimers[id]=setTimeout(()=>loadAddressSuggestions(id),300);
     });
     input.addEventListener('focus',()=>{if(input.value.trim().length>=2)loadAddressSuggestions(id)});
     input.addEventListener('keydown',e=>{if(e.key==='Escape')list.hidden=true});
     list.addEventListener('mousedown',e=>e.preventDefault());
     list.addEventListener('click',e=>{
       const button=e.target.closest('.suggestion-item');if(!button)return;
-      const item=list._items?.[Number(button.dataset.index)];if(!item)return;
-      const title=item.title?.text||'',subtitle=item.subtitle?.text||item.address?.formatted_address||'';
-      input.value=subtitle&& !title.includes(subtitle)?title+', '+subtitle:title;
-      list.hidden=true;input.dispatchEvent(new Event('change',{bubbles:true}));
+      const feature=list._items?.[Number(button.dataset.index)];if(!feature)return;
+      const p=feature.properties||{};
+      const title=p.name||p.street||p.city||'';
+      const address=[p.street&&p.name!==p.street?p.street:null,p.housenumber,p.district,p.city,p.state,p.country]
+        .filter(Boolean).join(', ');
+      input.value=address&&title&&!address.startsWith(title)?title+', '+address:(address||title);
+      list.hidden=true;
+      input.dispatchEvent(new Event('change',{bubbles:true}));
       input.dispatchEvent(new Event('input',{bubbles:true}));
     });
     input.addEventListener('blur',()=>setTimeout(()=>{list.hidden=true},160));
