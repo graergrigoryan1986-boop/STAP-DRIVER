@@ -54,9 +54,38 @@
       if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Փորձեք գրել փողոցի կամ վայրի անունը հայերեն, ռուսերեն կամ անգլերեն։</span></div>';
       list.hidden=false;
     }catch(error){
-      if(error.name!=='AbortError'){
-        console.error('Address autocomplete failed:',error);
-        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Չհաջողվեց կապ հաստատել հուշումների ծառայության հետ</span><span class="suggestion-sub">'+esc(error.message||'Ստուգեք ինտերնետ կապը։')+'</span></div>';
+      if(error.name==='AbortError')return;
+      console.warn('Photon autocomplete unavailable; trying Nominatim:',error);
+      try{
+        const params=new URLSearchParams({q:q+', Yerevan, Armenia',format:'jsonv2',limit:'8',countrycodes:'am',addressdetails:'1',accept_language:addressLanguage(q),viewbox:'44.20,40.35,44.75,40.00'});
+        const response=await fetch('https://nominatim.openstreetmap.org/search?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const results=await response.json();
+        if(input.value.trim()!==q)return;
+        list._items=(results||[]).map(item=>({
+          geometry:{coordinates:[Number(item.lon),Number(item.lat)]},
+          properties:{
+            name:item.name||item.display_name?.split(',')[0]||'Վայր',
+            street:item.address?.road||item.address?.pedestrian||'',
+            housenumber:item.address?.house_number||'',
+            district:item.address?.suburb||item.address?.city_district||'',
+            city:item.address?.city||item.address?.town||item.address?.village||'Երևան',
+            country:'Հայաստան',
+            osm_value:item.type||'Հասցե'
+          }
+        }));
+        list.innerHTML=list._items.map((feature,index)=>{
+          const p=feature.properties||{};
+          const title=p.name||p.street||p.city||'Վայր';
+          const address=[p.street&&p.name!==p.street?p.street:null,p.housenumber,p.district,p.city||'Երևան'].filter(Boolean).join(', ');
+          return '<button type="button" class="suggestion-item" data-index="'+index+'"><span class="suggestion-main">'+esc(title)+'</span><span class="suggestion-sub">'+esc(address||p.osm_value||'Հասցե')+'</span></button>';
+        }).join('');
+        if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Կարող եք շարունակել՝ գրելով ամբողջական հասցեն ձեռքով։</span></div>';
+        list.hidden=false;
+      }catch(fallbackError){
+        if(fallbackError.name==='AbortError')return;
+        console.error('Address autocomplete fallback failed:',fallbackError);
+        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հասցեի հուշումները ժամանակավորապես անհասանելի են</span><span class="suggestion-sub">Գրեք ամբողջական հասցեն ձեռքով և սեղմեք «Հաշվել երթուղին»։</span></div>';
         list.hidden=false;
       }
     }
