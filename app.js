@@ -76,7 +76,6 @@
       input.value=[...new Set(parts)].join(', ');
       list.hidden=true;
       input.dispatchEvent(new Event('change',{bubbles:true}));
-      input.dispatchEvent(new Event('input',{bubbles:true}));
     });
     input.addEventListener('blur',()=>setTimeout(()=>{list.hidden=true},160));
   });
@@ -165,13 +164,18 @@
     }
   }
   $('#calculateRoute').onclick=()=>calculateRoute(false);
-  ['pickup','destination'].forEach(id=>$('#'+id).addEventListener('input',()=>{
+  $('#calculateRoute').hidden=true;
+  function scheduleRouteCalculation(){
     clearTimeout(addressTimer);routeRequest++;routeKm=0;$('#routeResult').hidden=true;
     const a=$('#pickup').value.trim(),b=$('#destination').value.trim();
-    if(a&&b){$('#routeHelp').textContent='Հասցեները լրացված են․ երթուղին ինքնաշխատ կհաշվարկվի…';addressTimer=setTimeout(()=>calculateRoute(true),1200)}
-    else $('#routeHelp').textContent='Լրացրեք երկու հասցեները․ հաշվարկը կսկսվի ինքնաշխատ։';
-  })); 
-  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,from:f.get('pickup'),to:f.get('destination'),km:routeKm,price:service==='sober'?Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM)):null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
+    if(a&&b){$('#routeHelp').textContent='Երկու հասցեներն էլ լրացված են․ հաշվարկում ենք վերջնական արժեքը…';addressTimer=setTimeout(()=>calculateRoute(true),700)}
+    else $('#routeHelp').textContent='Նշեք մեկնարկի և նպատակակետի հասցեները․ երկուսն էլ պարտադիր են։';
+  }
+  ['pickup','destination'].forEach(id=>{
+    $('#'+id).addEventListener('input',scheduleRouteCalculation);
+    $('#'+id).addEventListener('change',scheduleRouteCalculation);
+  }); 
+  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickup'),to:f.get('destination'),km:routeKm,price:service==='sober'?Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM)):null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
   $('#year').textContent=new Date().getFullYear();
