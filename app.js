@@ -30,16 +30,18 @@
     list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Որոնում…</span></div>';
     list.hidden=false;
     try{
-      const variants=queryVariants(q);
-      const responses=await Promise.all(variants.map(async term=>{
-        const params=new URLSearchParams({q:term+', Yerevan, Armenia',limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
+      // Search the typed fragment first, then add Yerevan context and transliterations.
+      // One failed variant must not discard successful autocomplete results from the others.
+      const variants=[...new Set(queryVariants(q).flatMap(term=>[term,term+' Yerevan']))];
+      const responses=await Promise.allSettled(variants.map(async term=>{
+        const params=new URLSearchParams({q:term,limit:'10',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
         const response=await fetch('https://photon.komoot.io/api/?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}});
         if(!response.ok)throw new Error('HTTP '+response.status);
         return response.json();
       }));
       if(input.value.trim()!==q)return;
       const seen=new Set(),items=[];
-      responses.forEach(data=>(data.features||[]).forEach(feature=>{
+      responses.filter(result=>result.status==='fulfilled').forEach(result=>(result.value.features||[]).forEach(feature=>{
         const p=feature.properties||{},key=[p.name,p.street,p.housenumber,p.city,p.osm_type,p.osm_id].join('|').toLowerCase();
         if(!seen.has(key)){seen.add(key);items.push(feature)}
       }));
@@ -51,7 +53,7 @@
         const category=p.osm_value||p.osm_key||'Հասցե կամ վայր';
         return '<button type="button" class="suggestion-item" data-index="'+index+'"><span class="suggestion-main">'+esc(title)+'</span><span class="suggestion-sub">'+esc(address||category)+'</span></button>';
       }).join('');
-      if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Փորձեք գրել փողոցի կամ վայրի անունը հայերեն, ռուսերեն կամ անգլերեն։</span></div>';
+      if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Դեռ առաջարկներ չկան</span><span class="suggestion-sub">Շարունակեք գրել ևս մի քանի տառ կամ ավելացրեք փողոցի անունը։</span></div>';
       list.hidden=false;
     }catch(error){
       if(error.name==='AbortError')return;
