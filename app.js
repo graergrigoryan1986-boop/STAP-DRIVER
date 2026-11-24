@@ -60,7 +60,7 @@
   const YANDEX_SUGGEST_KEY='d8a07560-148f-4367-8030-f44477a2afbf';
   const suggestTimers={pickup:null,destination:null};
   const suggestControllers={pickup:null,destination:null};
-  const suggestLang=value=>/[\\u0530-\\u058F]/.test(value)?'hy':(/[\\u0400-\\u04FF]/.test(value)?'ru':'en');
+  const suggestLang=value=>value.split('').some(ch=>{const n=ch.codePointAt(0);return n>=0x0530&&n<=0x058F})?'hy':(value.split('').some(ch=>{const n=ch.codePointAt(0);return n>=0x0400&&n<=0x04FF})?'ru':'en');
   async function loadAddressSuggestions(id){
     const input=$('#'+id),list=$('#'+id+'Suggestions'),q=input.value.trim();
     if(!list)return;
