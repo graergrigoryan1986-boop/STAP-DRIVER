@@ -67,19 +67,38 @@
     if(q.length<2||YANDEX_SUGGEST_KEY==='PASTE_YANDEX_GEOSUGGEST_KEY_HERE'){list.hidden=true;return}
     suggestControllers[id]?.abort();
     const controller=new AbortController();suggestControllers[id]=controller;
-    const params=new URLSearchParams({apikey:YANDEX_SUGGEST_KEY,text:q,lang:suggestLang(q),results:'8',countries:'am',print_address:'1',org_address_kind:'house'});
+    const params=new URLSearchParams({
+      apikey:YANDEX_SUGGEST_KEY,text:q,lang:suggestLang(q),results:'8',
+      countries:'am',ll:'44.4991,40.1792',spn:'0.35,0.25',
+      types:'geo,biz',print_address:'1',org_address_kind:'house'
+    });
+    list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Որոնում…</span></div>';
+    list.hidden=false;
     try{
       const response=await fetch('https://suggest-maps.yandex.ru/v1/suggest?'+params.toString(),{signal:controller.signal});
-      if(!response.ok)throw Error('suggest');
-      const data=await response.json(),items=data.results||[];
+      const raw=await response.text();
+      if(!response.ok){
+        console.error('Yandex Geosuggest HTTP',response.status,raw);
+        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումների ծառայության սխալ ('+response.status+')</span><span class="suggestion-sub">Ստուգում ենք API բանալու թույլտվությունը։</span></div>';
+        return;
+      }
+      const data=JSON.parse(raw),items=Array.isArray(data.results)?data.results:[];
       if(input.value.trim()!==q)return;
       list.innerHTML=items.map((item,index)=>{
         const title=item.title?.text||'',subtitle=item.subtitle?.text||item.address?.formatted_address||'';
         const kind=(item.tags||[]).includes('business')?'Կազմակերպություն':((item.tags||[]).includes('house')?'Հասցե':'Վայր');
         return '<button type="button" class="suggestion-item" data-index="'+index+'"><span class="suggestion-main">'+esc(title)+'</span><span class="suggestion-sub">'+esc(subtitle||kind)+'</span></button>';
       }).join('');
-      list._items=items;list.hidden=!items.length;
-    }catch(error){if(error.name!=='AbortError')list.hidden=true}
+      list._items=items;
+      if(!items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Փորձեք գրել փողոցի կամ վայրի անունը ռուսերեն կամ անգլերեն։</span></div>';
+      list.hidden=false;
+    }catch(error){
+      if(error.name!=='AbortError'){
+        console.error('Yandex Geosuggest request failed:',error);
+        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Չհաջողվեց կապ հաստատել հուշումների ծառայության հետ</span><span class="suggestion-sub">Ստուգում ենք կապի և API թույլտվության կարգավորումները։</span></div>';
+        list.hidden=false;
+      }
+    }
   }
   ['pickup','destination'].forEach(id=>{
     const input=$('#'+id),list=$('#'+id+'Suggestions');
