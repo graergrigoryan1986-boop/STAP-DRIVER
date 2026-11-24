@@ -6,6 +6,8 @@ on:
     paths:
       - 'index.html'
       - 'editor.html'
+      - 'designs.html'
+      - 'design-*.html'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
