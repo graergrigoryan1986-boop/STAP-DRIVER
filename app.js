@@ -14,6 +14,7 @@
   const translit=(value,table)=>Array.from(value.toLowerCase()).map(ch=>table[ch]??ch).join('');
   const hyMap={'ա':'a','բ':'b','գ':'g','դ':'d','ե':'e','զ':'z','է':'e','ը':'y','թ':'t','ժ':'zh','ի':'i','լ':'l','խ':'kh','ծ':'ts','կ':'k','հ':'h','ձ':'dz','ղ':'gh','ճ':'ch','մ':'m','յ':'y','ն':'n','շ':'sh','ո':'o','չ':'ch','պ':'p','ջ':'j','ռ':'r','ս':'s','վ':'v','տ':'t','ր':'r','ց':'ts','ւ':'v','փ':'p','ք':'q','օ':'o','ֆ':'f','և':'ev'};
   const ruMap={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+  const addressLanguage=q=>/[\\u0530-\\u058F]/.test(q)?'hy':/[\\u0400-\\u04FF]/.test(q)?'ru':'en';
   const queryVariants=q=>{
     const variants=[q];
     if(/[\u0530-\u058F]/.test(q))variants.push(translit(q,hyMap));
@@ -31,7 +32,7 @@
     try{
       const variants=queryVariants(q);
       const responses=await Promise.all(variants.map(async term=>{
-        const params=new URLSearchParams({q:term+', Yerevan, Armenia',limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12'});
+        const params=new URLSearchParams({q:term+', Yerevan, Armenia',limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
         const response=await fetch('https://photon.komoot.io/api/?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}});
         if(!response.ok)throw new Error('HTTP '+response.status);
         return response.json();
@@ -140,7 +141,7 @@
     $('#routeResult').hidden=true;
     try{
       const geo=async q=>{
-        const params=new URLSearchParams({q:q+', Yerevan, Armenia',limit:'1',lat:'40.1792',lon:'44.4991',zoom:'12'});
+        const params=new URLSearchParams({q:q+', Yerevan, Armenia',limit:'1',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
         const r=await fetch('https://photon.komoot.io/api/?'+params.toString(),{headers:{Accept:'application/json'}});
         if(!r.ok)throw Error('Հասցեների որոնման ծառայությունը ժամանակավորապես անհասանելի է։');
         const j=await r.json(),feature=j.features?.[0];
