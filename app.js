@@ -16,8 +16,8 @@
   const ruMap={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
   const queryVariants=q=>{
     const variants=[q];
-    if(/[\\u0530-\\u058F]/.test(q))variants.push(translit(q,hyMap));
-    if(/[\\u0400-\\u04FF]/.test(q))variants.push(translit(q,ruMap));
+    if(/[\u0530-\u058F]/.test(q))variants.push(translit(q,hyMap));
+    if(/[\u0400-\u04FF]/.test(q))variants.push(translit(q,ruMap));
     return [...new Set(variants.map(v=>v.trim()).filter(Boolean))];
   };
   async function loadAddressSuggestions(id){
@@ -69,7 +69,7 @@
     list.addEventListener('click',e=>{
       const button=e.target.closest('.suggestion-item');if(!button)return;
       const feature=list._items?.[Number(button.dataset.index)];if(!feature)return;
-      const p=feature.properties||{},typedNumber=(input.value.match(/\\d+[a-zա-ֆ]?/i)||[])[0];
+      const p=feature.properties||{},typedNumber=(input.value.match(/\d+[a-zա-ֆ]?/i)||[])[0];
       const street=p.street||p.name||'';
       const number=p.housenumber||typedNumber||'';
       const parts=[street,number,p.district,p.city||'Երևան',p.country||'Հայաստան'].filter(Boolean);
