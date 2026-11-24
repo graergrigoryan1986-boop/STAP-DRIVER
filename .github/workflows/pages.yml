@@ -8,6 +8,7 @@ on:
       - 'editor.html'
       - 'designs.html'
       - 'design-*.html'
+      - 'concept-*.html'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
