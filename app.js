@@ -8,46 +8,53 @@
   const money=n=>Math.round(Number(n)||0).toLocaleString('hy-AM')+' ֏';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  // Initialize address autocomplete before the rest of the page handlers.
-  // Browser-friendly autocomplete using Photon (OpenStreetMap data).
+  // Multilingual address autocomplete: Armenian, Russian and Latin input.
   const suggestTimers={pickup:null,destination:null};
   const suggestControllers={pickup:null,destination:null};
-  const suggestLang=value=>value.split('').some(ch=>{const n=ch.codePointAt(0);return n>=0x0530&&n<=0x058F})?'hy':(value.split('').some(ch=>{const n=ch.codePointAt(0);return n>=0x0400&&n<=0x04FF})?'ru':'en');
+  const translit=(value,table)=>Array.from(value.toLowerCase()).map(ch=>table[ch]??ch).join('');
+  const hyMap={'ա':'a','բ':'b','գ':'g','դ':'d','ե':'e','զ':'z','է':'e','ը':'y','թ':'t','ժ':'zh','ի':'i','լ':'l','խ':'kh','ծ':'ts','կ':'k','հ':'h','ձ':'dz','ղ':'gh','ճ':'ch','մ':'m','յ':'y','ն':'n','շ':'sh','ո':'o','չ':'ch','պ':'p','ջ':'j','ռ':'r','ս':'s','վ':'v','տ':'t','ր':'r','ց':'ts','ւ':'v','փ':'p','ք':'q','օ':'o','ֆ':'f','և':'ev'};
+  const ruMap={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+  const queryVariants=q=>{
+    const variants=[q];
+    if(/[\\u0530-\\u058F]/.test(q))variants.push(translit(q,hyMap));
+    if(/[\\u0400-\\u04FF]/.test(q))variants.push(translit(q,ruMap));
+    return [...new Set(variants.map(v=>v.trim()).filter(Boolean))];
+  };
   async function loadAddressSuggestions(id){
     const input=$('#'+id),list=$('#'+id+'Suggestions'),q=input.value.trim();
     if(!list)return;
     if(q.length<2){list.hidden=true;return}
     suggestControllers[id]?.abort();
     const controller=new AbortController();suggestControllers[id]=controller;
-    const params=new URLSearchParams({
-      q:q+', Armenia',limit:'8',
-      lat:'40.1792',lon:'44.4991',zoom:'12',
-      countrycode:'AM'
-    });
     list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Որոնում…</span></div>';
     list.hidden=false;
     try{
-      const response=await fetch('https://photon.komoot.io/api/?'+params.toString(),{
-        signal:controller.signal,headers:{Accept:'application/json'}
-      });
-      if(!response.ok)throw new Error('HTTP '+response.status);
-      const data=await response.json();
+      const variants=queryVariants(q);
+      const responses=await Promise.all(variants.map(async term=>{
+        const params=new URLSearchParams({q:term+', Yerevan, Armenia',limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12'});
+        const response=await fetch('https://photon.komoot.io/api/?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        return response.json();
+      }));
       if(input.value.trim()!==q)return;
-      const items=Array.isArray(data.features)?data.features:[];
-      list._items=items;
-      list.innerHTML=items.map((feature,index)=>{
+      const seen=new Set(),items=[];
+      responses.forEach(data=>(data.features||[]).forEach(feature=>{
+        const p=feature.properties||{},key=[p.name,p.street,p.housenumber,p.city,p.osm_type,p.osm_id].join('|').toLowerCase();
+        if(!seen.has(key)){seen.add(key);items.push(feature)}
+      }));
+      list._items=items.slice(0,10);
+      list.innerHTML=list._items.map((feature,index)=>{
         const p=feature.properties||{};
         const title=p.name||p.street||p.city||p.district||'Վայր';
-        const address=[p.street&&p.name!==p.street?p.street:null,p.housenumber,p.district,p.city,p.state]
-          .filter(Boolean).join(', ');
+        const address=[p.street&&p.name!==p.street?p.street:null,p.housenumber,p.district,p.city||'Երևան'].filter(Boolean).join(', ');
         const category=p.osm_value||p.osm_key||'Հասցե կամ վայր';
         return '<button type="button" class="suggestion-item" data-index="'+index+'"><span class="suggestion-main">'+esc(title)+'</span><span class="suggestion-sub">'+esc(address||category)+'</span></button>';
       }).join('');
-      if(!items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Փորձեք գրել փողոցի, շենքի կամ կազմակերպության անունը։</span></div>';
+      if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Փորձեք գրել փողոցի կամ վայրի անունը հայերեն, ռուսերեն կամ անգլերեն։</span></div>';
       list.hidden=false;
     }catch(error){
       if(error.name!=='AbortError'){
-        console.error('Photon autocomplete request failed:',error);
+        console.error('Address autocomplete failed:',error);
         list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Չհաջողվեց կապ հաստատել հուշումների ծառայության հետ</span><span class="suggestion-sub">'+esc(error.message||'Ստուգեք ինտերնետ կապը։')+'</span></div>';
         list.hidden=false;
       }
@@ -55,21 +62,18 @@
   }
   ['pickup','destination'].forEach(id=>{
     const input=$('#'+id),list=$('#'+id+'Suggestions');
-    input.addEventListener('input',()=>{
-      clearTimeout(suggestTimers[id]);
-      suggestTimers[id]=setTimeout(()=>loadAddressSuggestions(id),300);
-    });
+    input.addEventListener('input',()=>{clearTimeout(suggestTimers[id]);suggestTimers[id]=setTimeout(()=>loadAddressSuggestions(id),300)});
     input.addEventListener('focus',()=>{if(input.value.trim().length>=2)loadAddressSuggestions(id)});
     input.addEventListener('keydown',e=>{if(e.key==='Escape')list.hidden=true});
     list.addEventListener('mousedown',e=>e.preventDefault());
     list.addEventListener('click',e=>{
       const button=e.target.closest('.suggestion-item');if(!button)return;
       const feature=list._items?.[Number(button.dataset.index)];if(!feature)return;
-      const p=feature.properties||{};
-      const title=p.name||p.street||p.city||'';
-      const address=[p.street&&p.name!==p.street?p.street:null,p.housenumber,p.district,p.city,p.state,p.country]
-        .filter(Boolean).join(', ');
-      input.value=address&&title&&!address.startsWith(title)?title+', '+address:(address||title);
+      const p=feature.properties||{},typedNumber=(input.value.match(/\\d+[a-zա-ֆ]?/i)||[])[0];
+      const street=p.street||p.name||'';
+      const number=p.housenumber||typedNumber||'';
+      const parts=[street,number,p.district,p.city||'Երևան',p.country||'Հայաստան'].filter(Boolean);
+      input.value=[...new Set(parts)].join(', ');
       list.hidden=true;
       input.dispatchEvent(new Event('change',{bubbles:true}));
       input.dispatchEvent(new Event('input',{bubbles:true}));
