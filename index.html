@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="hy">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10251f">
+<meta name="description" content="STAP DRIVER — սթափ վարորդի ծառայություն Երևանում։ Պատվիրեք վարորդ ձեր մեքենայի համար։">
+<title>STAP DRIVER — Սթափ վարորդ</title>
+<style>
+:root{--bg:#0b1714;--panel:#14251f;--green:#39d69a;--muted:#b5c8bf;--line:#294238}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f4faf6;font-family:Arial,sans-serif;line-height:1.55}
+header{padding:20px max(22px,calc((100% - 1100px)/2));display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#0d1d18;position:sticky;top:0}
+.brand{font-size:22px;font-weight:900;letter-spacing:1px}.brand span{color:var(--green)}nav a{color:var(--muted);text-decoration:none;margin-left:20px;font-size:14px}
+main{max-width:1100px;margin:auto;padding:0 22px}.hero{padding:76px 0 58px;display:grid;grid-template-columns:1.2fr .8fr;gap:35px;align-items:center}
+.eyebrow{color:var(--green);font-weight:bold;letter-spacing:2px;font-size:13px}h1{font-size:clamp(38px,6vw,64px);line-height:1.08;margin:14px 0}h1 span{color:var(--green)}p{color:var(--muted)}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}.btn{display:inline-block;padding:13px 19px;border-radius:10px;text-decoration:none;font-weight:bold;background:var(--green);color:#082016;border:0;cursor:pointer}.btn.secondary{background:transparent;color:#fff;border:1px solid var(--line)}
+.visual{background:linear-gradient(145deg,#1d3a2e,#10221b);border:1px solid var(--line);border-radius:24px;padding:28px;min-height:280px;display:flex;flex-direction:column;justify-content:space-between}.shield{font-size:70px}.visual strong{font-size:25px}
+section{padding:42px 0}.section-title{font-size:30px;margin:0 0 8px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}.card{background:var(--panel);border:1px solid var(--line);padding:22px;border-radius:16px}.card .ico{font-size:28px}.card h3{margin:10px 0 4px;color:var(--green)}
+.booking{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--panel);padding:24px;border-radius:18px;border:1px solid var(--line);margin-top:20px}label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}input,select,textarea{width:100%;padding:13px;border-radius:9px;border:1px solid var(--line);background:#0b1714;color:white;font:inherit}.full{grid-column:1/-1}.note{font-size:12px;color:#8fa69a}footer{border-top:1px solid var(--line);padding:28px 22px;text-align:center;color:#8fa69a;margin-top:40px}
+@media(max-width:700px){nav{display:none}.hero{grid-template-columns:1fr;padding-top:48px}.cards{grid-template-columns:1fr}.booking{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><div class="brand">STAP <span>DRIVER</span></div><nav><a href="#services">Ծառայություններ</a><a href="#booking">Պատվիրել</a><a href="#contact">Կապ</a></nav></header>
+<main>
+<section class="hero">
+<div><div class="eyebrow">ՍԹԱՓ ՎԱՐՈՐԴ • ԵՐԵՎԱՆ</div><h1>Քո մեքենան։<br><span>Մեր վարորդը։</span></h1><p>Երբ չես կարող կամ չես ցանկանում ինքդ վարել, մեր սթափ վարորդը կվարի քո մեքենան և կօգնի անվտանգ հասնել նպատակակետ։</p><div class="actions"><a class="btn" href="#booking">Պատվիրել վարորդ</a><a class="btn secondary" href="#services">Մեր ծառայությունները</a></div></div>
+<div class="visual"><div class="shield">🛡️</div><div><strong>Անվտանգությունը՝ առաջին տեղում</strong><p>Պատասխանատու վարում և հարմարավետ սպասարկում Երևանում։</p></div></div>
+</section>
+<section id="services"><div class="eyebrow">ՄԵՐ ՀՆԱՐԱՎՈՐՈՒԹՅՈՒՆՆԵՐԸ</div><h2 class="section-title">Ծառայություններ</h2><p>Հարմար լուծումներ անհատների և կազմակերպությունների համար։</p>
+<div class="cards">
+<div class="card"><div class="ico">🚘</div><h3>Սթափ վարորդ</h3><p>Վարորդ՝ ձեր մեքենան վարելու և ձեզ ուղեկցելու համար։</p></div>
+<div class="card"><div class="ico">📅</div><h3>Նախնական պատվեր</h3><p>Պլանավորեք ուղևորությունը նախապես՝ նշելով ձեզ հարմար ժամը։</p></div>
+<div class="card"><div class="ico">🏢</div><h3>Կորպորատիվ սպասարկում</h3><p>Վարորդական ծառայություններ ընկերությունների և գործընկերների համար։</p></div>
+</div></section>
+<section id="booking"><div class="eyebrow">ԱՐԱԳ ՀԱՅՏ</div><h2 class="section-title">Պատվերի հայտ</h2><p>Լրացրեք տվյալները․ այս նախնական տարբերակում հայտը կպատրաստվի ձեր սարքում՝ ուղարկելու համար։</p>
+<form class="booking" id="orderForm">
+<div><label for="name">Անուն</label><input id="name" required placeholder="Ձեր անունը"></div>
+<div><label for="phone">Հեռախոս</label><input id="phone" required type="tel" placeholder="+374 ..."></div>
+<div><label for="from">Մեկնարկի հասցե</label><input id="from" required placeholder="Որտեղից վերցնել"></div>
+<div><label for="to">Նպատակակետ</label><input id="to" placeholder="Ուր գնալ"></div>
+<div><label for="when">Ժամանակ</label><select id="when"><option>Հնարավորինս շուտ</option><option>Նախապես պայմանավորված ժամին</option></select></div>
+<div><label for="type">Պատվիրողի տեսակ</label><select id="type"><option>Անհատ հաճախորդ</option><option>Ընկերություն</option></select></div>
+<div class="full"><label for="details">Լրացուցիչ տեղեկություն</label><textarea id="details" rows="3" placeholder="Մեքենայի մակնիշ, հատուկ նշումներ..."></textarea></div>
+<div class="full"><button class="btn" type="submit">Պատրաստել պատվերի հայտը</button><p class="note" id="formStatus">Հայտը դեռ չի ուղարկվում սերվեր․ կապի համարը և պատվերների համակարգը կմիացնենք հաջորդ փուլում։</p></div>
+</form></section>
+<section id="contact"><h2 class="section-title">STAP DRIVER</h2><p>Սթափ վարորդի ծառայություն Երևանում։ Կապի հեռախոսահամարը կավելացնենք ընկերության տվյալները ստանալուց հետո։</p></section>
+</main><footer>© <span id="year"></span> STAP DRIVER • ՍԹԱՓ ՎԱՐՈՐԴ</footer>
+<script>
+document.getElementById('year').textContent=new Date().getFullYear();
+document.getElementById('orderForm').addEventListener('submit',function(e){e.preventDefault();const v=id=>document.getElementById(id).value.trim();const msg='STAP DRIVER պատվերի հայտ%0AԱնուն՝ '+encodeURIComponent(v('name'))+'%0AՀեռախոս՝ '+encodeURIComponent(v('phone'))+'%0AՄեկնարկ՝ '+encodeURIComponent(v('from'))+'%0AՆպատակակետ՝ '+encodeURIComponent(v('to'))+'%0AԺամանակ՝ '+encodeURIComponent(v('when'))+'%0AՏեսակ՝ '+encodeURIComponent(v('type'))+'%0AՆշումներ՝ '+encodeURIComponent(v('details'));document.getElementById('formStatus').textContent='Հայտի տվյալները պատրաստ են։ Երբ տրամադրեք ծառայության WhatsApp համարը, կմիացնենք ուղարկումը։';});
+</script>
+</body></html>
