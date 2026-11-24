@@ -136,29 +136,42 @@
     if(!a||!b){if(!automatic)notify('Լրացրեք մեկնարկի և նպատակակետի հասցեները։');return}
     const requestId=++routeRequest,btn=$('#calculateRoute');
     btn.disabled=true;btn.textContent='Հաշվարկվում է…';
-    $('#routeHelp').textContent='Հասցեները որոնվում են, խնդրում ենք սպասել…';
+    $('#routeHelp').textContent='Հասցեները որոնվում են․ խնդրում ենք սպասել…';
+    $('#routeResult').hidden=true;
     try{
-      const geo=async q=>{const url='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=am&q='+encodeURIComponent(q+', Armenia');const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok)throw Error('geocode');const d=await r.json();if(!d[0])throw Error('address');return d[0]};
+      const geo=async q=>{
+        const params=new URLSearchParams({q:q+', Yerevan, Armenia',limit:'1',lat:'40.1792',lon:'44.4991',zoom:'12'});
+        const r=await fetch('https://photon.komoot.io/api/?'+params.toString(),{headers:{Accept:'application/json'}});
+        if(!r.ok)throw Error('Հասցեների որոնման ծառայությունը ժամանակավորապես անհասանելի է։');
+        const j=await r.json(),feature=j.features?.[0];
+        if(!feature?.geometry?.coordinates)throw Error('Հասցեն չգտնվեց։ Փորձեք գրել փողոցը և շենքի համարը։');
+        const [lon,lat]=feature.geometry.coordinates;
+        return {lon,lat};
+      };
       const p=await geo(a);
-      await new Promise(resolve=>setTimeout(resolve,1100));
+      await new Promise(resolve=>setTimeout(resolve,350));
       const d=await geo(b);
       if(requestId!==routeRequest)return;
+      $('#routeHelp').textContent='Հասցեները գտնվեցին․ հաշվարկվում է մեքենայի երթուղին…';
       const url='https://router.project-osrm.org/route/v1/driving/'+p.lon+','+p.lat+';'+d.lon+','+d.lat+'?overview=false';
-      const r=await fetch(url);if(!r.ok)throw Error('route');
-      const j=await r.json();if(j.code!=='Ok'||!j.routes?.length)throw Error('route');
+      const r=await fetch(url);
+      if(!r.ok)throw Error('Երթուղու հաշվարկման ծառայությունը ժամանակավորապես անհասանելի է։');
+      const j=await r.json();
+      if(j.code!=='Ok'||!j.routes?.length)throw Error('Այս երկու հասցեների միջև մեքենայի երթուղի չգտնվեց։');
       routeKm=Math.max(0.1,Math.round(j.routes[0].distance/1000*10)/10);
       const fare=Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM));
       routeText='Երթուղի՝ '+routeKm+' կմ';
       $('#routeDistance').textContent=routeKm+' կմ';
       $('#routePrice').textContent=money(fare);
       $('#routeResult').hidden=false;
-      $('#routeHelp').textContent='Նվազագույն արժեքը՝ 5,000 ֏ (մոտեցման և պատվերի նվազագույն վճար)։ Հետագա հաշվարկը՝ 1,000 ֏/կմ։';
+      $('#routeHelp').textContent='Հաշվարկը պատրաստ է։ Նվազագույն արժեքը՝ 5,000 ֏, սակագինը՝ 1,000 ֏/կմ։';
       if(!automatic)notify('Երթուղին և արժեքը հաշվարկվեցին։');
     }catch(err){
       if(requestId!==routeRequest)return;
-      routeKm=0;$('#routeResult').hidden=true;
-      $('#routeHelp').textContent='Հասցեն չգտնվեց։ Գրեք ավելի հստակ հասցե՝ փողոց, շենք, քաղաք, և կրկին փորձեք։';
-      if(!automatic)notify('Չհաջողվեց գտնել երթուղին։ Ստուգեք հասցեները։');
+      routeKm=0;
+      $('#routeResult').hidden=true;
+      $('#routeHelp').textContent=err.message||'Չհաջողվեց հաշվարկել երթուղին։ Ստուգեք հասցեները և կրկին փորձեք։';
+      if(!automatic)notify(err.message||'Չհաջողվեց գտնել երթուղին։');
     }finally{
       if(requestId===routeRequest){btn.disabled=false;btn.textContent='Հաշվել երթուղին'}
     }
