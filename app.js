@@ -53,7 +53,7 @@
   document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal.open').forEach(m=>closeModal(m.id))});
   $$('.mode-btn').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;$$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#scheduleFields').hidden=selectedMode!=='scheduled';$('#scheduledAt').required=selectedMode==='scheduled';}));
   $('#serviceType').addEventListener('change',e=>{const v=e.target.value;$('#carSpecs').hidden=v!=='sober'; $('#destination').required=true;$('#calculateRoute').closest('.field').hidden=false;$('#bookingRateNote').textContent='Սակագին՝ 1 կմ = 1,000 ֏։ Վարորդը վարում է ձեր մեքենան։'});
-  $('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
+  $$('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
   $('#serviceType').dispatchEvent(new Event('change'));
   const MIN_FARE=5000, RATE_PER_KM=1000;
   // Yandex Geosuggest key: add the restricted browser key here after deployment.
