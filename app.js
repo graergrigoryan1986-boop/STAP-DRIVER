@@ -17,7 +17,20 @@
   const addressLanguage=q=>/[\u0530-\u058F]/.test(q)?'hy':/[\u0400-\u04FF]/.test(q)?'ru':'en';
   const queryVariants=q=>{
     const variants=[q];
-    if(/[\u0530-\u058F]/.test(q))variants.push(translit(q,hyMap));
+    if(/[\u0530-\u058F]/.test(q)){
+      variants.push(translit(q,hyMap));
+      // Common Yerevan street names are expanded while the user is still typing.
+      const prefix=q.toLowerCase().replace(/[\s-]+/g,'');
+      const known={
+        'աբո':'Աբովյան փողոց','աբով':'Աբովյան փողոց',
+        'մաշ':'Մաշտոցի պողոտա','մաշտ':'Մաշտոցի պողոտա',
+        'կոմ':'Կոմիտասի պողոտա','կոմի':'Կոմիտասի պողոտա',
+        'բաղ':'Բաղրամյան պողոտա','բաղր':'Բաղրամյան պողոտա',
+        'սայ':'Սայաթ-Նովայի պողոտա','սայա':'Սայաթ-Նովայի պողոտա',
+        'ամի':'Ամիրյան փողոց','ամիր':'Ամիրյան փողոց'
+      };
+      if(known[prefix])variants.push(known[prefix],translit(known[prefix],hyMap));
+    }
     if(/[\u0400-\u04FF]/.test(q))variants.push(translit(q,ruMap));
     return [...new Set(variants.map(v=>v.trim()).filter(Boolean))];
   };
@@ -45,6 +58,8 @@
         const p=feature.properties||{},key=[p.name,p.street,p.housenumber,p.city,p.osm_type,p.osm_id].join('|').toLowerCase();
         if(!seen.has(key)){seen.add(key);items.push(feature)}
       }));
+      // Empty Photon results must also trigger the backup provider (not only network errors).
+      if(!items.length)throw new Error('No Photon autocomplete matches');
       list._items=items.slice(0,10);
       list.innerHTML=list._items.map((feature,index)=>{
         const p=feature.properties||{};
@@ -59,7 +74,8 @@
       if(error.name==='AbortError')return;
       console.warn('Photon autocomplete unavailable; trying Nominatim:',error);
       try{
-        const params=new URLSearchParams({q:q+', Yerevan, Armenia',format:'jsonv2',limit:'8',countrycodes:'am',addressdetails:'1',accept_language:addressLanguage(q),viewbox:'44.20,40.35,44.75,40.00'});
+        const expanded=queryVariants(q).find(term=>term!==q)||q;
+        const params=new URLSearchParams({q:expanded+', Yerevan, Armenia',format:'jsonv2',limit:'8',countrycodes:'am',addressdetails:'1',accept_language:addressLanguage(q),viewbox:'44.20,40.35,44.75,40.00'});
         const response=await fetch('https://nominatim.openstreetmap.org/search?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}});
         if(!response.ok)throw new Error('HTTP '+response.status);
         const results=await response.json();
