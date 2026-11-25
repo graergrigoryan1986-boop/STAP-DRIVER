@@ -48,7 +48,7 @@
   $('#loginForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),email=String(f.get('email')).trim().toLowerCase(),hash=await digest(f.get('password')),u=db.users.find(x=>x.email===email&&x.passwordHash===hash);if(!u){notify('Մուտքի տվյալները սխալ են։');return}db.current=u.id;save();closeModal('loginModal');render();showDashboard()});
   $$('.auth-role').forEach(b=>b.addEventListener('click',()=>switchAuth(b.dataset.role)));
   $('#openRegisterHero').onclick=()=>switchAuth('customer');
-  $('#openLoginHero').onclick=()=>openModal('loginModal');
+  $('#openLoginHero')?.addEventListener('click',()=>openModal('loginModal'));
   $$('.modal-close').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal').id)));
   $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal.open').forEach(m=>closeModal(m.id))});
