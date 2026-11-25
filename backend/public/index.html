@@ -1,44 +1,52 @@
 <!doctype html>
 <html lang="hy">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101820">
-  <title>STAP DRIVER</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/app.js" defer></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090a0c">
+<meta name="description" content="STAP DRIVER — սթափ վարորդական ծառայություն Երևանում՝ ձեր սեփական մեքենայով։">
+<title>STAP DRIVER — Executive Mobility</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar"><a class="brand" href="/">STAP <span>DRIVER</span></a><span class="tag">YEREVAN • ARMENIA</span></header>
-  <main class="shell">
-    <section class="hero">
-      <div class="eyebrow">ՔՈ ՃԱՆԱՊԱՐՀԸ՝ ՄԵՐ ՀԵՏ</div>
-      <h1>Ուղևորություններ՝<br><em>ավելի պարզ։</em></h1>
-      <p>STAP DRIVER միասնական հարթակ՝ հաճախորդների, վարորդների և ադմինիստրատորի համար։</p>
-      <div class="pills"><span>Անվտանգ հաշիվներ</span><span>Պատվերների կառավարում</span><span>25% միջնորդավճար</span></div>
-    </section>
-    <section id="authPanel" class="panel">
-      <div class="switcher"><button class="switch active" id="loginTab">Մուտք</button><button class="switch" id="registerTab">Գրանցում</button></div>
-      <form id="authForm">
-        <div id="registerFields" class="hidden">
-          <label>Անուն Ազգանուն<input name="name" autocomplete="name" minlength="2"></label>
-          <label>Հեռախոս<input name="phone" autocomplete="tel" type="tel"></label>
-          <label>Հաշվի տեսակ<select name="role" id="role"><option value="CUSTOMER">Հաճախորդ</option><option value="DRIVER">Վարորդ</option></select></label>
-          <label id="licenseField" class="hidden">Վարորդական իրավունքի տվյալներ<input name="driverLicense"></label>
-        </div>
-        <label>Էլ․ փոստ<input name="email" type="email" autocomplete="username" required></label>
-        <label>Գաղտնաբառ<input name="password" type="password" autocomplete="current-password" minlength="10" required></label>
-        <button class="primary" type="submit" id="submitAuth">Մուտք գործել</button>
-      </form>
-      <p id="authMessage" class="message" role="status"></p>
-      <small>Գրանցման համար գաղտնաբառը պետք է ունենա առնվազն 10 նիշ։</small>
-    </section>
-    <section id="appPanel" class="panel hidden">
-      <div class="account-head"><div><div class="eyebrow">ԱՆՁՆԱԿԱՆ ՏԱՐԱԾՔ</div><h2 id="welcome"></h2><p id="accountMeta" class="muted"></p></div><button id="logout" class="quiet">Ելք</button></div>
-      <div id="dashboard"></div>
-      <p id="appMessage" class="message" role="status"></p>
-    </section>
-    <footer>© <span id="year"></span> STAP DRIVER • Բոլոր իրավունքները պաշտպանված են</footer>
-  </main>
-</body>
-</html>
+<header class="topbar"><div class="container nav">
+<a class="brand" href="/"><span class="brand-mark"><span>SD</span></span><span><span class="brand-name">STAP <span>DRIVER</span></span><span class="brand-sub">EXECUTIVE MOBILITY</span></span></a>
+<nav class="navlinks"><a href="#services">ԾԱՌԱՅՈՒԹՅՈՒՆՆԵՐ</a><a href="#account">ԱՆՁՆԱԿԱՆ ԷՋ</a><a href="#how">ՄԵՐ ՄՈՏԵՑՈՒՄԸ</a><a href="#accounts">ՀԱՇԻՎՆԵՐ</a></nav>
+<div class="nav-actions"><a class="nav-link" href="#account">Մուտք</a><a class="gold-btn small-btn" href="#account">Գրանցվել</a></div>
+</div></header>
+<main>
+<section class="hero"><div class="container"><div class="hero-content"><div class="eyebrow">PRIVATE DRIVER · EXECUTIVE MOBILITY · YEREVAN</div><h1>Արժանապատիվ<br><span>ճանապարհ։</span></h1><p class="hero-copy">Վարորդական ծառայություն՝ վստահության, ճշգրտության և բարձրակարգ սպասարկման չափանիշներով։ Ձեր մեքենայով՝ ձեր պայմաններով։</p><div class="hero-actions"><a class="gold-btn" href="#account">Մուտք / Գրանցում</a><a class="outline-btn" href="#services">Մեր ծառայությունները</a></div><div class="hero-note"><span>Անհատական սպասարկում</span><span>Անվտանգ հաշիվներ</span><span>Պատվերների կառավարում</span></div></div></div><div class="hero-stamp">DISCRETION · PRECISION · EXCELLENCE</div></section>
+<section class="section" id="services"><div class="container"><div class="section-head"><div class="eyebrow">STAP DRIVER SERVICES</div><h2>Մեկ հարթակ։<br>Վստահելի ծառայություն։</h2><p>Սթափ վարորդի ծառայություն՝ ձեր սեփական մեքենայով, հստակ պայմաններով և անհատական մոտեցմամբ։</p></div><div class="services-grid"><article class="service-card"><span class="service-index">01</span><div class="service-icon">✦</div><h3>Սթափ վարորդ</h3><p>Մեր վարորդը գալիս է ձեր հասցեով և անվտանգ վարում է ձեր սեփական մեքենան։</p></article><article class="service-card"><span class="service-index">02</span><div class="service-icon">◈</div><h3>Անձնական հաշիվ</h3><p>Գրանցվեք որպես հաճախորդ կամ վարորդ և կառավարեք ձեր պատվերները մեկ վայրից։</p></article><article class="service-card"><span class="service-index">03</span><div class="service-icon">⌘</div><h3>Վերահսկվող համակարգ</h3><p>Ադմինիստրատորի կողմից վարորդների հաստատում, հաշվեկշռի և պատվերների կառավարում։</p></article></div></div></section>
+<section class="section account-strip" id="accounts"><div class="container"><div class="section-head"><div class="eyebrow">ONE PLATFORM · THREE ACCOUNT TYPES</div><h2>Յուրաքանչյուրի համար՝<br>իր անձնական տարածքը։</h2><p>Հաշիվների հասանելիությունն ու գործողությունները որոշվում են օգտատիրոջ դերով։</p></div><div class="account-types"><article class="account-type"><div class="symbol">◉</div><h3>Հաճախորդ</h3><p>Ստեղծեք պատվերներ և հետևեք դրանց ընթացքին ձեր անձնական էջից։</p><a class="text-gold" href="#account">ՄՈՒՏՔ / ԳՐԱՆՑՈՒՄ ↗</a></article><article class="account-type"><div class="symbol">⌘</div><h3>Վարորդ</h3><p>Դիտեք հասանելի պատվերները, ընդունեք և կառավարեք ուղևորությունները։</p><a class="text-gold" href="#account">ՄՈՒՏՔ / ԳՐԱՆՑՈՒՄ ↗</a></article><article class="account-type"><div class="symbol">▦</div><h3>Ադմինիստրատոր</h3><p>Կառավարեք վարորդների հաստատումը, հաշիվների վիճակը և հաշվեկշիռները։</p><a class="text-gold" href="#account">ԱԴՄԻՆԻ ՄՈՒՏՔ ↗</a></article></div></div></section>
+<section class="section booking-section" id="account"><div class="container booking-layout"><div class="booking-intro"><div class="eyebrow">SECURE ACCOUNT ACCESS</div><h2>Ձեր հաշիվը։<br><span style="color:var(--gold2)">Ձեր վերահսկողությունը։</span></h2><p>Մուտք գործեք կամ ստեղծեք հաշիվ՝ STAP DRIVER համակարգի ծառայություններից օգտվելու համար։ Տվյալները մշակվում են սերվերում։</p><div class="rate-card"><span>ՀԱՐԹԱԿԻ ՄԻՋՆՈՐԴԱՎՃԱՐ</span><strong>25%</strong><small>Պատվերի գումարից՝ ներառյալ հարկերը։</small></div></div>
+<div>
+<section id="authPanel" class="booking-card">
+<div class="eyebrow">STAP DRIVER · ACCOUNT</div><h3>Անձնական հաշիվ</h3><p>Մուտք գործեք կամ գրանցվեք՝ շարունակելու համար։</p>
+<div class="switcher mode-switch"><button class="switch mode-btn active" id="loginTab" type="button">Մուտք</button><button class="switch mode-btn" id="registerTab" type="button">Գրանցում</button></div>
+<form id="authForm">
+<div id="registerFields" class="hidden form-grid">
+<label class="field">Անուն Ազգանուն<input name="name" autocomplete="name" minlength="2" placeholder="Ամբողջական անուն"></label>
+<label class="field">Հեռախոս<input name="phone" autocomplete="tel" type="tel" placeholder="+374 ..."></label>
+<label class="field full">Հաշվի տեսակ<select name="role" id="role"><option value="CUSTOMER">Հաճախորդ</option><option value="DRIVER">Վարորդ</option></select></label>
+<label id="licenseField" class="field full hidden">Վարորդական իրավունքի տվյալներ<input name="driverLicense" placeholder="Վկայականի տվյալներ"></label>
+</div>
+<div class="form-grid">
+<label class="field full">Էլ․ փոստ<input name="email" type="email" autocomplete="username" required placeholder="name@example.com"></label>
+<label class="field full">Գաղտնաբառ<input name="password" type="password" autocomplete="current-password" minlength="10" required placeholder="Առնվազն 10 նիշ"></label>
+<button class="gold-btn booking-submit full" type="submit" id="submitAuth">Մուտք գործել</button>
+</div>
+</form>
+<p id="authMessage" class="message" role="status"></p><small class="fineprint">Գրանցման համար գաղտնաբառը պետք է ունենա առնվազն 10 նիշ։ Վարորդի հաշիվը պատվերներ ընդունելուց առաջ պետք է հաստատվի ադմինի կողմից։</small>
+</section>
+<section id="appPanel" class="booking-card hidden">
+<div class="account-head dash-top"><div><div class="eyebrow">ԱՆՁՆԱԿԱՆ ՏԱՐԱԾՔ</div><h2 id="welcome"></h2><p id="accountMeta" class="muted"></p></div><button id="logout" class="outline-btn" type="button">Ելք</button></div>
+<div id="dashboard"></div><p id="appMessage" class="message" role="status"></p>
+</section>
+</div></div></section>
+<section class="section" id="how"><div class="container"><div class="section-head"><div class="eyebrow">THE STAP STANDARD</div><h2>Հստակ գործընթաց։<br>Վստահելի սպասարկում։</h2></div><div class="steps-grid"><article class="step"><b>01 / ԳՐԱՆՑՎԵՔ</b><h3>Ստեղծեք հաշիվ</h3><p>Ընտրեք հաճախորդի կամ վարորդի հաշիվը։</p></article><article class="step"><b>02 / ԿԱՌԱՎԱՐԵՔ</b><h3>Օգտվեք հարթակից</h3><p>Հաճախորդը ստեղծում է պատվեր, վարորդը՝ ընդունում այն։</p></article><article class="step"><b>03 / ՎԵՐԱՀՍԿԵՔ</b><h3>Անձնական էջից</h3><p>Պատվերների և հաշվեկշռի տվյալները հասանելի են համապատասխան հաշվում։</p></article></div></div></section>
+<section class="container contact-band"><div><div class="eyebrow">STAP DRIVER · YEREVAN</div><h2>Վստահությունը սկսվում է ճիշտ ընտրությունից։</h2></div><a href="#account" class="gold-btn">Մուտք գործել</a></section>
+</main>
+<footer class="footer"><div class="container footer-inner"><span>© <span id="year"></span> STAP DRIVER · EXECUTIVE MOBILITY</span><span>Սև · Սպիտակ · Շամպայն-ոսկեգույն</span><span>YEREVAN, ARMENIA</span></div></footer>
+</body></html>
