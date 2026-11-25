@@ -323,20 +323,26 @@ app.patch('/api/drivers/profile', auth, only('DRIVER'), asyncRoute(async (req, r
 
 app.patch('/api/admin/drivers/:id/profile', auth, only('ADMIN'), asyncRoute(async (req, res) => {
   const input = z.object({
-    driverFirstNameLatin: z.string().trim().min(2).max(80),
-    driverLastNameLatin: z.string().trim().min(2).max(80),
+    name: z.string().trim().min(2).max(120).optional(),
+    email: z.email().optional(),
+    phone: z.string().trim().min(5).max(30).optional(),
+    driverFirstNameLatin: z.string().trim().min(2).max(80).optional(),
+    driverLastNameLatin: z.string().trim().min(2).max(80).optional(),
     driverPatronymicLatin: z.string().trim().max(80).optional().or(z.literal('')),
-    driverLicenseSeries: z.string().trim().min(3).max(40),
-    driverLicenseExpiresAt: z.iso.date(),
-    driverLicenseIssuedAt: z.iso.date().optional(),
-    driverTransmission: z.enum(['AUTOMATIC','MANUAL']).optional()
-  }).parse(req.body);
+    driverLicenseSeries: z.string().trim().max(40).optional(),
+    driverLicenseExpiresAt: z.iso.date().optional().or(z.literal('')),
+    driverLicenseIssuedAt: z.iso.date().optional().or(z.literal('')),
+    driverLicenseCategories: z.array(z.string().trim().min(1).max(8)).max(20).optional(),
+    driverTransmission: z.enum(['AUTOMATIC','MANUAL']).optional(),
+    dateOfBirth: z.iso.date().optional().or(z.literal('')),
+    rating: z.number().min(0).max(5).optional()
+  }).strict().refine(v=>Object.keys(v).length>0,'Փոփոխության տվյալներ չկան').parse(req.body);
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
   if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
-  const user = await prisma.user.update({ where: { id: driver.id }, data: {
-    ...input, driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z'), ...(input.driverLicenseIssuedAt ? { driverLicenseIssuedAt: new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z') } : {})
-  }});
-  res.json({ user: publicUser(user), message: 'Վարորդական տվյալները թարմացվեցին ադմինի կողմից։' });
+  const data={...input};
+  for(const key of ['driverLicenseExpiresAt','driverLicenseIssuedAt','dateOfBirth']) if(key in data){data[key]=data[key]?new Date(data[key]+'T00:00:00.000Z'):null;}
+  const user = await prisma.user.update({ where: { id: driver.id }, data });
+  res.json({ user: publicUser(user), message: 'Վարորդի տվյալները թարմացվեցին ադմինի կողմից։' });
 }));
 
 app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res) => {
@@ -442,7 +448,7 @@ app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (r
 }));
 
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
-  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverLicenseCategories: true, driverTransmission: true, driverDocumentsStatus: true, driverVerificationMessage: true, driverVerifiedAt: true, createdAt: true } });
+  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverLicenseCategories: true, driverTransmission: true, driverDocumentsStatus: true, driverVerificationMessage: true, driverVerifiedAt: true, dateOfBirth:true, rating:true, createdAt: true } });
   res.json({ drivers });
 }));
 
@@ -563,6 +569,21 @@ app.patch('/api/admin/drivers/:id/verify',auth,only('ADMIN'),asyncRoute(async(re
  if(verified&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack||!driver.driverProfilePhoto||!driver.passportNumberEncrypted||!driver.driverLicenseIssuedAt||!driver.driverLicenseExpiresAt||!driver.driverLicenseCategories.length))return res.status(409).json({error:'Հաստատման համար լրացրեք բոլոր փաստաթղթերը և լուսանկարները։'});
  const user=await prisma.user.update({where:{id:driver.id},data:{isVerified:verified,driverDocumentsStatus:verified?'APPROVED':'REJECTED',driverVerifiedAt:verified?new Date():null,driverVerificationMessage:verified?'Ադմինը հաստատել է փաստաթղթերը։':'Փաստաթղթերը մերժվել են․ պահանջվում է կրկին ուղարկել։'}});
  res.json({driver:publicUser(user)});
+}));
+
+
+// Admin can inspect and remove individual ratings. Driver score is recomputed by the daily job.
+app.get('/api/admin/drivers/:id/ratings',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+ if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
+ const ratings=await prisma.rating.findMany({where:{toUserId:driver.id},orderBy:{createdAt:'desc'},include:{fromUser:{select:{name:true}},order:{select:{id:true,createdAt:true}}}});
+ res.json({ratings});
+}));
+app.delete('/api/admin/ratings/:id',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const rating=await prisma.rating.findUnique({where:{id:req.params.id}});
+ if(!rating)return res.status(404).json({error:'Գնահատականը չի գտնվել'});
+ await prisma.rating.delete({where:{id:rating.id}});
+ res.json({success:true,message:'Գնահատականը հեռացվեց։ Վարկանիշը կվերահաշվարկվի ամեն օր՝ 00:01-ին։'});
 }));
 
 app.patch('/api/admin/drivers/:id/documents/review',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
