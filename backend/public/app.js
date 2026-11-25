@@ -43,7 +43,7 @@ async function driverView(){
   <p class="secure-note">Անունը, ազգանունը, ծննդյան ամսաթիվը, վարորդական կարգերն ու վկայականի ժամկետները կարդացվում են փաստաթղթերից։ Ձեռքով լրացնել պետք չէ։</p>
   <p class="secure-note">Վարորդական ստաժ՝ <strong>${experienceLabel(u.driverLicenseIssuedAt)}</strong>. ${u.isVerified?'Տվյալները հաստատված են և կողպված։':'Ուղարկեք փաստաթղթերը ֆոտովերահսկման։'}</p>
   <div class="ocr-panel"><strong>Ավտոմատ նույնականացում</strong><p class="muted">Համակարգը կկարդա բոլոր փաստաթղթերը և կհամեմատի դրանց տվյալները։</p><small id="ocrStatus" class="secure-note"></small></div>
-  <form id="driverDocsForm" class="docs-form" style="${u.isVerified?'display:none':''}">
+  <form id="driverDocsForm" class="docs-form" style="${u.isVerified||u.driverDocumentsStatus==='PENDING_REVIEW'?'display:none':''}">
 <h4>1. Վարորդական իրավունք</h4>
 <label>Վարորդականի առջևի կողմ<input type="file" name="front" accept="image/*" capture="environment" required></label>
 <label>Վարորդականի հետևի կողմ<input type="file" name="back" accept="image/*" capture="environment" required></label>
@@ -55,7 +55,7 @@ async function driverView(){
 <button class="action" type="submit">Ուղարկել ավտոմատ նույնականացման</button>
 <small class="secure-note">Պարտադիր է բոլոր 5 լուսանկարները։ Լուսանկարները պետք է լինեն ամբողջական և հստակ։</small>
 </form>
-${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
+${u.driverDocumentsStatus==='PENDING_REVIEW'?'<p class="secure-note">Լուսանկարներն ուղարկվել են ադմինին։ Սպասեք ստուգման արդյունքին։ Ներբեռնման բաժինը փակ է մինչև ադմինի որոշումը։</p>':''}${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
 ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">'+esc(u.driverVerificationMessage||'Փաստաթղթերը մերժվել են։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։')+'</p>':''}
  </details>
  <details class="dash-section"><summary>Հասանելի պատվերներ (${open.orders.length})</summary><div id="openOrders" class="stack"></div></details>
