@@ -253,14 +253,20 @@
   }
   ['pickup','destination'].forEach(id=>{
     const input=$('#'+id);
-    input.addEventListener('input',()=>{
+    const onAddressChange=()=>{
       if(input.value!==input.dataset.selectedAddress){delete input.dataset.selectedLon;delete input.dataset.selectedLat;delete input.dataset.selectedAddress;}
       scheduleRouteCalculation();
-    });
+    };
+    input.addEventListener('input',onAddressChange);
     input.addEventListener('change',scheduleRouteCalculation);
+    input.addEventListener('blur',()=>setTimeout(scheduleRouteCalculation,250));
   });
-  // Automatically calculate when both fields are already populated on page load.
-  if($('#pickup').value.trim()&&$('#destination').value.trim())setTimeout(scheduleRouteCalculation,500); 
+  // Re-check after browser restores or autofills saved form values.
+  const checkRestoredAddresses=()=>setTimeout(()=>{
+    if($('#pickup').value.trim()&&$('#destination').value.trim())scheduleRouteCalculation();
+  },900);
+  window.addEventListener('pageshow',checkRestoredAddresses);
+  checkRestoredAddresses(); 
   $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickup'),to:f.get('destination'),km:routeKm,price:service==='sober'?Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM)):null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
