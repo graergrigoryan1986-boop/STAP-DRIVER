@@ -108,3 +108,33 @@ body.authenticated footer{display:none!important}
 .driver-profile-photo-block{display:flex;align-items:center;justify-content:center;margin:0 0 18px}.driver-profile-photo-block img{width:112px;height:112px;border-radius:50%;object-fit:cover;border:2px solid var(--gold2);box-shadow:0 6px 24px rgba(0,0,0,.35)}.driver-profile-photo-block span{font-size:12px;color:var(--muted)}
 
 .customer-driver-profile{display:flex;align-items:center;gap:14px;margin:14px 0;padding:14px;border:1px solid rgba(201,164,93,.35);border-radius:14px;background:rgba(201,164,93,.06)}.customer-driver-profile img{width:76px;height:76px;flex:0 0 76px;object-fit:cover;border-radius:50%;border:2px solid var(--gold2)}.customer-driver-profile p{margin:5px 0;font-size:13px;color:var(--muted)}.customer-driver-profile strong{color:var(--gold2)}
+
+
+/* Prominent driver document review submission */
+.docs-form .docs-submit{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  width:100%;
+  min-height:66px;
+  margin:10px 0 2px;
+  padding:18px 22px;
+  border:2px solid #f1d49a;
+  border-radius:14px;
+  background:linear-gradient(135deg,#f0d49a 0%,#c99b4d 52%,#a9782d 100%);
+  color:#17120a;
+  font-size:17px;
+  font-weight:900;
+  letter-spacing:.35px;
+  line-height:1.25;
+  text-align:center;
+  box-shadow:0 7px 24px rgba(201,164,93,.28),inset 0 1px 0 rgba(255,255,255,.45);
+  cursor:pointer;
+  transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;
+}
+.docs-form .docs-submit span{font-size:23px;line-height:1}
+.docs-form .docs-submit:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 10px 28px rgba(201,164,93,.38)}
+.docs-form .docs-submit:active{transform:translateY(0)}
+.docs-form .docs-submit:focus-visible{outline:3px solid #fff;outline-offset:4px}
+@media(max-width:560px){.docs-form .docs-submit{min-height:72px;font-size:16px;padding:18px 14px}}
