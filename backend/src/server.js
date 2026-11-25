@@ -9,6 +9,7 @@ import { rateLimit } from 'express-rate-limit';
 import { Server as SocketServer } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -38,13 +39,16 @@ app.use(cors({
 app.use(express.json({ limit: '12mb' }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false }));
 
+const DOCUMENT_KEY = createHash('sha256').update(JWT_SECRET).digest();
+function encryptPrivate(value){if(value==null)return null;const nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',DOCUMENT_KEY,nonce),encrypted=Buffer.concat([cipher.update(Buffer.isBuffer(value)?value:Buffer.from(String(value),'utf8')),cipher.final()]);return Buffer.concat([Buffer.from('STAP1'),nonce,cipher.getAuthTag(),encrypted])}
+function decryptPrivate(value){if(!value)return null;const data=Buffer.from(value);if(data.subarray(0,5).toString()!=='STAP1')return data;const nonce=data.subarray(5,17),tag=data.subarray(17,33),body=data.subarray(33),decipher=createDecipheriv('aes-256-gcm',DOCUMENT_KEY,nonce);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(body),decipher.final()])}
 const publicUser = user => ({
   id: user.id, name: user.name, email: user.email, phone: user.phone,
   role: user.role, isBlocked: user.isBlocked, isVerified: user.isVerified,
   balanceAmd: user.balanceAmd, driverLicense: user.driverLicense,
   driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
-  driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, driverDocumentsStatus: user.driverDocumentsStatus, createdAt: user.createdAt
+  driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, createdAt: user.createdAt
 });
 const signToken = user => jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '12h', issuer: 'stap-driver-api' });
 
@@ -364,52 +368,97 @@ app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (r
 }));
 
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
-  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverLicenseCategories: true, driverTransmission: true, driverDocumentsStatus: true, createdAt: true } });
+  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverLicenseCategories: true, driverTransmission: true, driverDocumentsStatus: true, driverVerificationMessage: true, driverVerifiedAt: true, createdAt: true } });
   res.json({ drivers });
 }));
 
 app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, res) => {
-  if (req.user.isVerified) return res.status(403).json({ error: 'Հաստատված պրոֆիլի փաստաթղթերը փոփոխել կարող է միայն ադմինը։' });
+  if (req.user.isVerified) return res.status(403).json({ error: 'Հաստատված փաստաթղթերը փոփոխել կարող է միայն ադմինը։' });
   const input = z.object({
-    front: z.string().min(100).max(3500000),
-    back: z.string().min(100).max(3500000),
-    selfie: z.string().min(100).max(3500000),
-    ocrText: z.string().max(12000).optional()
+    front:z.string().min(100).max(3500000), back:z.string().min(100).max(3500000), selfie:z.string().min(100).max(3500000),
+    passportDocumentType:z.enum(['PASSPORT','ID_CARD']), passportNumber:z.string().trim().min(4).max(40),
+    passportIssuedBy:z.string().trim().min(2).max(120), passportIssueDate:z.iso.date(), passportExpiryDate:z.iso.date(),
+    passportFront:z.string().min(100).max(3500000), passportBack:z.string().min(100).max(3500000),
+    profilePhoto:z.string().min(100).max(3500000), ocrText:z.string().max(12000).optional(), passportOcrText:z.string().max(12000).optional()
   }).parse(req.body);
   const decode = value => {
-    const raw = value.replace(/^data:image\/(jpeg|jpg|png|webp);base64,/i, '');
-    if (!/^[A-Za-z0-9+/=]+$/.test(raw)) throw new Error('Նկարի ձևաչափը սխալ է');
-    const buffer = Buffer.from(raw, 'base64');
-    if (!buffer.length || buffer.length > 2500000) throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ');
-    return buffer;
+    const match=value.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);
+    if(!match)throw new Error('Նկարի ձևաչափը սխալ է։ Օգտագործեք JPG, PNG կամ WEBP։');
+    const buffer=Buffer.from(match[2],'base64');
+    if(!buffer.length||buffer.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');
+    return encryptPrivate(buffer);
   };
-  const [front, back, selfie] = [decode(input.front), decode(input.back), decode(input.selfie)];
-  const user = await prisma.user.update({ where: { id: req.user.id }, data: {
-    driverLicenseFront: front, driverLicenseBack: back, driverLicenseSelfie: selfie,
-    driverDocumentsStatus: 'PENDING', driverOcrText: input.ocrText || null, isVerified: false
+  const docs={front:decode(input.front),back:decode(input.back),selfie:decode(input.selfie),passportFront:decode(input.passportFront),passportBack:decode(input.passportBack),profilePhoto:decode(input.profilePhoto)};
+  const clean=x=>String(x||'').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zա-ֆа-я]/g,'');
+  const ocr=clean((input.ocrText||'')+' '+(input.passportOcrText||''));
+  const first=clean(req.user.driverFirstNameLatin),last=clean(req.user.driverLastNameLatin);
+  const namesReadable=first.length>=2&&last.length>=2&&ocr.includes(first)&&ocr.includes(last);
+  const datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>new Date()&&new Date(input.passportIssueDate+'T00:00:00Z')<=new Date();
+  const autoPassed=namesReadable&&datesValid&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt&&req.user.driverLicenseCategories?.length);
+  const status=autoPassed?'AUTO_APPROVED':'REVIEW_REQUIRED';
+  const user=await prisma.user.update({where:{id:req.user.id},data:{
+    driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,
+    passportDocumentType:input.passportDocumentType,passportNumberEncrypted:encryptPrivate(input.passportNumber),
+    passportIssuedByEncrypted:encryptPrivate(input.passportIssuedBy),
+    passportIssueDate:new Date(input.passportIssueDate+'T00:00:00.000Z'),passportExpiryDate:new Date(input.passportExpiryDate+'T00:00:00.000Z'),
+    passportFront:docs.passportFront,passportBack:docs.passportBack,driverProfilePhoto:docs.profilePhoto,
+    driverOcrText:input.ocrText||null,driverDocumentsStatus:status,isVerified:autoPassed,
+    driverVerifiedAt:autoPassed?new Date():null,
+    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։': 'Լուսանկարները կամ OCR տվյալները լրացուցիչ ստուգման կարիք ունեն։ Մինչև 24 ժամ։'
   }});
-  res.json({ success: true, driverDocumentsStatus: user.driverDocumentsStatus, message: 'Փաստաթղթերն ուղարկվեցին ադմինի ֆոտովերահսկմանը։' });
+  res.json({success:true,user:publicUser(user),message:autoPassed?'Ավտոմատ ստուգումն անցավ․ պատվերներն արդեն հասանելի են։':'Փաստաթղթերն ուղարկվեցին ստուգման։ Ստուգումը կարող է տևել մինչև 24 ժամ։' });
 }));
 
-app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(async (req, res) => {
-  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' }, select: {
-    id: true, name: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true,
-    driverLicenseSeries: true, driverLicenseIssuedAt: true, driverLicenseExpiresAt: true,
-    driverLicenseCategories: true, driverTransmission: true, driverDocumentsStatus: true, driverOcrText: true,
-    driverLicenseFront: true, driverLicenseBack: true, driverLicenseSelfie: true
-  }});
-  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
-  const encode = value => value ? 'data:image/jpeg;base64,'+Buffer.from(value).toString('base64') : null;
-  res.json({ driver: { ...driver, driverLicenseFront: encode(driver.driverLicenseFront), driverLicenseBack: encode(driver.driverLicenseBack), driverLicenseSelfie: encode(driver.driverLicenseSelfie) } });
+app.post('/api/drivers/profile-photo', auth, only('DRIVER'), asyncRoute(async(req,res)=>{
+  if(req.user.isVerified)return res.status(403).json({error:'Հաստատված պրոֆիլի լուսանկարը փոխել կարող է միայն ադմինը։'});
+  const {photo}=z.object({photo:z.string().min(100).max(3500000)}).parse(req.body);
+  const match=photo.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);
+  if(!match)return res.status(400).json({error:'Ընտրեք JPG, PNG կամ WEBP լուսանկար։'});
+  const data=Buffer.from(match[2],'base64');if(!data.length||data.length>2500000)return res.status(400).json({error:'Լուսանկարը պետք է լինի առավելագույնը 2.5 ՄԲ։'});
+  await prisma.user.update({where:{id:req.user.id},data:{driverProfilePhoto:encryptPrivate(data)}});
+  res.json({success:true,message:'Պրոֆիլի լուսանկարը պահպանվեց։'});
 }));
 
-app.patch('/api/admin/drivers/:id/documents/review', auth, only('ADMIN'), asyncRoute(async (req, res) => {
-  const { approved } = z.object({ approved: z.boolean() }).parse(req.body);
-  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
-  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
-  if (approved && (!driver.driverLicenseFront || !driver.driverLicenseBack || !driver.driverLicenseSelfie)) return res.status(409).json({ error: 'Բոլոր երեք լուսանկարները պարտադիր են։' });
-  const user = await prisma.user.update({ where: { id: driver.id }, data: { driverDocumentsStatus: approved ? 'APPROVED' : 'REJECTED', isVerified: approved } });
-  res.json({ driver: publicUser(user), message: approved ? 'Փաստաթղթերը հաստատվեցին։' : 'Փաստաթղթերը մերժվեցին․ վարորդը կարող է կրկին ուղարկել։' });
+app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(async(req,res)=>{
+  const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{
+    id:true,name:true,email:true,phone:true,driverFirstNameLatin:true,driverLastNameLatin:true,driverPatronymicLatin:true,
+    driverLicenseSeries:true,driverLicenseIssuedAt:true,driverLicenseExpiresAt:true,driverLicenseCategories:true,driverTransmission:true,
+    driverDocumentsStatus:true,driverOcrText:true,driverVerificationMessage:true,passportDocumentType:true,passportIssueDate:true,passportExpiryDate:true,
+    passportNumberEncrypted:true,passportIssuedByEncrypted:true,driverLicenseFront:true,driverLicenseBack:true,driverLicenseSelfie:true,
+    passportFront:true,passportBack:true,driverProfilePhoto:true
+  }});
+  if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
+  const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
+  res.json({driver:{...driver,passportNumber:decryptPrivate(driver.passportNumberEncrypted)?.toString('utf8')||null,passportIssuedBy:decryptPrivate(driver.passportIssuedByEncrypted)?.toString('utf8')||null,
+    driverLicenseFront:image(driver.driverLicenseFront),driverLicenseBack:image(driver.driverLicenseBack),driverLicenseSelfie:image(driver.driverLicenseSelfie),
+    passportFront:image(driver.passportFront),passportBack:image(driver.passportBack),driverProfilePhoto:image(driver.driverProfilePhoto)}});
+}));
+
+function makeDocumentsPdf(title, pages){
+  const objs=[];const add=v=>{objs.push(Buffer.isBuffer(v)?v:Buffer.from(v,'binary'));return objs.length};
+  const catalog=add(''),pagesId=add(''),fontId=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),pageIds=[];
+  for(const p of pages){
+    const img=decryptPrivate(p.data),imgId=add(Buffer.concat([Buffer.from('<< /Type /XObject /Subtype /Image /Width 1200 /Height 800 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>\nstream\n'),img,Buffer.from('\nendstream')]));
+    const contentText='BT /F1 14 Tf 40 810 Td ('+String(p.label).replace(/[()\\]/g,'')+') Tj ET\nq 520 0 0 700 37 70 cm /Im0 Do Q';
+    const content=Buffer.from(contentText,'binary'),contentId=add(Buffer.concat([Buffer.from('<< /Length '+content.length+' >>\nstream\n'),content,Buffer.from('\nendstream')]));
+    const pageId=add('');pageIds.push(pageId);
+    objs[pageId-1]=Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 '+fontId+' 0 R >> /XObject << /Im0 '+imgId+' 0 R >> >> /Contents '+contentId+' 0 R >>');
+  }
+  objs[catalog-1]=Buffer.from('<< /Type /Catalog /Pages '+pagesId+' 0 R >>');
+  objs[pagesId-1]=Buffer.from('<< /Type /Pages /Kids ['+pageIds.map(id=>id+' 0 R').join(' ')+'] /Count '+pageIds.length+' >>');
+  let out=Buffer.from('%PDF-1.4\n%âãÏÓ\n','binary'),offsets=[0];
+  objs.forEach((o,i)=>{offsets.push(out.length);out=Buffer.concat([out,Buffer.from((i+1)+' 0 obj\n'),o,Buffer.from('\nendobj\n')])});
+  const xref=out.length;out=Buffer.concat([out,Buffer.from('xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n')]);
+  for(let i=1;i<offsets.length;i++)out=Buffer.concat([out,Buffer.from(String(offsets[i]).padStart(10,'0')+' 00000 n \n')]);
+  out=Buffer.concat([out,Buffer.from('trailer\n<< /Size '+(objs.length+1)+' /Root '+catalog+' 0 R >>\nstartxref\n'+xref+'\n%%EOF')]);return out;
+}
+app.get('/api/admin/drivers/:id/documents.pdf',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+  const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+  if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել'});
+  const pages=[['Driver license front',d.driverLicenseFront],['Driver license back',d.driverLicenseBack],['Driver selfie',d.driverLicenseSelfie],['Passport or ID front',d.passportFront],['Passport or ID back',d.passportBack],['Driver profile photo',d.driverProfilePhoto]].filter(x=>x[1]).map(([label,data])=>({label,data}));
+  if(!pages.length)return res.status(404).json({error:'Փաստաթղթեր չկան'});
+  const pdf=makeDocumentsPdf('STAP DRIVER documents',pages);
+  res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition','attachment; filename="driver-'+d.id+'-documents.pdf"');res.send(pdf);
 }));
 
 app.patch('/api/admin/drivers/:id/verify', auth, only('ADMIN'), asyncRoute(async (req, res) => {
