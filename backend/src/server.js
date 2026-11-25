@@ -65,6 +65,43 @@ function extractLicenseCategories(raw) {
   return LICENSE_CATEGORIES.filter(category => found.has(category));
 }
 
+function mrzDate(value, kind) {
+  if (!/^\d{6}$/.test(value)) return null;
+  const yy=Number(value.slice(0,2)),month=Number(value.slice(2,4)),day=Number(value.slice(4,6));
+  if(month<1||month>12||day<1||day>31)return null;
+  const currentYY=new Date().getUTCFullYear()%100;
+  const year=kind==='birth'?(yy<=currentYY?2000+yy:1900+yy):2000+yy;
+  const date=new Date(Date.UTC(year,month-1,day));
+  return date.getUTCMonth()===month-1&&date.getUTCDate()===day?date:null;
+}
+function parseMrzIdentity(raw) {
+  const lines=String(raw||'').toUpperCase().split(/\r?\n/).map(line=>line.replace(/[^A-Z0-9<]/g,'')).filter(line=>line.length>=28);
+  for(let i=0;i<lines.length;i++){
+    const first=lines[i];
+    if(!/^[PIAC][<A-Z]/.test(first))continue;
+    if(first.length>=40&&lines[i+1]?.length>=40){
+      const second=lines[i+1],names=first.slice(5).split('<<');
+      const surname=(names[0]||'').replace(/</g,' ').trim(),given=(names[1]||'').replace(/</g,' ').trim();
+      return {surname,givenNames:given,firstName:given.split(' ')[0]||'',passportNumber:second.slice(0,9).replace(/</g,''),birthDate:mrzDate(second.slice(13,19),'birth'),expiryDate:mrzDate(second.slice(21,27),'expiry')};
+    }
+    if(first.length>=28&&lines[i+1]?.length>=28&&lines[i+2]?.length>=28){
+      const second=lines[i+1],third=lines[i+2],names=third.split('<<');
+      const surname=(names[0]||'').replace(/</g,' ').trim(),given=(names[1]||'').replace(/</g,' ').trim();
+      return {surname,givenNames:given,firstName:given.split(' ')[0]||'',passportNumber:first.slice(5,14).replace(/</g,''),birthDate:mrzDate(second.slice(0,6),'birth'),expiryDate:mrzDate(second.slice(8,14),'expiry')};
+    }
+  }
+  return null;
+}
+function labelledDate(raw, labels) {
+  const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const datePattern=/(\d{4}[./-]\d{2}[./-]\d{2}|\d{2}[./-]\d{2}[./-]\d{4})/;
+  for(let i=0;i<lines.length;i++){
+    if(!labels.some(label=>label.test(lines[i])))continue;
+    const match=(lines[i]+' '+(lines[i+1]||'')).match(datePattern);
+    if(match){const p=match[1].split(/[./-]/),y=p[0].length===4?+p[0]:+p[2],m=+p[1],d=p[0].length===4?+p[2]:+p[0],date=new Date(Date.UTC(y,m-1,d));if(date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d)return date;}
+  }
+  return null;
+}
 const signToken = user => jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '12h', issuer: 'stap-driver-api' });
 
 async function auth(req, res, next) {
@@ -403,47 +440,50 @@ app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) 
 
 app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, res) => {
   if (req.user.isVerified) return res.status(403).json({ error: 'Հաստատված փաստաթղթերը փոփոխել կարող է միայն ադմինը։' });
-  const input = z.object({
-    front:z.string().min(100).max(3500000), back:z.string().min(100).max(3500000), selfie:z.string().min(100).max(3500000),
-    passportDocumentType:z.enum(['PASSPORT','ID_CARD']), dateOfBirth:z.iso.date(), passportNumber:z.string().trim().min(4).max(40),
-    passportIssuedBy:z.string().trim().min(2).max(120), passportIssueDate:z.iso.date(), passportExpiryDate:z.iso.date(),
-    passportFront:z.string().min(100).max(3500000), passportBack:z.string().min(100).max(3500000),
-    profilePhoto:z.string().min(100).max(3500000), ocrText:z.string().max(12000).optional(), passportOcrText:z.string().max(12000).optional()
+  const input=z.object({
+    front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),selfie:z.string().min(100).max(3500000),
+    passportDocumentType:z.enum(['PASSPORT','ID_CARD']),
+    passportFront:z.string().min(100).max(3500000),passportBack:z.string().min(100).max(3500000),
+    ocrText:z.string().max(24000),passportOcrText:z.string().max(24000)
   }).parse(req.body);
-  const decode = value => {
+  const decode=value=>{
     const match=value.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/i);
-    if(!match)throw new Error('Նկարի ձևաչափը սխալ է։ Օգտագործեք JPG, PNG կամ WEBP։');
+    if(!match)throw new Error('Նկարը պետք է լինի JPG/JPEG։');
     const buffer=Buffer.from(match[1],'base64');
-    if(buffer[0]!==0xff||buffer[1]!==0xd8)throw new Error('Նկարը պետք է լինի վավեր JPEG։');
-    if(!buffer.length||buffer.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');
+    if(buffer[0]!==0xff||buffer[1]!==0xd8||!buffer.length||buffer.length>2500000)throw new Error('Յուրաքանչյուր լուսանկարը պետք է լինի վավեր JPEG և առավելագույնը 2.5 ՄԲ։');
     return encryptPrivate(buffer);
   };
-  const docs={front:decode(input.front),back:decode(input.back),selfie:decode(input.selfie),passportFront:decode(input.passportFront),passportBack:decode(input.passportBack),profilePhoto:decode(input.profilePhoto)};
-  const clean=x=>String(x||'').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zա-ֆа-я]/g,'');
-  const licenseOcr=clean(input.ocrText||''),passportOcr=clean(input.passportOcrText||''),passportOcrAlnum=String(input.passportOcrText||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  const first=clean(req.user.driverFirstNameLatin),last=clean(req.user.driverLastNameLatin);
-  const namesReadable=first.length>=2&&last.length>=2&&licenseOcr.includes(first)&&licenseOcr.includes(last)&&passportOcr.includes(first)&&passportOcr.includes(last);
-  const normalizeNumber=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  const passportNumberReadable=normalizeNumber(input.passportNumber).length>=4&&passportOcrAlnum.includes(normalizeNumber(input.passportNumber));
-  const now=new Date(),birthDate=new Date(input.dateOfBirth+'T00:00:00Z'),ageAtNow=now.getUTCFullYear()-birthDate.getUTCFullYear()-((now.getUTCMonth()<birthDate.getUTCMonth()||(now.getUTCMonth()===birthDate.getUTCMonth()&&now.getUTCDate()<birthDate.getUTCDate()))?1:0),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
-  const detectedLicenseCategories=extractLicenseCategories(input.ocrText);
-  const ocrCategoryMatches=detectedLicenseCategories.length>0;
-  const autoPassed=namesReadable&&passportNumberReadable&&datesValid&&ocrCategoryMatches&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt);
-  const licenseExpiry=req.user.driverLicenseExpiresAt?new Date(req.user.driverLicenseExpiresAt):null,passportExpiry=new Date(input.passportExpiryDate+'T00:00:00Z'),licenseIssue=req.user.driverLicenseIssuedAt?new Date(req.user.driverLicenseIssuedAt):null,passportIssue=new Date(input.passportIssueDate+'T00:00:00Z');
-  const objectivelyExpired=(licenseExpiry&&licenseExpiry<=now)||(passportExpiry<=now)||(licenseIssue&&licenseIssue>now)||(passportIssue>now)||birthDate>now||ageAtNow<18;
-  const status=autoPassed?'AUTO_APPROVED':objectivelyExpired?'REJECTED':'REVIEW_REQUIRED';
+  const docs={front:decode(input.front),back:decode(input.back),selfie:decode(input.selfie),passportFront:decode(input.passportFront),passportBack:decode(input.passportBack)};
+  const identity=parseMrzIdentity(input.passportOcrText);
+  const clean=value=>String(value||'').toLocaleUpperCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-ZԱ-Ֆ]/g,'');
+  const licenseText=String(input.ocrText||''),licenseClean=clean(licenseText);
+  const surname=clean(identity?.surname),firstName=clean(identity?.firstName);
+  const namesMatch=Boolean(surname.length>=3&&firstName.length>=2&&licenseClean.includes(surname)&&licenseClean.includes(firstName));
+  const detectedLicenseCategories=extractLicenseCategories(licenseText);
+  const issueDate=labelledDate(licenseText,[/\b4a\b/i,/date of issue/i,/issue date/i,/issued/i,/տրման ամսաթիվ/i,/տրամադրման ամսաթիվ/i]);
+  const licenseExpiry=labelledDate(licenseText,[/\b4b\b/i,/date of expiry/i,/expiry date/i,/valid until/i,/վավեր է մինչև/i,/գործողության ավարտ/i]);
+  const now=new Date(),birthDate=identity?.birthDate||null,passportExpiry=identity?.expiryDate||null;
+  const age=birthDate?now.getUTCFullYear()-birthDate.getUTCFullYear()-((now.getUTCMonth()<birthDate.getUTCMonth()||(now.getUTCMonth()===birthDate.getUTCMonth()&&now.getUTCDate()<birthDate.getUTCDate()))?1:0):null;
+  const expired=Boolean((birthDate&&birthDate>now)||(age!==null&&age<18)||(passportExpiry&&passportExpiry<=now)||(licenseExpiry&&licenseExpiry<=now));
+  const allReadable=Boolean(identity&&birthDate&&passportExpiry&&licenseExpiry&&namesMatch&&detectedLicenseCategories.length>0);
+  const autoPassed=allReadable&&!expired,status=autoPassed?'AUTO_APPROVED':'REJECTED';
+  const passportNumber=identity?.passportNumber||'';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
-    driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,driverLicenseCategories:detectedLicenseCategories,
-    passportDocumentType:input.passportDocumentType,dateOfBirth:birthDate,passportNumberEncrypted:encryptPrivate(input.passportNumber),
-    passportIssuedByEncrypted:encryptPrivate(input.passportIssuedBy),
-    passportIssueDate:new Date(input.passportIssueDate+'T00:00:00.000Z'),passportExpiryDate:new Date(input.passportExpiryDate+'T00:00:00.000Z'),
-    passportFront:docs.passportFront,passportBack:docs.passportBack,driverProfilePhoto:docs.profilePhoto,
-    driverOcrText:input.ocrText||null,driverDocumentsStatus:status,isVerified:autoPassed,
-    driverVerifiedAt:autoPassed?new Date():null,
-    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։':!ocrCategoryMatches?'Վարորդական վկայականի կարգերը OCR-ով հստակ չեն ճանաչվել։ Խնդրում ենք ուղարկել ավելի հստակ լուսանկար՝ ձեռքով ստուգման համար։':ageAtNow<18?'Վարորդը պետք է լինի առնվազն 18 տարեկան։':objectivelyExpired?'Փաստաթղթի գործողության ժամկետը լրացած է կամ տրման ամսաթիվը սխալ է։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։':'OCR տվյալները ամբողջությամբ չեն համընկել։ Լրացուցիչ ստուգումը կարող է տևել մինչև 24 ժամ։',
-    driverDocumentsPdf:encryptPrivate(makeDocumentsPdf('STAP DRIVER identity documents',[['Driver license front',docs.front],['Driver license back',docs.back],['Driver selfie',docs.selfie],['Passport or ID front',docs.passportFront],['Passport or ID back',docs.passportBack],['Driver profile photo',docs.profilePhoto]].map(([label,data])=>({label,data}))))
+    driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,
+    passportDocumentType:input.passportDocumentType,passportNumberEncrypted:passportNumber?encryptPrivate(passportNumber):null,
+    passportIssuedByEncrypted:null,dateOfBirth:birthDate,passportIssueDate:null,passportExpiryDate:passportExpiry,
+    passportFront:docs.passportFront,passportBack:docs.passportBack,driverProfilePhoto:docs.selfie,
+    driverFirstNameLatin:identity?.firstName||null,driverLastNameLatin:identity?.surname||null,driverPatronymicLatin:null,
+    driverLicenseCategories:detectedLicenseCategories,driverLicenseIssuedAt:issueDate,driverLicenseExpiresAt:licenseExpiry,
+    driverOcrText:licenseText,driverDocumentsStatus:status,isVerified:autoPassed,driverVerifiedAt:autoPassed?new Date():null,
+    driverVerificationMessage:autoPassed?'Փաստաթղթերի OCR տվյալները համընկել են։ Վարորդը հաստատվեց։':expired?'Փաստաթղթի ժամկետը լրացած է կամ տարիքը չի համապատասխանում։ Խնդրում ենք ուղարկել գործող փաստաթղթերի նոր լուսանկարներ։':'Տվյալները չեն համընկել կամ փաստաթղթերը հստակ չեն ընթերցվել։ Ստուգեք լուսանկարների որակը և կրկին ուղարկեք բոլոր լուսանկարները։',
+    driverDocumentsPdf:encryptPrivate(makeDocumentsPdf('STAP DRIVER identity documents',[
+      ['Driver license front',docs.front],['Driver license back',docs.back],['Driver selfie',docs.selfie],
+      [input.passportDocumentType==='PASSPORT'?'Passport photo page':'ID card front',docs.passportFront],
+      [input.passportDocumentType==='PASSPORT'?'Passport registration page':'ID card back',docs.passportBack]
+    ].map(([label,data])=>({label,data}))))
   }});
-  res.json({success:true,user:publicUser(user),message:autoPassed?'Ավտոմատ ստուգումն անցավ․ պատվերներն արդեն հասանելի են։':'Փաստաթղթերն ուղարկվեցին ստուգման։ Ստուգումը կարող է տևել մինչև 24 ժամ։' });
+  res.json({success:true,user:publicUser(user),message:autoPassed?'Փաստաթղթերի տվյալները համընկել են․ վարորդը ավտոմատ հաստատվեց։':'Նույնականացումը չհաստատվեց։ Տվյալները չեն համընկել կամ լուսանկարները հստակ չեն ընթերցվել։ Խնդրում ենք կրկին ուղարկել բոլոր լուսանկարները։'});
 }));
 
 app.post('/api/drivers/profile-photo', auth, only('DRIVER'), asyncRoute(async(req,res)=>{
@@ -517,7 +557,7 @@ app.patch('/api/admin/drivers/:id/documents/review',auth,only('ADMIN'),asyncRout
  const {approved}=z.object({approved:z.boolean()}).parse(req.body);
  const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
  if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
- if(approved&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack||!driver.driverProfilePhoto||!driver.passportNumberEncrypted))return res.status(409).json({error:'Բոլոր փաստաթղթերը պարտադիր են։'});
+ if(approved&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack))return res.status(409).json({error:'Բոլոր փաստաթղթերը պարտադիր են։'});
  const user=await prisma.user.update({where:{id:driver.id},data:{driverDocumentsStatus:approved?'APPROVED':'REJECTED',isVerified:approved,driverVerifiedAt:approved?new Date():null,driverVerificationMessage:approved?'Փաստաթղթերը հաստատվեցին։':'Փաստաթղթերը մերժվեցին․ խնդրում ենք ուղղել և կրկին ուղարկել։'}});
  res.json({driver:publicUser(user),message:approved?'Փաստաթղթերը հաստատվեցին։':'Փաստաթղթերը մերժվեցին։ Վարորդին կպահանջվի կրկին ուղարկել։'});
 }));
