@@ -3,7 +3,7 @@
   const $$ = (s, root=document) => [...root.querySelectorAll(s)];
   const KEY='stap_driver_demo_v1';
   const read=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{users:[],orders:[],current:null}}catch{return {users:[],orders:[],current:null}}};
-  let db=read(), selectedRole='customer', selectedMode='now', routeKm=0, routeText='';
+  let db=read(), selectedRole='customer', selectedMode='now', routeKm=0, routeText='', routeFare=10000;
   const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
   const money=n=>Math.round(Number(n)||0).toLocaleString('hy-AM')+' ֏';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -57,6 +57,32 @@
   $$('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
   $('#serviceType').dispatchEvent(new Event('change'));
   const MIN_FARE=10000, RATE_PER_KM=0;
+  const districtNeighbors={
+    'Աջափնյակ':['Արաբկիր','Դավթաշեն','Կենտրոն','Մալաթիա-Սեբաստիա'],
+    'Ավան':['Արաբկիր','Նոր Նորք','Քանաքեռ-Զեյթուն'],
+    'Արաբկիր':['Աջափնյակ','Ավան','Դավթաշեն','Կենտրոն','Քանաքեռ-Զեյթուն'],
+    'Դավթաշեն':['Աջափնյակ','Արաբկիր'],
+    'Էրեբունի':['Կենտրոն','Նորք-Մարաշ','Շենգավիթ','Նուբարաշեն'],
+    'Կենտրոն':['Աջափնյակ','Արաբկիր','Նոր Նորք','Նորք-Մարաշ','Շենգավիթ','Քանաքեռ-Զեյթուն','Էրեբունի','Մալաթիա-Սեբաստիա'],
+    'Մալաթիա-Սեբաստիա':['Աջափնյակ','Կենտրոն','Շենգավիթ'],
+    'Նոր Նորք':['Ավան','Էրեբունի','Կենտրոն','Նորք-Մարաշ','Քանաքեռ-Զեյթուն'],
+    'Նորք-Մարաշ':['Էրեբունի','Կենտրոն','Նոր Նորք'],
+    'Նուբարաշեն':['Էրեբունի','Շենգավիթ'],
+    'Շենգավիթ':['Էրեբունի','Կենտրոն','Մալաթիա-Սեբաստիա','Նուբարաշեն'],
+    'Քանաքեռ-Զեյթուն':['Ավան','Արաբկիր','Կենտրոն','Նոր Նորք']
+  };
+  function districtDistance(from,to){
+    if(from===to)return 0;
+    const queue=[[from,0]],visited=new Set([from]);
+    while(queue.length){
+      const [current,distance]=queue.shift();
+      for(const next of (districtNeighbors[current]||[])){
+        if(next===to)return distance+1;
+        if(!visited.has(next)){visited.add(next);queue.push([next,distance+1]);}
+      }
+    }
+    return Infinity;
+  }
   let routeRequest=0, addressTimer;
   function calculateRoute(automatic=false){
     const pickupCommunity=$('#pickupCommunity').value;
@@ -68,16 +94,17 @@
       $('#routeHelp').textContent='Ընտրեք սկզբնակետի ու վերջնակետի համայնքները և գրեք հասցեները։';
       return;
     }
-    routeRequest++;
-    routeKm=0;
-    const fare=10000;
+    const distance=districtDistance(pickupCommunity,destinationCommunity);
+    if(!Number.isFinite(distance)){notify('Այս համայնքների միջև սակագինը հնարավոր չեղավ որոշել։');return;}
+    const intermediate=Math.max(0,distance-1);
+    routeFare=distance<=1?10000:12000+Math.max(0,intermediate-1)*1000;
     routeKm=1;
-    routeText=pickupCommunity===destinationCommunity?'Նույն համայնքի ներսում':'Համայնքների միջև';
+    routeText=distance===0?'Նույն համայնքի ներսում':distance===1?'Հարևան համայնքներ':intermediate+' միջանկյալ համայնք';
     $('#routeDistance').textContent=routeText;
-    $('#routePrice').textContent=money(fare);
+    $('#routePrice').textContent=money(routeFare);
     $('#routeResult').hidden=false;
-    $('#routeHelp').textContent='Ֆիքսված համայնքային արժեք՝ 10,000 ֏։ Հաշվարկը կատարվում է անմիջապես՝ առանց քարտեզի որոնման։';
-    if(!automatic)notify('Ֆիքսված արժեքը հաշվարկվեց։');
+    $('#routeHelp').textContent='Համայնքների միջև հաշվարկված սակագին՝ '+intermediate+' միջանկյալ համայնք։ Գինը ֆիքսված է և հաշվարկվում է անմիջապես։';
+    if(!automatic)notify('Համայնքային արժեքը հաշվարկվեց։');
   }
   $('#calculateRoute').onclick=()=>calculateRoute(false);
   $('#calculateRoute').hidden=false;
@@ -93,7 +120,7 @@
     $('#'+id).addEventListener('input',scheduleRouteCalculation);
     $('#'+id).addEventListener('change',scheduleRouteCalculation);
   });
-  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+f.get('pickup'),to:f.get('destinationCommunity')+' · '+f.get('destination'),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),km:0,price:service==='sober'?10000:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
+  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+f.get('pickup'),to:f.get('destinationCommunity')+' · '+f.get('destination'),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),km:0,price:service==='sober'?routeFare:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;routeFare=10000;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
   $('#year').textContent=new Date().getFullYear();
