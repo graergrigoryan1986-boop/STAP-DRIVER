@@ -182,93 +182,44 @@
   $('#serviceType').addEventListener('change',e=>{const v=e.target.value;$('#carSpecs').hidden=v!=='sober'; $('#destination').required=true;$('#calculateRoute').closest('.field').hidden=false;$('#bookingRateNote').textContent='Սակագին՝ 1 կմ = 1,000 ֏։ Վարորդը վարում է ձեր մեքենան։'});
   $$('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
   $('#serviceType').dispatchEvent(new Event('change'));
-  const MIN_FARE=5000, RATE_PER_KM=1000;
-  // Yandex Geosuggest key: add the restricted browser key here after deployment.
+  const MIN_FARE=10000, RATE_PER_KM=0;
   let routeRequest=0, addressTimer;
-  async function calculateRoute(automatic=false){
-    const a=$('#pickup').value.trim(),b=$('#destination').value.trim();
-    if(!a||!b){if(!automatic)notify('Լրացրեք մեկնարկի և նպատակակետի հասցեները։');return}
-    const requestId=++routeRequest,btn=$('#calculateRoute');
-    btn.disabled=true;btn.textContent='Հաշվարկվում է…';
-    $('#routeHelp').textContent='Հասցեները որոնվում են․ խնդրում ենք սպասել…';
-    $('#routeResult').hidden=true;
-    const fetchJson=async(url,timeout=12000)=>{
-      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
-      try{
-        const response=await fetch(url,{signal:controller.signal,headers:{Accept:'application/json'}});
-        if(!response.ok)throw Error('HTTP '+response.status);
-        return await response.json();
-      }finally{clearTimeout(timer)}
-    };
-    try{
-      const geo=async(q,input)=>{
-        if(input.dataset.selectedAddress===q&&input.dataset.selectedLon&&input.dataset.selectedLat)return {lon:Number(input.dataset.selectedLon),lat:Number(input.dataset.selectedLat)};
-        const clean=q.replace(/,\s*(Հայաստան|Armenia|Հայաստանի Հանրապետություն)$/i,'').trim();
-        const language=/[\u0530-\u058F]/.test(clean)?'hy':/[\u0400-\u04FF]/.test(clean)?'ru':'en';
-        const photonParams=new URLSearchParams({q:clean+', Yerevan, Armenia',limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:language});
-        const nomParams=new URLSearchParams({q:clean+', Yerevan, Armenia',format:'jsonv2',limit:'5',countrycodes:'am',addressdetails:'1',accept_language:language,viewbox:'44.20,40.35,44.75,40.00'});
-        const inYerevan=point=>Number.isFinite(point.lon)&&Number.isFinite(point.lat)&&point.lon>=44.20&&point.lon<=44.75&&point.lat>=40.00&&point.lat<=40.35;
-        const photon=(async()=>{const data=await fetchJson('https://photon.komoot.io/api/?'+photonParams.toString(),7000);return (data.features||[]).filter(x=>x.geometry?.coordinates?.length===2).map(x=>({lon:Number(x.geometry.coordinates[0]),lat:Number(x.geometry.coordinates[1])})).filter(inYerevan);})();
-        const nominatim=(async()=>{const data=await fetchJson('https://nominatim.openstreetmap.org/search?'+nomParams.toString()+'&bounded=1',7000);return (data||[]).map(x=>({lon:Number(x.lon),lat:Number(x.lat)})).filter(inYerevan);})();
-        const results=await Promise.allSettled([photon,nominatim]);
-        const candidates=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
-        const result=candidates[0];
-        if(!result)throw Error('Հասցեն Երևանում չգտնվեց։ Ընտրեք որոնման առաջարկներից մեկը կամ գրեք հասցեն ավելի հստակ։');
-        return result;
-      };
-      $('#routeHelp').textContent='Երկու հասցեներն էլ որոնվում են միաժամանակ…';
-      const [p,d]=await Promise.all([geo(a,$('#pickup')),geo(b,$('#destination'))]);
-      if(requestId!==routeRequest)return;
-      $('#routeHelp').textContent='Հասցեները գտնվեցին․ հաշվարկվում է մեքենայի երթուղին…';
-      const routeUrl='https://router.project-osrm.org/route/v1/driving/'+p.lon+','+p.lat+';'+d.lon+','+d.lat+'?overview=false&alternatives=true&steps=false';
-      const route=await fetchJson(routeUrl,18000);
-      if(requestId!==routeRequest)return;
-      if(route.code!=='Ok'||!route.routes?.length)throw Error('Այս հասցեների միջև մեքենայի երթուղի չգտնվեց։ Ստուգեք հասցեները։');
-      const distance=route.routes[0].distance;
-      if(!Number.isFinite(distance)||distance<=0)throw Error('Երթուղու հեռավորությունը հնարավոր չեղավ որոշել։');
-      routeKm=Math.max(0.1,Math.round(distance/100)/10);
-      const fare=Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM));
-      routeText='Երթուղի՝ '+routeKm+' կմ';
-      $('#routeDistance').textContent=routeKm.toLocaleString('hy-AM')+' կմ';
-      $('#routePrice').textContent=money(fare);
-      $('#routeResult').hidden=false;
-      $('#routeHelp').textContent='Հաշվարկը պատրաստ է։ Նվազագույն արժեքը՝ 5,000 ֏, սակագինը՝ 1,000 ֏/կմ։';
-      if(!automatic)notify('Երթուղին և արժեքը հաշվարկվեցին։');
-    }catch(err){
-      if(requestId!==routeRequest)return;
-      routeKm=0;
-      $('#routeResult').hidden=true;
-      $('#routeHelp').textContent=err.message||'Չհաջողվեց հաշվարկել երթուղին։ Ստուգեք հասցեները և կրկին փորձեք։';
-      if(!automatic)notify(err.message||'Չհաջողվեց գտնել երթուղին։');
-    }finally{
-      if(requestId===routeRequest){btn.disabled=false;btn.textContent='Հաշվել երթուղին'}
+  function calculateRoute(automatic=false){
+    const pickupCommunity=$('#pickupCommunity').value;
+    const destinationCommunity=$('#destinationCommunity').value;
+    const pickupAddress=$('#pickup').value.trim();
+    const destinationAddress=$('#destination').value.trim();
+    if(!pickupCommunity||!destinationCommunity||!pickupAddress||!destinationAddress){
+      if(!automatic)notify('Ընտրեք երկու համայնքները և լրացրեք երկու հասցեները։');
+      $('#routeHelp').textContent='Ընտրեք սկզբնակետի ու վերջնակետի համայնքները և գրեք հասցեները։';
+      return;
     }
+    routeRequest++;
+    routeKm=0;
+    const fare=10000;
+    routeKm=1;
+    routeText=pickupCommunity===destinationCommunity?'Նույն համայնքի ներսում':'Համայնքների միջև';
+    $('#routeDistance').textContent=routeText;
+    $('#routePrice').textContent=money(fare);
+    $('#routeResult').hidden=false;
+    $('#routeHelp').textContent='Ֆիքսված համայնքային արժեք՝ 10,000 ֏։ Հաշվարկը կատարվում է անմիջապես՝ առանց քարտեզի որոնման։';
+    if(!automatic)notify('Ֆիքսված արժեքը հաշվարկվեց։');
   }
   $('#calculateRoute').onclick=()=>calculateRoute(false);
   $('#calculateRoute').hidden=false;
   function scheduleRouteCalculation(){
-    clearTimeout(addressTimer);routeRequest++;routeKm=0;$('#routeResult').hidden=true;
-    const a=$('#pickup').value.trim(),b=$('#destination').value.trim();
-    if(a&&b){$('#routeHelp').textContent='Երկու հասցեներն էլ լրացված են․ հաշվարկում ենք վերջնական արժեքը…';addressTimer=setTimeout(()=>calculateRoute(true),700)}
-    else $('#routeHelp').textContent='Նշեք մեկնարկի և նպատակակետի հասցեները․ երկուսն էլ պարտադիր են։';
+    clearTimeout(addressTimer);
+    routeKm=0;
+    $('#routeResult').hidden=true;
+    const ready=$('#pickupCommunity').value&&$('#destinationCommunity').value&&$('#pickup').value.trim()&&$('#destination').value.trim();
+    if(ready){$('#routeHelp').textContent='Համայնքներն ու հասցեները լրացված են․ արժեքը հաշվարկվում է…';addressTimer=setTimeout(()=>calculateRoute(true),100)}
+    else $('#routeHelp').textContent='Ընտրեք երկու համայնքները և լրացրեք երկու հասցեները։';
   }
-  ['pickup','destination'].forEach(id=>{
-    const input=$('#'+id);
-    const onAddressChange=()=>{
-      if(input.value!==input.dataset.selectedAddress){delete input.dataset.selectedLon;delete input.dataset.selectedLat;delete input.dataset.selectedAddress;}
-      scheduleRouteCalculation();
-    };
-    input.addEventListener('input',onAddressChange);
-    input.addEventListener('change',scheduleRouteCalculation);
-    input.addEventListener('blur',()=>setTimeout(scheduleRouteCalculation,250));
+  ['pickupCommunity','destinationCommunity','pickup','destination'].forEach(id=>{
+    $('#'+id).addEventListener('input',scheduleRouteCalculation);
+    $('#'+id).addEventListener('change',scheduleRouteCalculation);
   });
-  // Re-check after browser restores or autofills saved form values.
-  const checkRestoredAddresses=()=>setTimeout(()=>{
-    if($('#pickup').value.trim()&&$('#destination').value.trim())scheduleRouteCalculation();
-  },900);
-  window.addEventListener('pageshow',checkRestoredAddresses);
-  checkRestoredAddresses(); 
-  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickup'),to:f.get('destination'),km:routeKm,price:service==='sober'?Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM)):null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
+  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+f.get('pickup'),to:f.get('destinationCommunity')+' · '+f.get('destination'),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),km:0,price:service==='sober'?10000:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
   $('#year').textContent=new Date().getFullYear();
