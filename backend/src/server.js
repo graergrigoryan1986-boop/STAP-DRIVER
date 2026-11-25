@@ -46,7 +46,7 @@ function decryptPrivate(value){if(!value)return null;const data=Buffer.from(valu
 const publicUser = user => ({
   id: user.id, name: user.name, email: user.email, phone: user.phone,
   role: user.role, isBlocked: user.isBlocked, isVerified: user.isVerified,
-  balanceAmd: user.balanceAmd, driverLicense: user.driverLicense,
+  balanceAmd: user.balanceAmd, rating: user.rating, driverLicense: user.driverLicense,
   driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
   driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, createdAt: user.createdAt
