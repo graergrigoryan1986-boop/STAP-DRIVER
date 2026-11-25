@@ -54,11 +54,11 @@ const publicUser = user => ({
 const LICENSE_CATEGORIES = ['AM','A1','A','B1','B','C1','C','D1','D','BE','C1E','CE','D1E','DE'];
 function extractLicenseCategories(raw) {
   const text = String(raw || '').toUpperCase().replace(/[|]/g, 'I');
-  const lines = text.split(/\\r?\\n/).map(line => line.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   const heading = lines.findIndex(line => /CATEGOR|CAT[ÉE]GOR|КАТЕГОР|ԿԱՐԳԵՐ|ԿԱՐԳԵՐԸ/.test(line));
   const source = heading >= 0 ? lines.slice(heading, heading + 18).join(' ') : text;
   const found = new Set();
-  for (const line of source.split(/\\s+/)) {
+  for (const line of source.split(/\s+/)) {
     const token = line.replace(/^[^A-Z0-9]+|[^A-Z0-9]+$/g, '');
     if (LICENSE_CATEGORIES.includes(token)) found.add(token);
   }
@@ -91,6 +91,10 @@ function parseMrzIdentity(raw) {
     }
   }
   return null;
+}
+function transliterateArmenian(value) {
+  const map={Ա:'A',Բ:'B',Գ:'G',Դ:'D',Ե:'E',Զ:'Z',Է:'E',Ը:'Y',Թ:'T',Ժ:'ZH',Ի:'I',Լ:'L',Խ:'KH',Ծ:'TS',Կ:'K',Հ:'H',Ձ:'DZ',Ղ:'GH',Ճ:'CH',Մ:'M',Յ:'Y',Ն:'N',Շ:'SH',Ո:'O',Չ:'CH',Պ:'P',Ջ:'J',Ռ:'R',Ս:'S',Վ:'V',Տ:'T',Ր:'R',Ց:'TS',Ւ:'V',Փ:'P',Ք:'K',Օ:'O',Ֆ:'F'};
+  return Array.from(String(value||'').toUpperCase()).map(ch=>map[ch]||ch).join('');
 }
 function labelledDate(raw, labels) {
   const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
@@ -457,8 +461,8 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const identity=parseMrzIdentity(input.passportOcrText);
   const clean=value=>String(value||'').toLocaleUpperCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-ZԱ-Ֆ]/g,'');
   const licenseText=String(input.ocrText||''),licenseClean=clean(licenseText);
-  const surname=clean(identity?.surname),firstName=clean(identity?.firstName);
-  const namesMatch=Boolean(surname.length>=3&&firstName.length>=2&&licenseClean.includes(surname)&&licenseClean.includes(firstName));
+  const surname=clean(identity?.surname),firstName=clean(identity?.firstName),licenseLatin=clean(transliterateArmenian(licenseText));
+  const namesMatch=Boolean(surname.length>=3&&firstName.length>=2&&(licenseClean.includes(surname)&&licenseClean.includes(firstName)||licenseLatin.includes(surname)&&licenseLatin.includes(firstName)));
   const detectedLicenseCategories=extractLicenseCategories(licenseText);
   const issueDate=labelledDate(licenseText,[/\b4a\b/i,/date of issue/i,/issue date/i,/issued/i,/տրման ամսաթիվ/i,/տրամադրման ամսաթիվ/i]);
   const licenseExpiry=labelledDate(licenseText,[/\b4b\b/i,/date of expiry/i,/expiry date/i,/valid until/i,/վավեր է մինչև/i,/գործողության ավարտ/i]);
