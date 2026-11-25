@@ -477,7 +477,7 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const expired=Boolean((birthDate&&birthDate>now)||(age!==null&&age<18)||(passportExpiry&&passportExpiry<=now)||(licenseExpiry&&licenseExpiry<=now)||(issueDate&&issueDate>now));
   const datesMatch=Boolean(birthDate&&licenseBirthDate&&birthDate.getTime()===licenseBirthDate.getTime());
   const allReadable=Boolean(identity&&birthDate&&passportExpiry&&licenseBirthDate&&issueDate&&licenseExpiry&&datesMatch&&namesMatch&&detectedLicenseCategories.length>0);
-  const autoPassed=allReadable&&!expired,status=autoPassed?'AUTO_APPROVED':'REJECTED';
+  const autoPassed=false,status='PENDING_REVIEW';
   const passportNumber=identity?.passportNumber||'';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
     driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,
@@ -486,15 +486,15 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
     passportFront:docs.passportFront,passportBack:docs.passportBack,driverProfilePhoto:docs.selfie,
     driverFirstNameLatin:identity?.firstName||null,driverLastNameLatin:identity?.surname||null,driverPatronymicLatin:null,
     driverLicenseCategories:detectedLicenseCategories,driverLicenseIssuedAt:issueDate,driverLicenseExpiresAt:licenseExpiry,
-    driverOcrText:licenseText,driverDocumentsStatus:status,isVerified:autoPassed,driverVerifiedAt:autoPassed?new Date():null,
-    driverVerificationMessage:autoPassed?'Փաստաթղթերի OCR տվյալները համընկել են։ Վարորդը հաստատվեց։':expired?'Փաստաթղթի ժամկետը լրացած է կամ տարիքը չի համապատասխանում։ Խնդրում ենք ուղարկել գործող փաստաթղթերի նոր լուսանկարներ։':'Տվյալները չեն համընկել կամ փաստաթղթերը հստակ չեն ընթերցվել։ Ստուգեք լուսանկարների որակը և կրկին ուղարկեք բոլոր լուսանկարները։',
+    driverOcrText:licenseText,driverDocumentsStatus:status,isVerified:false,driverVerifiedAt:null,
+    driverVerificationMessage:allReadable&&!expired?'OCR տվյալները նախնական ստուգմամբ համընկել են։ Սպասում է ադմինի վերջնական ստուգմանը։':expired?'OCR-ը հայտնաբերել է ժամկետանց կամ տարիքային անհամապատասխանություն։ Պահանջվում է ադմինի ստուգում։':'OCR-ը չի կարողացել վստահորեն հաստատել բոլոր տվյալները։ Պահանջվում է ադմինի ձեռքով ստուգում։',
     driverDocumentsPdf:encryptPrivate(makeDocumentsPdf('STAP DRIVER identity documents',[
       ['Driver license front',docs.front],['Driver license back',docs.back],['Driver selfie',docs.selfie],
       [input.passportDocumentType==='PASSPORT'?'Passport photo page':'ID card front',docs.passportFront],
       [input.passportDocumentType==='PASSPORT'?'Passport registration page':'ID card back',docs.passportBack]
     ].map(([label,data])=>({label,data}))))
   }});
-  res.json({success:true,user:publicUser(user),message:autoPassed?'Փաստաթղթերի տվյալները համընկել են․ վարորդը ավտոմատ հաստատվեց։':'Նույնականացումը չհաստատվեց։ Տվյալները չեն համընկել կամ լուսանկարները հստակ չեն ընթերցվել։ Խնդրում ենք կրկին ուղարկել բոլոր լուսանկարները։'});
+  res.json({success:true,user:publicUser(user),message:'Բոլոր 5 լուսանկարներն ուղարկվել են ադմինին։ Փաստաթղթերը սպասում են ձեռքով ստուգման։'});
 }));
 
 app.post('/api/drivers/profile-photo', auth, only('DRIVER'), asyncRoute(async(req,res)=>{
