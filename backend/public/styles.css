@@ -82,3 +82,15 @@ body.authenticated #appPanel{width:100%;max-width:none}
 body.authenticated #appPanel .dash-top{margin-bottom:18px}
 .driver-overview{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:560px){.driver-overview{grid-template-columns:1fr}}
+
+/* Driver/customer/admin account: keep only the private account area visible */
+body.authenticated main>section:not(#account){display:none!important}
+body.authenticated .topbar .navlinks,
+body.authenticated .topbar .nav-actions{display:none!important}
+body.authenticated .topbar .nav{justify-content:flex-start;min-height:64px;height:64px}
+body.authenticated #account{display:block!important;padding:20px 0 36px}
+body.authenticated #account .booking-intro,
+body.authenticated #account #authPanel{display:none!important}
+body.authenticated #account .booking-layout{display:block;max-width:1000px}
+body.authenticated #account #appPanel{display:block!important;width:100%;max-width:none}
+body.authenticated footer{display:none!important}
