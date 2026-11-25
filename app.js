@@ -244,7 +244,7 @@
     }
   }
   $('#calculateRoute').onclick=()=>calculateRoute(false);
-  $('#calculateRoute').hidden=true;
+  $('#calculateRoute').hidden=false;
   function scheduleRouteCalculation(){
     clearTimeout(addressTimer);routeRequest++;routeKm=0;$('#routeResult').hidden=true;
     const a=$('#pickup').value.trim(),b=$('#destination').value.trim();
