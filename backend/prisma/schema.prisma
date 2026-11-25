@@ -79,6 +79,7 @@ model Order {
   customer User  @relation("CustomerOrders", fields: [customerId], references: [id])
   driver   User? @relation("DriverOrders", fields: [driverId], references: [id])
   ratings  Rating[]
+  skippedBy SkippedOrder[]
   @@index([status, createdAt])
   @@index([driverId, status])
 }
