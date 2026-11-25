@@ -248,7 +248,7 @@ app.patch('/api/admin/drivers/:id/profile', auth, only('ADMIN'), asyncRoute(asyn
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
   if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
   const user = await prisma.user.update({ where: { id: driver.id }, data: {
-    ...input, driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z')
+    ...input, driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z'), ...(input.driverLicenseIssuedAt ? { driverLicenseIssuedAt: new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z') } : {})
   }});
   res.json({ user: publicUser(user), message: 'Վարորդական տվյալները թարմացվեցին ադմինի կողմից։' });
 }));
