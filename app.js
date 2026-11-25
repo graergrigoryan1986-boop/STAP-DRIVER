@@ -68,7 +68,7 @@
       if(!input.value||input.value<input.min)input.value='';
     }
   }
-  $('.mode-btn').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#scheduleFields').hidden=false;$('#scheduledAt').required=true;updateBookingTimeLimits();}));
+  $$('.mode-btn').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;$$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#scheduleFields').hidden=false;$('#scheduledAt').required=true;updateBookingTimeLimits();}));
   updateBookingTimeLimits();
   $('#serviceType').addEventListener('change',e=>{const v=e.target.value;$('#carSpecs').hidden=v!=='sober'; $('#destination').required=true;$('#bookingRateNote').textContent='Սակագին՝ 1 կմ = 1,000 ֏։ Վարորդը վարում է ձեր մեքենան։'});
   $$('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
