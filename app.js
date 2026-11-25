@@ -106,7 +106,7 @@
       if(error.name==='AbortError'&&suggestControllers[id]!==controller)return;
       console.warn('Address autocomplete failed:',error);
       list._items=[];
-      list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հասցեի որոնումը ժամանակավորապես անհասանելի է</span><span class="suggestion-sub">Շարունակեք գրել ամբողջական հասցեն կամ փորձեք կրկին։</span></div>';
+      list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումները ժամանակավորապես անհասանելի են</span><span class="suggestion-sub">Շարունակեք գրել հասցեն․ երթուղին կփորձի հաշվարկվել ինքնաշխատ։</span></div>';
       list.hidden=false;
     }
   }
@@ -124,6 +124,10 @@
       const number=p.housenumber||typedNumber||'';
       const parts=[street,number,p.district,p.city||'Երևան',p.country||'Հայաստան'].filter(Boolean);
       input.value=[...new Set(parts)].join(', ');
+      const coords=feature.geometry?.coordinates;
+      if(coords?.length===2&&coords.every(Number.isFinite)){
+        input.dataset.selectedLon=String(coords[0]);input.dataset.selectedLat=String(coords[1]);input.dataset.selectedAddress=input.value;
+      }
       list.hidden=true;
       input.dispatchEvent(new Event('change',{bubbles:true}));
     });
@@ -197,47 +201,22 @@
       }finally{clearTimeout(timer)}
     };
     try{
-      const geo=async(q)=>{
+      const geo=async(q,input)=>{
+        if(input.dataset.selectedAddress===q&&input.dataset.selectedLon&&input.dataset.selectedLat)return {lon:Number(input.dataset.selectedLon),lat:Number(input.dataset.selectedLat)};
         const clean=q.replace(/,\s*(Հայաստան|Armenia|Հայաստանի Հանրապետություն)$/i,'').trim();
         const language=/[\u0530-\u058F]/.test(clean)?'hy':/[\u0400-\u04FF]/.test(clean)?'ru':'en';
-        const variants=[clean,clean+', Yerevan',clean+', Armenia'];
-        let photonError=null;
-        for(const term of [...new Set(variants)]){
-          try{
-            const params=new URLSearchParams({q:term,limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:language});
-            const data=await fetchJson('https://photon.komoot.io/api/?'+params.toString());
-            const features=(data.features||[]).filter(x=>x.geometry?.coordinates?.length===2);
-            if(features.length){
-              const inArmenia=features.filter(x=>{
-                const p=x.properties||{};
-                return /armenia|հայաստան|армения/i.test([p.country,p.countrycode,p.state,p.city,p.county].join(' '));
-              });
-              const pool=inArmenia.length?inArmenia:features;
-              const chosen=pool.sort((x,y)=>{
-                const xp=x.properties||{},yp=y.properties||{};
-                const xs=(xp.city||'').toLowerCase().includes('yerevan')?0:1;
-                const ys=(yp.city||'').toLowerCase().includes('yerevan')?0:1;
-                return xs-ys;
-              })[0];
-              const [lon,lat]=chosen.geometry.coordinates;
-              return {lon,lat};
-            }
-          }catch(error){photonError=error}
-        }
-        // Backup geocoder if Photon is unavailable or has no result.
-        const params=new URLSearchParams({q:clean,format:'jsonv2',limit:'5',countrycodes:'am',addressdetails:'1',accept_language:language,viewbox:'44.20,40.35,44.75,40.00'});
-        const fallback=await fetchJson('https://nominatim.openstreetmap.org/search?'+params.toString());
-        if(fallback.length){
-          const [lon,lat]=[Number(fallback[0].lon),Number(fallback[0].lat)];
-          if(Number.isFinite(lon)&&Number.isFinite(lat))return {lon,lat};
-        }
-        if(photonError?.name==='AbortError')throw Error('Հասցեի որոնումը ուշանում է։ Փորձեք կրկին։');
-        throw Error('Հասցեն չգտնվեց։ Գրեք փողոցի անունը և շենքի համարը կամ ընտրեք առաջարկվող հասցեն։');
+        const photonParams=new URLSearchParams({q:clean+', Yerevan, Armenia',limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:language});
+        const nomParams=new URLSearchParams({q:clean+', Yerevan, Armenia',format:'jsonv2',limit:'5',countrycodes:'am',addressdetails:'1',accept_language:language,viewbox:'44.20,40.35,44.75,40.00'});
+        const photon=(async()=>{const data=await fetchJson('https://photon.komoot.io/api/?'+photonParams.toString(),7000);const features=(data.features||[]).filter(x=>x.geometry?.coordinates?.length===2);const local=features.filter(x=>/armenia|հայաստան|армения/i.test([x.properties?.country,x.properties?.countrycode,x.properties?.city,x.properties?.state].join(' ')));const chosen=(local.length?local:features)[0];if(!chosen)throw Error('Photon no match');return {lon:Number(chosen.geometry.coordinates[0]),lat:Number(chosen.geometry.coordinates[1])};})();
+        const nominatim=(async()=>{const data=await fetchJson('https://nominatim.openstreetmap.org/search?'+nomParams.toString(),7000);const item=data?.[0];if(!item)throw Error('Nominatim no match');return {lon:Number(item.lon),lat:Number(item.lat)};})();
+        const result=await Promise.any([photon,nominatim]);
+        if(!Number.isFinite(result.lon)||!Number.isFinite(result.lat))throw Error('Invalid coordinates');
+        return result;
       };
-      const p=await geo(a);
+      const p=await geo(a,$('#pickup'));
       if(requestId!==routeRequest)return;
       $('#routeHelp').textContent='Մեկնարկի հասցեն գտնվեց․ որոնվում է նպատակակետը…';
-      const d=await geo(b);
+      const d=await geo(b,$('#destination'));
       if(requestId!==routeRequest)return;
       $('#routeHelp').textContent='Հասցեները գտնվեցին․ հաշվարկվում է մեքենայի երթուղին…';
       const routeUrl='https://router.project-osrm.org/route/v1/driving/'+p.lon+','+p.lat+';'+d.lon+','+d.lat+'?overview=false&alternatives=true&steps=false';
@@ -273,8 +252,12 @@
     else $('#routeHelp').textContent='Նշեք մեկնարկի և նպատակակետի հասցեները․ երկուսն էլ պարտադիր են։';
   }
   ['pickup','destination'].forEach(id=>{
-    $('#'+id).addEventListener('input',scheduleRouteCalculation);
-    $('#'+id).addEventListener('change',scheduleRouteCalculation);
+    const input=$('#'+id);
+    input.addEventListener('input',()=>{
+      if(input.value!==input.dataset.selectedAddress){delete input.dataset.selectedLon;delete input.dataset.selectedLat;delete input.dataset.selectedAddress;}
+      scheduleRouteCalculation();
+    });
+    input.addEventListener('change',scheduleRouteCalculation);
   }); 
   $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickup'),to:f.get('destination'),km:routeKm,price:service==='sober'?Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM)):null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
