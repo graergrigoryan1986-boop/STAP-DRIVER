@@ -43,7 +43,6 @@ async function driverView(){
   <p class="secure-note">Անունը, ազգանունը, ծննդյան ամսաթիվը, վարորդական կարգերն ու վկայականի ժամկետները կարդացվում են փաստաթղթերից։ Ձեռքով լրացնել պետք չէ։</p>
   <p class="secure-note">Վարորդական ստաժ՝ <strong>${experienceLabel(u.driverLicenseIssuedAt)}</strong>. ${u.isVerified?'Տվյալները հաստատված են և կողպված։':'Ուղարկեք փաստաթղթերը ֆոտովերահսկման։'}</p>
   <div class="driver-admin-data"><strong>Վարորդական կարգեր՝</strong> ${esc((u.driverLicenseCategories||[]).join(', ')||'Դեռ նշված չէ')}<br><strong>Փոխանցման տուփ՝</strong> ${u.driverTransmission==='MANUAL'?'Ավտոմատ / մեխանիկական':'Ավտոմատ'}</div>
-  <div class="ocr-panel"><strong>Ավտոմատ նույնականացում</strong><p class="muted">Համակարգը կկարդա բոլոր փաստաթղթերը և կհամեմատի դրանց տվյալները։</p><small id="ocrStatus" class="secure-note"></small></div>
   <form id="driverDocsForm" class="docs-form" style="${u.isVerified||u.driverDocumentsStatus==='PENDING_REVIEW'?'display:none':''}">
 <h4>1. Վարորդական իրավունք</h4>
 <label>Վարորդականի առջևի կողմ<input type="file" name="front" accept="image/*" capture="environment" required></label>
