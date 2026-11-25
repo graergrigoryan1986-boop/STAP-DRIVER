@@ -42,6 +42,14 @@ model User {
   driverPatronymicLatin String?
   driverLicenseSeries String?
   driverLicenseExpiresAt DateTime?
+  driverLicenseIssuedAt DateTime?
+  driverLicenseCategories String[] @default([])
+  driverTransmission String @default("AUTOMATIC")
+  driverLicenseFront Bytes?
+  driverLicenseBack Bytes?
+  driverLicenseSelfie Bytes?
+  driverDocumentsStatus String @default("NOT_SUBMITTED")
+  driverOcrText String?
   rating          Float    @default(5.0)
   balanceAmd     Int      @default(0)
   createdAt      DateTime @default(now())
@@ -67,6 +75,8 @@ model Order {
   destinationLng     Float?
   status             OrderStatus @default(OPEN)
   fareAmd            Int
+  requiredLicenseCategory String @default("B")
+  transmissionType String @default("AUTOMATIC")
   commissionRate     Int         @default(25)
   commissionAmd      Int         @default(0)
   driverEarningAmd   Int         @default(0)
