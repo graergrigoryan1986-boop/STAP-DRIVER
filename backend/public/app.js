@@ -52,7 +52,7 @@ async function driverView(){
 <label>Փաստաթղթի տեսակ<select name="passportDocumentType" required><option value="PASSPORT">Անձնագիր</option><option value="ID_CARD">Նույնականացման քարտ</option></select></label>
 <label id="identityFrontLabel">Անձնագրի լուսանկարով էջ<input type="file" name="passportFront" accept="image/*" capture="environment" required></label>
 <label id="identityBackLabel">Անձնագրի գրանցման էջ<input type="file" name="passportBack" accept="image/*" capture="environment" required></label>
-<button class="action" type="submit">Ուղարկել ավտոմատ նույնականացման</button>
+<button class="action docs-submit" type="submit"><span aria-hidden="true">⬆</span> ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ</button>
 <small class="secure-note">Պարտադիր է բոլոր 5 լուսանկարները։ Լուսանկարները պետք է լինեն ամբողջական և հստակ։</small>
 </form>
 ${u.driverDocumentsStatus==='PENDING_REVIEW'?'<p class="secure-note">Լուսանկարներն ուղարկվել են ադմինին։ Սպասեք ստուգման արդյունքին։ Ներբեռնման բաժինը փակ է մինչև ադմինի որոշումը։</p>':''}${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
