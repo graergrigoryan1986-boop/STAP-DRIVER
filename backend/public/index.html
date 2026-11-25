@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101820">
+  <title>STAP DRIVER</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/">STAP <span>DRIVER</span></a><span class="tag">YEREVAN • ARMENIA</span></header>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">ՔՈ ՃԱՆԱՊԱՐՀԸ՝ ՄԵՐ ՀԵՏ</div>
+      <h1>Ուղևորություններ՝<br><em>ավելի պարզ։</em></h1>
+      <p>STAP DRIVER միասնական հարթակ՝ հաճախորդների, վարորդների և ադմինիստրատորի համար։</p>
+      <div class="pills"><span>Անվտանգ հաշիվներ</span><span>Պատվերների կառավարում</span><span>25% միջնորդավճար</span></div>
+    </section>
+    <section id="authPanel" class="panel">
+      <div class="switcher"><button class="switch active" id="loginTab">Մուտք</button><button class="switch" id="registerTab">Գրանցում</button></div>
+      <form id="authForm">
+        <div id="registerFields" class="hidden">
+          <label>Անուն Ազգանուն<input name="name" autocomplete="name" minlength="2"></label>
+          <label>Հեռախոս<input name="phone" autocomplete="tel" type="tel"></label>
+          <label>Հաշվի տեսակ<select name="role" id="role"><option value="CUSTOMER">Հաճախորդ</option><option value="DRIVER">Վարորդ</option></select></label>
+          <label id="licenseField" class="hidden">Վարորդական իրավունքի տվյալներ<input name="driverLicense"></label>
+        </div>
+        <label>Էլ․ փոստ<input name="email" type="email" autocomplete="username" required></label>
+        <label>Գաղտնաբառ<input name="password" type="password" autocomplete="current-password" minlength="10" required></label>
+        <button class="primary" type="submit" id="submitAuth">Մուտք գործել</button>
+      </form>
+      <p id="authMessage" class="message" role="status"></p>
+      <small>Գրանցման համար գաղտնաբառը պետք է ունենա առնվազն 10 նիշ։</small>
+    </section>
+    <section id="appPanel" class="panel hidden">
+      <div class="account-head"><div><div class="eyebrow">ԱՆՁՆԱԿԱՆ ՏԱՐԱԾՔ</div><h2 id="welcome"></h2><p id="accountMeta" class="muted"></p></div><button id="logout" class="quiet">Ելք</button></div>
+      <div id="dashboard"></div>
+      <p id="appMessage" class="message" role="status"></p>
+    </section>
+    <footer>© <span id="year"></span> STAP DRIVER • Բոլոր իրավունքները պաշտպանված են</footer>
+  </main>
+</body>
+</html>
