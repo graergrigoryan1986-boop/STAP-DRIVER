@@ -154,7 +154,7 @@
     $('#navAuth').querySelector('#openDashboard')?.addEventListener('click',()=>showDashboard());
     $('#navAuth').querySelector('#openLogin')?.addEventListener('click',()=>openModal('loginModal'));
     $('#navAuth').querySelector('#openRegister')?.addEventListener('click',()=>switchAuth('customer'));
-    $('#dashboardNav').hidden=!u;
+    const dashboardNav=$('#dashboardNav');if(dashboardNav)dashboardNav.hidden=!u;
   }
   function showDashboard(){
     const u=user();if(!u)return;
@@ -207,10 +207,13 @@
         const language=/[\u0530-\u058F]/.test(clean)?'hy':/[\u0400-\u04FF]/.test(clean)?'ru':'en';
         const photonParams=new URLSearchParams({q:clean+', Yerevan, Armenia',limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:language});
         const nomParams=new URLSearchParams({q:clean+', Yerevan, Armenia',format:'jsonv2',limit:'5',countrycodes:'am',addressdetails:'1',accept_language:language,viewbox:'44.20,40.35,44.75,40.00'});
-        const photon=(async()=>{const data=await fetchJson('https://photon.komoot.io/api/?'+photonParams.toString(),7000);const features=(data.features||[]).filter(x=>x.geometry?.coordinates?.length===2);const local=features.filter(x=>/armenia|հայաստան|армения/i.test([x.properties?.country,x.properties?.countrycode,x.properties?.city,x.properties?.state].join(' ')));const chosen=(local.length?local:features)[0];if(!chosen)throw Error('Photon no match');return {lon:Number(chosen.geometry.coordinates[0]),lat:Number(chosen.geometry.coordinates[1])};})();
-        const nominatim=(async()=>{const data=await fetchJson('https://nominatim.openstreetmap.org/search?'+nomParams.toString(),7000);const item=data?.[0];if(!item)throw Error('Nominatim no match');return {lon:Number(item.lon),lat:Number(item.lat)};})();
-        const result=await Promise.any([photon,nominatim]);
-        if(!Number.isFinite(result.lon)||!Number.isFinite(result.lat))throw Error('Invalid coordinates');
+        const inYerevan=point=>Number.isFinite(point.lon)&&Number.isFinite(point.lat)&&point.lon>=44.20&&point.lon<=44.75&&point.lat>=40.00&&point.lat<=40.35;
+        const photon=(async()=>{const data=await fetchJson('https://photon.komoot.io/api/?'+photonParams.toString(),7000);return (data.features||[]).filter(x=>x.geometry?.coordinates?.length===2).map(x=>({lon:Number(x.geometry.coordinates[0]),lat:Number(x.geometry.coordinates[1])})).filter(inYerevan);})();
+        const nominatim=(async()=>{const data=await fetchJson('https://nominatim.openstreetmap.org/search?'+nomParams.toString()+'&bounded=1',7000);return (data||[]).map(x=>({lon:Number(x.lon),lat:Number(x.lat)})).filter(inYerevan);})();
+        const results=await Promise.allSettled([photon,nominatim]);
+        const candidates=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
+        const result=candidates[0];
+        if(!result)throw Error('Հասցեն Երևանում չգտնվեց։ Ընտրեք որոնման առաջարկներից մեկը կամ գրեք հասցեն ավելի հստակ։');
         return result;
       };
       $('#routeHelp').textContent='Երկու հասցեներն էլ որոնվում են միաժամանակ…';
