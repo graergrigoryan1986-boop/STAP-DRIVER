@@ -1,6 +1,7 @@
 const $ = (s) => document.querySelector(s);
 const authPanel = $('#authPanel'), appPanel = $('#appPanel'), authForm = $('#authForm');
-let mode = 'login', token = localStorage.getItem('stap_token') || '', currentUser = null;\nconst publicAuthActions=$('#publicAuthActions');
+let mode = 'login', token = localStorage.getItem('stap_token') || '', currentUser = null;
+const publicAuthActions=$('#publicAuthActions');
 $('#year').textContent = new Date().getFullYear();
 function message(id, text, error=false){const el=$(id);el.textContent=text||'';el.classList.toggle('error',!!error)}
 function setMode(next){mode=next;publicAuthActions?.classList.remove('hidden');const registering=mode==='register';$('#loginTab').classList.toggle('active',!registering);$('#registerTab').classList.toggle('active',registering);$('#registerFields').classList.toggle('hidden',!registering);['name','phone','role'].forEach(name=>{const field=$('#authForm [name='+name+']');field.disabled=!registering;field.required=registering&&name!=='role'});syncLicenseField();$('#submitAuth').textContent=registering?'Գրանցվել':'Մուտք գործել';$('#authForm [name=password]').autocomplete=registering?'new-password':'current-password';message('#authMessage','')}
