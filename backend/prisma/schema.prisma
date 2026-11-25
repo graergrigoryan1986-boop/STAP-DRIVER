@@ -51,7 +51,8 @@ model User {
   driverOrders   Order[]  @relation("DriverOrders")
   transactions   WalletTransaction[]
   ratingsGiven   Rating[] @relation("RatingsGiven")
-  ratingsReceived Rating[] @relation("RatingsReceived")\n  skippedOrders SkippedOrder[]
+  ratingsReceived Rating[] @relation("RatingsReceived")
+  skippedOrders SkippedOrder[]
 }
 
 model Order {
