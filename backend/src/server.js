@@ -113,6 +113,14 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
 
 app.get('/api/me', auth, (req, res) => res.json({ user: publicUser(req.user) }));
 
+app.patch('/api/customer/profile', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
+  const { driverLicenseIssuedAt } = z.object({ driverLicenseIssuedAt: z.iso.date().or(z.literal('')) }).parse(req.body);
+  const user = await prisma.user.update({ where: { id: req.user.id }, data: {
+    driverLicenseIssuedAt: driverLicenseIssuedAt ? new Date(driverLicenseIssuedAt+'T00:00:00.000Z') : null
+  }});
+  res.json({ user: publicUser(user), message: 'Վարորդական ստաժի տվյալը պահպանվեց։' });
+}));
+
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const input = z.object({
     pickupAddress: z.string().trim().min(3).max(300),
