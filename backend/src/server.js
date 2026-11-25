@@ -416,7 +416,9 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const now=new Date(),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
   const ocrCategoryMatches=(req.user.driverLicenseCategories||[]).length>0&&(req.user.driverLicenseCategories||[]).every(category=>new RegExp('(^|[^A-Z0-9])'+category+'([^A-Z0-9]|$)','i').test(input.ocrText||''));
   const autoPassed=namesReadable&&passportNumberReadable&&datesValid&&ocrCategoryMatches&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt);
-  const status=autoPassed?'AUTO_APPROVED':'REVIEW_REQUIRED';
+  const licenseExpiry=req.user.driverLicenseExpiresAt?new Date(req.user.driverLicenseExpiresAt):null,passportExpiry=new Date(input.passportExpiryDate+'T00:00:00Z'),licenseIssue=req.user.driverLicenseIssuedAt?new Date(req.user.driverLicenseIssuedAt):null,passportIssue=new Date(input.passportIssueDate+'T00:00:00Z');
+  const objectivelyExpired=(licenseExpiry&&licenseExpiry<=now)||(passportExpiry<=now)||(licenseIssue&&licenseIssue>now)||(passportIssue>now);
+  const status=autoPassed?'AUTO_APPROVED':objectivelyExpired?'REJECTED':'REVIEW_REQUIRED';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
     driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,
     passportDocumentType:input.passportDocumentType,passportNumberEncrypted:encryptPrivate(input.passportNumber),
@@ -425,7 +427,7 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
     passportFront:docs.passportFront,passportBack:docs.passportBack,driverProfilePhoto:docs.profilePhoto,
     driverOcrText:input.ocrText||null,driverDocumentsStatus:status,isVerified:autoPassed,
     driverVerifiedAt:autoPassed?new Date():null,
-    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։': 'Լուսանկարները կամ OCR տվյալները լրացուցիչ ստուգման կարիք ունեն։ Մինչև 24 ժամ։',
+    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։':objectivelyExpired?'Փաստաթղթի գործողության ժամկետը լրացած է կամ տրման ամսաթիվը սխալ է։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։':'OCR տվյալները ամբողջությամբ չեն համընկել։ Լրացուցիչ ստուգումը կարող է տևել մինչև 24 ժամ։',
     driverDocumentsPdf:encryptPrivate(makeDocumentsPdf('STAP DRIVER identity documents',[['Driver license front',docs.front],['Driver license back',docs.back],['Driver selfie',docs.selfie],['Passport or ID front',docs.passportFront],['Passport or ID back',docs.passportBack],['Driver profile photo',docs.profilePhoto]].map(([label,data])=>({label,data}))))
   }});
   res.json({success:true,user:publicUser(user),message:autoPassed?'Ավտոմատ ստուգումն անցավ․ պատվերներն արդեն հասանելի են։':'Փաստաթղթերն ուղարկվեցին ստուգման։ Ստուգումը կարող է տևել մինչև 24 ժամ։' });
