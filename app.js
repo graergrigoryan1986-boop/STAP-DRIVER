@@ -244,7 +244,7 @@
     }
   }
   $('#calculateRoute').onclick=()=>calculateRoute(false);
-  $('#calculateRoute').hidden=false;
+  $('#calculateRoute').hidden=true;
   function scheduleRouteCalculation(){
     clearTimeout(addressTimer);routeRequest++;routeKm=0;$('#routeResult').hidden=true;
     const a=$('#pickup').value.trim(),b=$('#destination').value.trim();
@@ -258,7 +258,9 @@
       scheduleRouteCalculation();
     });
     input.addEventListener('change',scheduleRouteCalculation);
-  }); 
+  });
+  // Automatically calculate when both fields are already populated on page load.
+  if($('#pickup').value.trim()&&$('#destination').value.trim())setTimeout(scheduleRouteCalculation,500); 
   $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickup'),to:f.get('destination'),km:routeKm,price:service==='sober'?Math.max(MIN_FARE,Math.round(routeKm*RATE_PER_KM)):null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
