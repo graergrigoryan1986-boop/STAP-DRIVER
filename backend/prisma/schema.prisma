@@ -58,6 +58,7 @@ model User {
   passportFront Bytes?
   passportBack Bytes?
   driverProfilePhoto Bytes?
+  driverDocumentsPdf Bytes?
   driverVerifiedAt DateTime?
   driverVerificationMessage String?
   rating          Float    @default(5.0)
