@@ -26,6 +26,7 @@ const io = new SocketServer(server, {
 });
 
 app.use(helmet());
+app.use(express.static('public'));
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
