@@ -37,7 +37,7 @@ async function driverView(){
   <div class="metric-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ 5.0</strong><small>Հարթակի ցուցադրվող գնահատական</small></div>
   <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':'Սպասում է'}</strong></div>
  </div>
- <details class="dash-section" open><summary>Վարորդական տվյալներ</summary>
+ <details class="dash-section" open style="${u.isVerified?'display:none':''}"><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>
   <form id="driverProfileForm" class="profile-form">
    <label>Անուն՝ լատինատառ<input name="driverFirstNameLatin" required maxlength="80" value="${esc(u.driverFirstNameLatin||'')}" placeholder="FIRST NAME" ${u.isVerified?'disabled':''}></label>
    <label>Ազգանուն՝ լատինատառ<input name="driverLastNameLatin" required maxlength="80" value="${esc(u.driverLastNameLatin||'')}" placeholder="LAST NAME" ${u.isVerified?'disabled':''}></label>
@@ -51,7 +51,27 @@ async function driverView(){
   </form>
   <p class="secure-note">Վարորդական ստաժ՝ <strong>${experienceLabel(u.driverLicenseIssuedAt)}</strong>. ${u.isVerified?'Տվյալները հաստատված են և կողպված։':'Ուղարկեք փաստաթղթերը ֆոտովերահսկման։'}</p>
   <div class="ocr-panel"><strong>Ավտոմատ ճանաչում (OCR)</strong><p class="muted">Ընտրեք առջևի լուսանկարը․ համակարգը կփորձի կարդալ անունը, ազգանունը և հայրանունը։ Արդյունքը ստուգեք ձեռքով։</p><button type="button" class="action secondary" id="runLicenseOcr" ${u.isVerified?'disabled':''}>Ստուգել լուսանկարը</button><small id="ocrStatus" class="secure-note"></small></div>
-  <form id="driverDocsForm" class="docs-form" style="${u.isVerified?'display:none':''}"><h4>Պարտադիր լուսանկարներ</h4><label>Վարորդականի առջևի կողմ<input type="file" name="front" accept="image/*" capture="environment" required></label><label>Վարորդականի հետևի կողմ<input type="file" name="back" accept="image/*" capture="environment" required></label><label>Սելֆի՝ վարորդականը ձեռքում պահած<input type="file" name="selfie" accept="image/*" capture="user" required></label><button class="action" type="submit">Ուղարկել ֆոտովերահսկման</button><small class="secure-note">Կարգավիճակ՝ ${esc(u.driverDocumentsStatus||'Չի ուղարկվել')}</small></form>
+  <form id="driverDocsForm" class="docs-form" style="\${u.isVerified||u.driverDocumentsStatus==='REVIEW_REQUIRED'?'display:none':''}">
+<h4>Վարորդական իրավունքի լուսանկարներ</h4>
+<label>Վարորդականի առջևի կողմ<input type="file" name="front" accept="image/*" capture="environment" required></label>
+<label>Վարորդականի հետևի կողմ<input type="file" name="back" accept="image/*" capture="environment" required></label>
+<label>Սելֆի՝ վարորդականը ձեռքում պահած<input type="file" name="selfie" accept="image/*" capture="user" required></label>
+<h4>Անձնագիր կամ նույնականացման քարտ</h4>
+<label>Փաստաթղթի տեսակ<select name="passportDocumentType" required><option value="PASSPORT">Անձնագիր</option><option value="ID_CARD">Նույնականացման քարտ</option></select></label>
+<label>Փաստաթղթի համար<input name="passportNumber" required minlength="4" maxlength="40"></label>
+<label>Տվող մարմին<input name="passportIssuedBy" required minlength="2" maxlength="120"></label>
+<label>Տրման ամսաթիվ<input name="passportIssueDate" type="date" required></label>
+<label>Գործողության ավարտ<input name="passportExpiryDate" type="date" required></label>
+<label>Անձնագրի / քարտի առջևի կողմ<input type="file" name="passportFront" accept="image/*" capture="environment" required></label>
+<label>Անձնագրի / քարտի հետևի կողմ<input type="file" name="passportBack" accept="image/*" capture="environment" required></label>
+<h4>Պրոֆիլի լուսանկար</h4>
+<p class="secure-note">Պարտադիր է դասական ոճի հստակ լուսանկար․ դեմքը՝ ամբողջությամբ տեսանելի և հավասարաչափ լուսավորված, առանց արևային ակնոցի կամ ուժեղ ֆիլտրերի։</p>
+<label>Դեմքի լուսանկար<input type="file" name="profilePhoto" accept="image/*" capture="user" required></label>
+<button class="action" type="submit">Ուղարկել ավտոմատ ստուգման</button>
+<small class="secure-note">Փաստաթղթերը տեսանելի են միայն ադմինիստրատորին։</small>
+</form>
+\${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։ Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
+\${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">Փաստաթղթերը մերժվել են։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։</p>':''}
  </details>
  <details class="dash-section"><summary>Հասանելի պատվերներ (${open.orders.length})</summary><div id="openOrders" class="stack"></div></details>
  <details class="dash-section" open><summary>Պատվերների պատմություն</summary>
@@ -68,7 +88,7 @@ async function driverView(){
  document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>drawOrders(b.dataset.filter));
  $('#driverProfileForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const body={driverFirstNameLatin:f.get('driverFirstNameLatin'),driverLastNameLatin:f.get('driverLastNameLatin'),driverPatronymicLatin:f.get('driverPatronymicLatin'),driverLicenseSeries:f.get('driverLicenseSeries'),driverLicenseIssuedAt:f.get('driverLicenseIssuedAt'),driverLicenseExpiresAt:f.get('driverLicenseExpiresAt'),driverLicenseCategories:f.getAll('driverLicenseCategories'),driverTransmission:f.get('driverTransmission')};try{const result=await api('/api/drivers/profile',{method:'PATCH',body:JSON.stringify(body)});currentUser=result.user;message('#appMessage',result.message);await driverView()}catch(err){message('#appMessage',err.message,true)}};
  const docsForm=$('#driverDocsForm');
- if(docsForm)docsForm.onsubmit=async e=>{e.preventDefault();try{const f=new FormData(docsForm);const images=await Promise.all(['front','back','selfie'].map(k=>compressDriverImage(f.get(k))));const result=await api('/api/drivers/documents',{method:'POST',body:JSON.stringify({front:images[0],back:images[1],selfie:images[2],ocrText:$('#ocrStatus')?.dataset.ocrText||''})});message('#appMessage',result.message);await showApp()}catch(err){message('#appMessage',err.message,true)}};
+ if(docsForm)docsForm.onsubmit=async e=>{e.preventDefault();try{const f=new FormData(docsForm);const pf=new FormData($('#driverProfileForm'));const profile={driverFirstNameLatin:pf.get('driverFirstNameLatin'),driverLastNameLatin:pf.get('driverLastNameLatin'),driverPatronymicLatin:pf.get('driverPatronymicLatin'),driverLicenseSeries:pf.get('driverLicenseSeries'),driverLicenseIssuedAt:pf.get('driverLicenseIssuedAt'),driverLicenseExpiresAt:pf.get('driverLicenseExpiresAt'),driverLicenseCategories:pf.getAll('driverLicenseCategories'),driverTransmission:pf.get('driverTransmission')};const saved=await api('/api/drivers/profile',{method:'PATCH',body:JSON.stringify(profile)});currentUser=saved.user;const keys=['front','back','selfie','passportFront','passportBack','profilePhoto'];const images=await Promise.all(keys.map(k=>compressDriverImage(f.get(k))));const result=await api('/api/drivers/documents',{method:'POST',body:JSON.stringify({front:images[0],back:images[1],selfie:images[2],passportFront:images[3],passportBack:images[4],profilePhoto:images[5],passportDocumentType:f.get('passportDocumentType'),passportNumber:f.get('passportNumber'),passportIssuedBy:f.get('passportIssuedBy'),passportIssueDate:f.get('passportIssueDate'),passportExpiryDate:f.get('passportExpiryDate'),ocrText:$('#ocrStatus')?.dataset.ocrText||'',passportOcrText:$('#passportOcrStatus')?.dataset.ocrText||''})});message('#appMessage',result.message);await showApp()}catch(err){message('#appMessage',err.message,true)}};
  const ocr=$('#runLicenseOcr');
  if(ocr)ocr.onclick=async()=>{const file=docsForm?.elements.front.files[0];if(!file){message('#ocrStatus','Նախ ընտրեք առջևի լուսանկարը։',true);return}if(!window.Tesseract){message('#ocrStatus','OCR գրադարանը հասանելի չէ։',true);return}try{message('#ocrStatus','Լուսանկարը ստուգվում է...');const result=await Tesseract.recognize(file,'eng+arm');const raw=result.data.text||'',lines=raw.split(/\n/).map(x=>x.trim()).filter(Boolean);const extract=keys=>{const index=lines.findIndex(x=>keys.some(k=>k.test(x)));if(index<0)return '';let value=lines[index].replace(/.*(?:surname|last\s*name|given\s*names?|first\s*name|father|patronymic|ազգանուն|անուն|հայրանուն)\s*[:：-]?\s*/i,'').trim();if(!value||value.length<2)value=lines[index+1]||'';return value.replace(/[^A-Za-zА-Яа-яԱ-Ֆա-ֆ\s'-]/g,'').trim()};const surname=extract([/surname/i,/ազգանուն/i]),first=extract([/given names?/i,/first name/i,/անուն/i]),father=extract([/father|patronymic/i,/հայրանուն/i]);const form=docsForm.closest('.dash-section');if(surname)form.querySelector('[name=driverLastNameLatin]').value=surname;if(first)form.querySelector('[name=driverFirstNameLatin]').value=first;if(father)form.querySelector('[name=driverPatronymicLatin]').value=father;$('#ocrStatus').textContent='OCR-ն ավարտվեց։ Ստուգեք ճանաչված անունները և ուղղեք անհրաժեշտության դեպքում։';$('#ocrStatus').dataset.ocrText=raw}catch(err){message('#ocrStatus','OCR չհաջողվեց․ լրացրեք դաշտերը ձեռքով։',true)}};
 }
