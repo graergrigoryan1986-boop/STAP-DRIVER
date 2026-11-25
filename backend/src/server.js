@@ -127,16 +127,34 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   res.status(201).json({ order });
 }));
 
-app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (_req, res) => {
-  const orders = await prisma.order.findMany({ where: { status: 'OPEN' }, orderBy: { createdAt: 'asc' } });
+app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
+  const orders = await prisma.order.findMany({ where: { status: 'OPEN', skippedBy: { none: { driverId: _req.user.id } } }, orderBy: { createdAt: 'asc' } });
   res.json({ orders });
 }));
 
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
-  const where = req.user.role === 'CUSTOMER' ? { customerId: req.user.id } :
-    req.user.role === 'DRIVER' ? { driverId: req.user.id } : {};
+  if (req.user.role === 'DRIVER') {
+    const [assigned, skipped] = await Promise.all([
+      prisma.order.findMany({ where: { driverId: req.user.id }, orderBy: { createdAt: 'desc' } }),
+      prisma.skippedOrder.findMany({ where: { driverId: req.user.id }, include: { order: true }, orderBy: { createdAt: 'desc' } })
+    ]);
+    const orders = [...assigned, ...skipped.map(x => ({ ...x.order, status: 'SKIPPED', skippedAt: x.createdAt }))].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
+    return res.json({ orders });
+  }
+  const where = req.user.role === 'CUSTOMER' ? { customerId: req.user.id } : {};
   const orders = await prisma.order.findMany({ where, orderBy: { createdAt: 'desc' } });
   res.json({ orders });
+}));
+
+app.post('/api/orders/:id/skip', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
+  const order = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', driverId: null } });
+  if (!order) return res.status(404).json({ error: 'Բաց պատվերը չի գտնվել' });
+  await prisma.skippedOrder.upsert({
+    where: { orderId_driverId: { orderId: order.id, driverId: req.user.id } },
+    update: {},
+    create: { orderId: order.id, driverId: req.user.id }
+  });
+  res.json({ success: true, message: 'Պատվերը նշվեց որպես բաց թողնված։' });
 }));
 
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), asyncRoute(async (req, res) => {
