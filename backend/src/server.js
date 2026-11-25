@@ -70,7 +70,11 @@ function mrzDate(value, kind) {
   const yy=Number(value.slice(0,2)),month=Number(value.slice(2,4)),day=Number(value.slice(4,6));
   if(month<1||month>12||day<1||day>31)return null;
   const currentYY=new Date().getUTCFullYear()%100;
-  const year=kind==='birth'?(yy<=currentYY?2000+yy:1900+yy):2000+yy;
+  let year=2000+yy;
+  if(kind==='birth'){
+    const candidate=new Date(Date.UTC(year,month-1,day));
+    if(yy>currentYY||candidate>new Date())year=1900+yy;
+  }
   const date=new Date(Date.UTC(year,month-1,day));
   return date.getUTCMonth()===month-1&&date.getUTCDate()===day?date:null;
 }
@@ -470,7 +474,7 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const licenseExpiry=labelledDate(licenseText,[/\b4b\b/i,/date of expiry/i,/expiry date/i,/valid until/i,/վավեր է մինչև/i,/գործողության ավարտ/i]);
   const now=new Date(),birthDate=identity?.birthDate||null,passportExpiry=identity?.expiryDate||null;
   const age=birthDate?now.getUTCFullYear()-birthDate.getUTCFullYear()-((now.getUTCMonth()<birthDate.getUTCMonth()||(now.getUTCMonth()===birthDate.getUTCMonth()&&now.getUTCDate()<birthDate.getUTCDate()))?1:0):null;
-  const expired=Boolean((birthDate&&birthDate>now)||(age!==null&&age<18)||(passportExpiry&&passportExpiry<=now)||(licenseExpiry&&licenseExpiry<=now));
+  const expired=Boolean((birthDate&&birthDate>now)||(age!==null&&age<18)||(passportExpiry&&passportExpiry<=now)||(licenseExpiry&&licenseExpiry<=now)||(issueDate&&issueDate>now));
   const datesMatch=Boolean(birthDate&&licenseBirthDate&&birthDate.getTime()===licenseBirthDate.getTime());
   const allReadable=Boolean(identity&&birthDate&&passportExpiry&&licenseBirthDate&&issueDate&&licenseExpiry&&datesMatch&&namesMatch&&detectedLicenseCategories.length>0);
   const autoPassed=allReadable&&!expired,status=autoPassed?'AUTO_APPROVED':'REJECTED';
