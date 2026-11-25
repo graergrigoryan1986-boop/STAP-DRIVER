@@ -82,7 +82,7 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">'+esc(u.dri
    if(keys.some(k=>!(f.get(k) instanceof File)||!f.get(k).size))throw new Error('Խնդրում ենք ընտրել բոլոր 5 լուսանկարները։');
    if(!window.Tesseract)throw new Error('OCR գրադարանը հասանելի չէ։ Փորձեք մի փոքր ուշ։');
    message('#ocrStatus','Կարդում և համեմատում ենք փաստաթղթերը։ Մի փակեք էջը...');
-   const scans=await Promise.all(keys.map(k=>Tesseract.recognize(f.get(k),'eng+arm')));
+   const scans=await Promise.all(['front','back','passportFront','passportBack'].map(k=>Tesseract.recognize(f.get(k),'eng+arm')));
    const licenseText='ՎԱՐՈՐԴԱԿԱՆ ԱՌՋԵՎ\n'+(scans[0].data.text||'')+'\nՎԱՐՈՐԴԱԿԱՆ ՀԵՏԵՎ\n'+(scans[1].data.text||'');
    const passportText='ԱՆՁՆԱԳԻՐ ԿԱՄ ID ԱՌՋԵՎ\n'+(scans[3].data.text||'')+'\nԱՆՁՆԱԳԻՐ ԿԱՄ ID ՀԵՏԵՎ\n'+(scans[4].data.text||'');
    const images=await Promise.all(keys.map(k=>compressDriverImage(f.get(k))));
