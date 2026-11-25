@@ -128,7 +128,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
-  const orders = await prisma.order.findMany({ where: { status: 'OPEN', skippedBy: { none: { driverId: _req.user.id } } }, orderBy: { createdAt: 'asc' } });
+  const orders = await prisma.order.findMany({ where: { status: 'OPEN', skippedBy: { none: { driverId: req.user.id } } }, orderBy: { createdAt: 'asc' } });
   res.json({ orders });
 }));
 
