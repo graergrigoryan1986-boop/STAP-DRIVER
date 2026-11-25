@@ -200,6 +200,7 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
 }));
 
 app.patch('/api/drivers/profile', auth, only('DRIVER'), asyncRoute(async (req, res) => {
+  if (req.user.isVerified) return res.status(403).json({ error: 'Վարորդական տվյալները հաստատված են․ փոփոխությունը կարող է կատարել միայն ադմինիստրատորը։' });
   const input = z.object({
     driverFirstNameLatin: z.string().trim().min(2).max(80),
     driverLastNameLatin: z.string().trim().min(2).max(80),
@@ -211,6 +212,22 @@ app.patch('/api/drivers/profile', auth, only('DRIVER'), asyncRoute(async (req, r
     ...input, driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z')
   }});
   res.json({ user: publicUser(user), message: 'Վարորդական տվյալները պահպանվեցին։' });
+}));
+
+app.patch('/api/admin/drivers/:id/profile', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const input = z.object({
+    driverFirstNameLatin: z.string().trim().min(2).max(80),
+    driverLastNameLatin: z.string().trim().min(2).max(80),
+    driverPatronymicLatin: z.string().trim().max(80).optional().or(z.literal('')),
+    driverLicenseSeries: z.string().trim().min(3).max(40),
+    driverLicenseExpiresAt: z.iso.date()
+  }).parse(req.body);
+  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
+  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
+  const user = await prisma.user.update({ where: { id: driver.id }, data: {
+    ...input, driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z')
+  }});
+  res.json({ user: publicUser(user), message: 'Վարորդական տվյալները թարմացվեցին ադմինի կողմից։' });
 }));
 
 app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res) => {
