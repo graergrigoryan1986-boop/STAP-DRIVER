@@ -392,11 +392,11 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   };
   const docs={front:decode(input.front),back:decode(input.back),selfie:decode(input.selfie),passportFront:decode(input.passportFront),passportBack:decode(input.passportBack),profilePhoto:decode(input.profilePhoto)};
   const clean=x=>String(x||'').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zա-ֆа-я]/g,'');
-  const licenseOcr=clean(input.ocrText||''),passportOcr=clean(input.passportOcrText||'');
+  const licenseOcr=clean(input.ocrText||''),passportOcr=clean(input.passportOcrText||''),passportOcrAlnum=String(input.passportOcrText||'').toLowerCase().replace(/[^a-z0-9]/g,'');
   const first=clean(req.user.driverFirstNameLatin),last=clean(req.user.driverLastNameLatin);
   const namesReadable=first.length>=2&&last.length>=2&&licenseOcr.includes(first)&&licenseOcr.includes(last)&&passportOcr.includes(first)&&passportOcr.includes(last);
   const normalizeNumber=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  const passportNumberReadable=normalizeNumber(input.passportNumber).length>=4&&normalizeNumber(passportOcr).includes(normalizeNumber(input.passportNumber));
+  const passportNumberReadable=normalizeNumber(input.passportNumber).length>=4&&passportOcrAlnum.includes(normalizeNumber(input.passportNumber));
   const now=new Date(),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
   const autoPassed=namesReadable&&passportNumberReadable&&datesValid&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt&&req.user.driverLicenseCategories?.length);
   const status=autoPassed?'AUTO_APPROVED':'REVIEW_REQUIRED';
