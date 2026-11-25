@@ -438,8 +438,8 @@ function makeDocumentsPdf(title, pages){
   const objs=[];const add=v=>{objs.push(Buffer.isBuffer(v)?v:Buffer.from(v,'binary'));return objs.length};
   const catalog=add(''),pagesId=add(''),fontId=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),pageIds=[];
   for(const p of pages){
-    const img=decryptPrivate(p.data),imgId=add(Buffer.concat([Buffer.from('<< /Type /XObject /Subtype /Image /Width 1200 /Height 800 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>\nstream\n'),img,Buffer.from('\nendstream')]));
-    const contentText='BT /F1 14 Tf 40 810 Td ('+String(p.label).replace(/[()\\]/g,'')+') Tj ET\nq 520 0 0 700 37 70 cm /Im0 Do Q';
+    const img=decryptPrivate(p.data);let iw=1200,ih=800;for(let k=2;k<img.length-8;k++){if(img[k]===0xff&&[0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf].includes(img[k+1])){ih=img.readUInt16BE(k+5);iw=img.readUInt16BE(k+7);break}}const imgId=add(Buffer.concat([Buffer.from('<< /Type /XObject /Subtype /Image /Width '+iw+' /Height '+ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>\nstream\n'),img,Buffer.from('\nendstream')]));
+    const scale=Math.min(520/iw,700/ih),dw=Math.round(iw*scale),dh=Math.round(ih*scale),x=Math.round((595-dw)/2),y=Math.round(430-dh/2);const contentText='BT /F1 14 Tf 40 810 Td ('+String(p.label).replace(/[()\\]/g,'')+') Tj ET\nq '+dw+' 0 0 '+dh+' '+x+' '+y+' cm /Im0 Do Q';
     const content=Buffer.from(contentText,'binary'),contentId=add(Buffer.concat([Buffer.from('<< /Length '+content.length+' >>\nstream\n'),content,Buffer.from('\nendstream')]));
     const pageId=add('');pageIds.push(pageId);
     objs[pageId-1]=Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 '+fontId+' 0 R >> /XObject << /Im0 '+imgId+' 0 R >> >> /Contents '+contentId+' 0 R >>');
@@ -461,15 +461,22 @@ app.get('/api/admin/drivers/:id/documents.pdf',auth,only('ADMIN'),asyncRoute(asy
   res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition','attachment; filename="driver-'+d.id+'-documents.pdf"');res.send(pdf);
 }));
 
-app.patch('/api/admin/drivers/:id/verify', auth, only('ADMIN'), asyncRoute(async (req, res) => {
-  const { verified } = z.object({ verified: z.boolean() }).parse(req.body);
-  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
-  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
-  if (verified && (!driver.driverLicenseFront || !driver.driverLicenseBack || !driver.driverLicenseSelfie || driver.driverDocumentsStatus !== 'PENDING' || !driver.driverLicenseIssuedAt || !driver.driverLicenseExpiresAt || !driver.driverLicenseCategories.length || !driver.driverFirstNameLatin || !driver.driverLastNameLatin)) {
-    return res.status(409).json({ error: 'Հաստատման համար անհրաժեշտ են երեք լուսանկար, տրման ամսաթիվ և վարորդական կարգեր։' });
-  }
-  const user = await prisma.user.update({ where: { id: driver.id }, data: { isVerified: verified, driverDocumentsStatus: verified ? 'APPROVED' : driver.driverDocumentsStatus } });
-  res.json({ driver: publicUser(user) });
+app.patch('/api/admin/drivers/:id/verify',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const {verified}=z.object({verified:z.boolean()}).parse(req.body);
+ const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+ if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
+ if(verified&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack||!driver.driverProfilePhoto||!driver.passportNumberEncrypted||!driver.driverLicenseIssuedAt||!driver.driverLicenseExpiresAt||!driver.driverLicenseCategories.length))return res.status(409).json({error:'Հաստատման համար լրացրեք բոլոր փաստաթղթերը և լուսանկարները։'});
+ const user=await prisma.user.update({where:{id:driver.id},data:{isVerified:verified,driverDocumentsStatus:verified?'APPROVED':'REJECTED',driverVerifiedAt:verified?new Date():null,driverVerificationMessage:verified?'Ադմինը հաստատել է փաստաթղթերը։':'Փաստաթղթերը մերժվել են․ պահանջվում է կրկին ուղարկել։'}});
+ res.json({driver:publicUser(user)});
+}));
+
+app.patch('/api/admin/drivers/:id/documents/review',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const {approved}=z.object({approved:z.boolean()}).parse(req.body);
+ const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+ if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
+ if(approved&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack||!driver.driverProfilePhoto||!driver.passportNumberEncrypted))return res.status(409).json({error:'Բոլոր փաստաթղթերը պարտադիր են։'});
+ const user=await prisma.user.update({where:{id:driver.id},data:{driverDocumentsStatus:approved?'APPROVED':'REJECTED',isVerified:approved,driverVerifiedAt:approved?new Date():null,driverVerificationMessage:approved?'Փաստաթղթերը հաստատվեցին։':'Փաստաթղթերը մերժվեցին․ խնդրում ենք ուղղել և կրկին ուղարկել։'}});
+ res.json({driver:publicUser(user),message:approved?'Փաստաթղթերը հաստատվեցին։':'Փաստաթղթերը մերժվեցին։ Վարորդին կպահանջվի կրկին ուղարկել։'});
 }));
 
 app.patch('/api/admin/users/:id/block', auth, only('ADMIN'), asyncRoute(async (req, res) => {
