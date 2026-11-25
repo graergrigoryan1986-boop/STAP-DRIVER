@@ -583,7 +583,10 @@ app.delete('/api/admin/ratings/:id',auth,only('ADMIN'),asyncRoute(async(req,res)
  const rating=await prisma.rating.findUnique({where:{id:req.params.id}});
  if(!rating)return res.status(404).json({error:'Գնահատականը չի գտնվել'});
  await prisma.rating.delete({where:{id:rating.id}});
- res.json({success:true,message:'Գնահատականը հեռացվեց։ Վարկանիշը կվերահաշվարկվի ամեն օր՝ 00:01-ին։'});
+ const result=await prisma.rating.aggregate({where:{toUserId:rating.toUserId},_avg:{score:true}});
+ const updatedRating=result._avg.score===null?5:Number(result._avg.score.toFixed(2));
+ await prisma.user.update({where:{id:rating.toUserId},data:{rating:updatedRating}});
+ res.json({success:true,rating:updatedRating,message:'Գնահատականը հեռացվեց։ Վարորդի վարկանիշը թարմացվեց անմիջապես։'});
 }));
 
 app.patch('/api/admin/drivers/:id/documents/review',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
