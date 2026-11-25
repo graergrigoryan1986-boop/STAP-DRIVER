@@ -59,6 +59,10 @@ const only = (...roles) => (req, res, next) => {
   if (!roles.includes(req.user?.role)) return res.status(403).json({ error: 'Գործողությունն արգելված է' });
   next();
 };
+const verifiedDriver = (req, res, next) => {
+  if (req.user?.role !== 'DRIVER' || !req.user.isVerified) return res.status(403).json({ error: 'Վարորդի հաշիվը դեռ հաստատված չէ ադմինի կողմից' });
+  next();
+};
 const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'STAP DRIVER API' }));
@@ -109,7 +113,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   res.status(201).json({ order });
 }));
 
-app.get('/api/orders/open', auth, only('DRIVER'), asyncRoute(async (_req, res) => {
+app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (_req, res) => {
   const orders = await prisma.order.findMany({ where: { status: 'OPEN' }, orderBy: { createdAt: 'asc' } });
   res.json({ orders });
 }));
@@ -182,6 +186,14 @@ app.post('/api/admin/drivers/:id/top-up', auth, only('ADMIN'), asyncRoute(async 
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
   const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, createdAt: true } });
   res.json({ drivers });
+}));
+
+app.patch('/api/admin/drivers/:id/verify', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const { verified } = z.object({ verified: z.boolean() }).parse(req.body);
+  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
+  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
+  const user = await prisma.user.update({ where: { id: driver.id }, data: { isVerified: verified } });
+  res.json({ driver: publicUser(user) });
 }));
 
 app.patch('/api/admin/users/:id/block', auth, only('ADMIN'), asyncRoute(async (req, res) => {
