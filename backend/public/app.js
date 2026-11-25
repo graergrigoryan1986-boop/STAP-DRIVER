@@ -39,7 +39,7 @@ async function driverView(){
   <div class="metric-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ 5.0</strong><small>Հարթակի ցուցադրվող գնահատական</small></div>
   <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='PENDING_REVIEW'?'Ադմինի ստուգմանը':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Կրկին ուղարկեք':'Սպասում է'}</strong></div>
  </div>
- <details class="dash-section" open style="${u.isVerified?'display:none':''}"><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>
+ ${u.driverDocumentsStatus==='PENDING_REVIEW'?'<div class="secure-note docs-sent-status">ՈւՂԱՐԿՎԵՑ</div>':u.isVerified?'':'<details class="dash-section" open><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>'}
   <p class="secure-note">Անունը, ազգանունը, ծննդյան ամսաթիվը, վարորդական կարգերն ու վկայականի ժամկետները կարդացվում են փաստաթղթերից։ Ձեռքով լրացնել պետք չէ։</p>
   <p class="secure-note">Վարորդական ստաժ՝ <strong>${experienceLabel(u.driverLicenseIssuedAt)}</strong>. ${u.isVerified?'Տվյալները հաստատված են և կողպված։':'Ուղարկեք փաստաթղթերը ֆոտովերահսկման։'}</p>
   <div class="ocr-panel"><strong>Ավտոմատ նույնականացում</strong><p class="muted">Համակարգը կկարդա բոլոր փաստաթղթերը և կհամեմատի դրանց տվյալները։</p><small id="ocrStatus" class="secure-note"></small></div>
@@ -55,9 +55,9 @@ async function driverView(){
 <button class="action docs-submit" type="submit"><span aria-hidden="true">⬆</span> ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ</button>
 <small class="secure-note">Պարտադիր է բոլոր 5 լուսանկարները։ Լուսանկարները պետք է լինեն ամբողջական և հստակ։</small>
 </form>
-${u.driverDocumentsStatus==='PENDING_REVIEW'?'<p class="secure-note">Լուսանկարներն ուղարկվել են ադմինին։ Սպասեք ստուգման արդյունքին։ Ներբեռնման բաժինը փակ է մինչև ադմինի որոշումը։</p>':''}${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
+${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
 ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք ուղղել լուսանկարները և կրկին ուղարկել ստուգման։ Նախորդ մերժման ծանուցումը չի խանգարում նոր ուղարկմանը։</p>':''}
- </details>
+ ${u.driverDocumentsStatus==='PENDING_REVIEW'||u.isVerified?'':'</details>'}
  <details class="dash-section"><summary>Հասանելի պատվերներ (${open.orders.length})</summary><div id="openOrders" class="stack"></div></details>
  <details class="dash-section" open><summary>Պատվերների պատմություն</summary>
   <div class="order-filters"><button class="action active" data-filter="ALL">Բոլորը</button><button class="action" data-filter="COMPLETED">Կատարված</button><button class="action" data-filter="SKIPPED">Բաց թողնված</button><button class="action" data-filter="ACTIVE">Ընթացքի մեջ</button><button class="action" data-filter="CANCELLED">Չեղարկված</button></div>
