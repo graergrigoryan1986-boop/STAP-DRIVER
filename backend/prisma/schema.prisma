@@ -50,6 +50,7 @@ model User {
   driverLicenseSelfie Bytes?
   driverDocumentsStatus String @default("NOT_SUBMITTED")
   driverOcrText String?
+  dateOfBirth DateTime?
   passportDocumentType String?
   passportNumberEncrypted Bytes?
   passportIssuedByEncrypted Bytes?
