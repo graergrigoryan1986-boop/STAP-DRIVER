@@ -19,8 +19,10 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET must be configured and contain at least 32 characters.');
 }
 
-const allowedOrigins = (process.env.CORS_ORIGINS || '')
-  .split(',').map(x => x.trim()).filter(Boolean);
+const allowedOrigins = [...new Set([
+  ...(process.env.CORS_ORIGINS || '').split(',').map(x => x.trim()).filter(Boolean),
+  'https://stap-driver-api.onrender.com'
+])];
 const io = new SocketServer(server, {
   cors: { origin: allowedOrigins.length ? allowedOrigins : false, methods: ['GET', 'POST'] }
 });
