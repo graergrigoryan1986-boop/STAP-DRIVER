@@ -463,7 +463,8 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const licenseText=String(input.ocrText||''),licenseClean=clean(licenseText);
   const surname=clean(identity?.surname),firstName=clean(identity?.firstName),licenseLatin=clean(transliterateArmenian(licenseText));
   const namesMatch=Boolean(surname.length>=3&&firstName.length>=2&&(licenseClean.includes(surname)&&licenseClean.includes(firstName)||licenseLatin.includes(surname)&&licenseLatin.includes(firstName)));
-  const detectedLicenseCategories=extractLicenseCategories(licenseText);
+  const licenseBackText=licenseText.split('ՎԱՐՈՐԴԱԿԱՆ ՀԵՏԵՎ')[1]||'';
+  const detectedLicenseCategories=extractLicenseCategories(licenseBackText);
   const licenseBirthDate=labelledDate(licenseText,[/\b3\b/i,/date of birth/i,/birth date/i,/ծննդյան ամսաթիվ/i]);
   const issueDate=labelledDate(licenseText,[/\b4a\b/i,/date of issue/i,/issue date/i,/issued/i,/տրման ամսաթիվ/i,/տրամադրման ամսաթիվ/i]);
   const licenseExpiry=labelledDate(licenseText,[/\b4b\b/i,/date of expiry/i,/expiry date/i,/valid until/i,/վավեր է մինչև/i,/գործողության ավարտ/i]);
