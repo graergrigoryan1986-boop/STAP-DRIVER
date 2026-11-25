@@ -160,3 +160,26 @@ body.authenticated footer{display:none!important}
 #dashboard.admin-light .balance-symbol{background:#fff;color:#202124;border:1px solid #cfd4dc}
 #dashboard.admin-light .empty-state{color:#667085}
 @media(max-width:560px){#dashboard.admin-light{padding:12px}}
+
+
+/* Keep admin driver editor fields readable instead of collapsing into tiny boxes */
+#dashboard.admin-light .admin-driver-profile{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:10px;
+ align-items:stretch;
+}
+#dashboard.admin-light .admin-driver-profile input,
+#dashboard.admin-light .admin-driver-profile select{
+ width:100%;
+ min-width:0;
+ box-sizing:border-box;
+}
+#dashboard.admin-light .admin-driver-profile button{
+ grid-column:1/-1;
+ justify-self:start;
+}
+@media(max-width:640px){
+ #dashboard.admin-light .admin-driver-profile{grid-template-columns:1fr}
+ #dashboard.admin-light .admin-driver-profile button{grid-column:auto;width:100%}
+}
