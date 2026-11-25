@@ -157,7 +157,16 @@ app.post('/api/orders/:id/skip', auth, only('DRIVER'), verifiedDriver, asyncRout
   res.json({ success: true, message: 'Պատվերը նշվեց որպես բաց թողնված։' });
 }));
 
-app.post('/api/orders/:id/accept', auth, only('DRIVER'), asyncRoute(async (req, res) => {
+app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
+  const result = await prisma.order.updateMany({
+    where: { id: req.params.id, customerId: req.user.id, status: { in: ['OPEN', 'ACCEPTED'] } },
+    data: { status: 'CANCELLED' }
+  });
+  if (!result.count) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ չեղարկել այս կարգավիճակում' });
+  res.json({ success: true, message: 'Պատվերը չեղարկվեց։' });
+}));
+
+app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const result = await prisma.order.updateMany({
     where: { id: req.params.id, status: 'OPEN', driverId: null },
     data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date() }
@@ -168,13 +177,13 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), asyncRoute(async (req, 
   res.json({ order });
 }));
 
-app.post('/api/orders/:id/start', auth, only('DRIVER'), asyncRoute(async (req, res) => {
+app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const result = await prisma.order.updateMany({ where: { id: req.params.id, driverId: req.user.id, status: 'ACCEPTED' }, data: { status: 'IN_PROGRESS' } });
   if (!result.count) return res.status(409).json({ error: 'Պատվերի կարգավիճակը հնարավոր չէ փոխել' });
   res.json({ order: await prisma.order.findUnique({ where: { id: req.params.id } }) });
 }));
 
-app.post('/api/orders/:id/complete', auth, only('DRIVER'), asyncRoute(async (req, res) => {
+app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const result = await prisma.$transaction(async tx => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, driverId: req.user.id, status: 'IN_PROGRESS' } });
     if (!order) return null;
