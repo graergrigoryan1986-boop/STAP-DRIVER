@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  OPEN
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WalletType {
+  ADMIN_TOP_UP
+  ORDER_EARNING
+  ADMIN_ADJUSTMENT
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String
+  passwordHash   String
+  role           Role     @default(CUSTOMER)
+  isBlocked      Boolean  @default(false)
+  isVerified     Boolean  @default(false)
+  driverLicense  String?
+  balanceAmd     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  customerOrders Order[]  @relation("CustomerOrders")
+  driverOrders   Order[]  @relation("DriverOrders")
+  transactions   WalletTransaction[]
+  ratingsGiven   Rating[] @relation("RatingsGiven")
+  ratingsReceived Rating[] @relation("RatingsReceived")
+}
+
+model Order {
+  id                 String      @id @default(cuid())
+  customerId         String
+  driverId           String?
+  pickupAddress      String
+  destinationAddress String
+  pickupLat          Float?
+  pickupLng          Float?
+  destinationLat     Float?
+  destinationLng     Float?
+  status             OrderStatus @default(OPEN)
+  fareAmd            Int
+  commissionRate     Int         @default(25)
+  commissionAmd      Int         @default(0)
+  driverEarningAmd   Int         @default(0)
+  note               String?
+  createdAt          DateTime    @default(now())
+  acceptedAt         DateTime?
+  completedAt        DateTime?
+  updatedAt          DateTime    @updatedAt
+
+  customer User  @relation("CustomerOrders", fields: [customerId], references: [id])
+  driver   User? @relation("DriverOrders", fields: [driverId], references: [id])
+  ratings  Rating[]
+  @@index([status, createdAt])
+  @@index([driverId, status])
+}
+
+model WalletTransaction {
+  id             String     @id @default(cuid())
+  userId         String
+  amountAmd      Int
+  type           WalletType
+  description    String
+  orderId        String?
+  createdByAdmin String?
+  createdAt      DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  @@index([userId, createdAt])
+}
+
+model Rating {
+  id         String   @id @default(cuid())
+  orderId    String
+  fromUserId String
+  toUserId   String
+  score      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  order    Order @relation(fields: [orderId], references: [id])
+  fromUser User  @relation("RatingsGiven", fields: [fromUserId], references: [id])
+  toUser   User  @relation("RatingsReceived", fields: [toUserId], references: [id])
+  @@unique([orderId, fromUserId])
+}
