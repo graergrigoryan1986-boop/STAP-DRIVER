@@ -186,6 +186,25 @@ app.post('/api/admin/drivers/:id/top-up', auth, only('ADMIN'), asyncRoute(async 
   res.json({ driver: publicUser(updated) });
 }));
 
+app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const { email } = z.object({ email: z.email().transform(v => v.toLowerCase()) }).parse(req.body);
+  const target = await prisma.user.findUnique({ where: { email } });
+  if (!target) return res.status(404).json({ error: 'Այս էլ․ փոստով հաշիվ չի գտնվել' });
+  if (target.role === 'ADMIN') return res.status(403).json({ error: 'Ադմինի հաշիվը հեռացնել չի թույլատրվում' });
+  const [customerOrders, driverOrders, transactions, ratingsGiven, ratingsReceived] = await Promise.all([
+    prisma.order.count({ where: { customerId: target.id } }),
+    prisma.order.count({ where: { driverId: target.id } }),
+    prisma.walletTransaction.count({ where: { userId: target.id } }),
+    prisma.rating.count({ where: { fromUserId: target.id } }),
+    prisma.rating.count({ where: { toUserId: target.id } })
+  ]);
+  if (customerOrders || driverOrders || transactions || ratingsGiven || ratingsReceived) {
+    return res.status(409).json({ error: 'Հաշիվը կապված է պատվերների, վճարումների կամ գնահատականների հետ և չի կարող անվտանգ ջնջվել։' });
+  }
+  await prisma.user.delete({ where: { id: target.id } });
+  res.json({ success: true, message: 'Հաշիվը հեռացվեց, էլ․ փոստն ազատ է նոր գրանցման համար։' });
+}));
+
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
   const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, createdAt: true } });
   res.json({ drivers });
