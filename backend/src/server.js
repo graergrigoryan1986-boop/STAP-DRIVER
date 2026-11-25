@@ -269,6 +269,35 @@ app.post('/api/admin/drivers/:id/top-up', auth, only('ADMIN'), asyncRoute(async 
   res.json({ driver: publicUser(updated) });
 }));
 
+app.post('/api/admin/drivers/:id/withdraw', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const { amountAmd, description } = z.object({
+    amountAmd: z.number().int().positive().max(100000000),
+    description: z.string().trim().min(3).max(300)
+  }).parse(req.body);
+  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
+  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
+  const result = await prisma.$transaction(async tx => {
+    const changed = await tx.user.updateMany({
+      where: { id: driver.id, balanceAmd: { gte: amountAmd } },
+      data: { balanceAmd: { decrement: amountAmd } }
+    });
+    if (!changed.count) return null;
+    const user = await tx.user.findUnique({ where: { id: driver.id } });
+    await tx.walletTransaction.create({
+      data: {
+        userId: driver.id,
+        amountAmd: -amountAmd,
+        type: 'ADMIN_ADJUSTMENT',
+        description,
+        createdByAdmin: req.user.id
+      }
+    });
+    return user;
+  });
+  if (!result) return res.status(409).json({ error: 'Վարորդի հաշվեկշռում բավարար գումար չկա։' });
+  res.json({ driver: publicUser(result), message: 'Գումարը ելքագրվեց վարորդի հաշվեկշռից։' });
+}));
+
 app.patch('/api/admin/users/convert-to-driver', auth, only('ADMIN'), asyncRoute(async (req, res) => {
   const { email, driverLicense } = z.object({
     email: z.email().transform(v => v.toLowerCase()),
