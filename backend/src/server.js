@@ -38,6 +38,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '24mb' }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false }));
+app.use('/api/drivers/documents', rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false }));
 
 const DOCUMENT_KEY = createHash('sha256').update(JWT_SECRET).digest();
 function encryptPrivate(value){if(value==null)return null;const nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',DOCUMENT_KEY,nonce),encrypted=Buffer.concat([cipher.update(Buffer.isBuffer(value)?value:Buffer.from(String(value),'utf8')),cipher.final()]);return Buffer.concat([Buffer.from('STAP1'),nonce,cipher.getAuthTag(),encrypted])}
@@ -382,9 +383,10 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
     profilePhoto:z.string().min(100).max(3500000), ocrText:z.string().max(12000).optional(), passportOcrText:z.string().max(12000).optional()
   }).parse(req.body);
   const decode = value => {
-    const match=value.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);
+    const match=value.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/i);
     if(!match)throw new Error('Նկարի ձևաչափը սխալ է։ Օգտագործեք JPG, PNG կամ WEBP։');
-    const buffer=Buffer.from(match[2],'base64');
+    const buffer=Buffer.from(match[1],'base64');
+    if(buffer[0]!==0xff||buffer[1]!==0xd8)throw new Error('Նկարը պետք է լինի վավեր JPEG։');
     if(!buffer.length||buffer.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');
     return encryptPrivate(buffer);
   };
@@ -393,8 +395,10 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const licenseOcr=clean(input.ocrText||''),passportOcr=clean(input.passportOcrText||'');
   const first=clean(req.user.driverFirstNameLatin),last=clean(req.user.driverLastNameLatin);
   const namesReadable=first.length>=2&&last.length>=2&&licenseOcr.includes(first)&&licenseOcr.includes(last)&&passportOcr.includes(first)&&passportOcr.includes(last);
+  const normalizeNumber=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const passportNumberReadable=normalizeNumber(input.passportNumber).length>=4&&normalizeNumber(passportOcr).includes(normalizeNumber(input.passportNumber));
   const now=new Date(),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
-  const autoPassed=namesReadable&&datesValid&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt&&req.user.driverLicenseCategories?.length);
+  const autoPassed=namesReadable&&passportNumberReadable&&datesValid&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt&&req.user.driverLicenseCategories?.length);
   const status=autoPassed?'AUTO_APPROVED':'REVIEW_REQUIRED';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
     driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,
