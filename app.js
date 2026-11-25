@@ -97,7 +97,7 @@
     const distance=districtDistance(pickupCommunity,destinationCommunity);
     if(!Number.isFinite(distance)){notify('Այս համայնքների միջև սակագինը հնարավոր չեղավ որոշել։');return;}
     const intermediate=Math.max(0,distance-1);
-    routeFare=distance<=1?10000:12000+Math.max(0,intermediate-1)*1000;
+    routeFare=distance<=1?10000:12000+intermediate*1000;
     routeKm=1;
     routeText=distance===0?'Նույն համայնքի ներսում':distance===1?'Հարևան համայնքներ':intermediate+' միջանկյալ համայնք';
     $('#routeDistance').textContent=routeText;
