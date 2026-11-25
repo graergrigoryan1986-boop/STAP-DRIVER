@@ -37,6 +37,12 @@ model User {
   isBlocked      Boolean  @default(false)
   isVerified     Boolean  @default(false)
   driverLicense  String?
+  driverFirstNameLatin String?
+  driverLastNameLatin String?
+  driverPatronymicLatin String?
+  driverLicenseSeries String?
+  driverLicenseExpiresAt DateTime?
+  rating          Float    @default(5.0)
   balanceAmd     Int      @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
