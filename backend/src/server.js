@@ -36,7 +36,7 @@ app.use(cors({
     return callback(new Error('Origin is not allowed by CORS'));
   }
 }));
-app.use(express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '24mb' }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false }));
 
 const DOCUMENT_KEY = createHash('sha256').update(JWT_SECRET).digest();
