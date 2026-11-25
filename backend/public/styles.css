@@ -183,3 +183,100 @@ body.authenticated footer{display:none!important}
  #dashboard.admin-light .admin-driver-profile{grid-template-columns:1fr}
  #dashboard.admin-light .admin-driver-profile button{grid-column:auto;width:100%}
 }
+
+/* Admin editor: high-contrast, spacious and clearly separated controls */
+#dashboard.admin-light .admin-driver-tools{
+ margin-top:14px;
+ padding:14px;
+ background:#f8fafc;
+ border:1px solid #cbd5e1;
+ border-radius:12px;
+}
+#dashboard.admin-light .admin-driver-tools>summary{
+ cursor:pointer;
+ display:block;
+ padding:12px 14px;
+ color:#173b63;
+ background:#e8f1fb;
+ border:1px solid #b8cde3;
+ border-radius:8px;
+ font-size:15px;
+ font-weight:800;
+}
+#dashboard.admin-light .admin-driver-tools[open]>summary{margin-bottom:14px;background:#dceafa}
+#dashboard.admin-light .admin-driver-profile{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;
+ padding:4px 0 12px;
+}
+#dashboard.admin-light .admin-driver-profile input,
+#dashboard.admin-light .admin-driver-profile select,
+#dashboard.admin-light .admin-search,
+#dashboard.admin-light input,
+#dashboard.admin-light select{
+ min-height:48px;
+ padding:11px 13px;
+ background:#fff!important;
+ color:#172b4d!important;
+ border:1.5px solid #94a3b8!important;
+ border-radius:8px!important;
+ font-size:14px!important;
+ font-weight:600;
+ line-height:1.35;
+}
+#dashboard.admin-light input::placeholder{color:#64748b!important;opacity:1}
+#dashboard.admin-light input:focus,
+#dashboard.admin-light select:focus{
+ outline:3px solid rgba(37,99,235,.18);
+ border-color:#2563eb!important;
+}
+#dashboard.admin-light .admin-driver-profile button{
+ min-height:46px;
+ padding:10px 16px;
+ font-size:14px;
+ font-weight:800;
+}
+#dashboard.admin-light .driver-admin-overview{
+ padding:10px 12px;
+ background:#eef6ff;
+ border:1px solid #bfdbfe;
+ border-radius:8px;
+ color:#173b63;
+ font-size:14px;
+}
+#dashboard.admin-light .driver-admin-overview strong{color:#12345a}
+#dashboard.admin-light .admin-doc-preview,
+#dashboard.admin-light .admin-ratings,
+#dashboard.admin-light .admin-ledger{
+ margin-top:14px;
+ padding:14px;
+ background:#fff;
+ border:1px solid #cbd5e1;
+ border-radius:10px;
+}
+#dashboard.admin-light .admin-doc-preview figure{
+ margin:0 0 14px;
+ padding:10px;
+ background:#f8fafc;
+ border:1px solid #e2e8f0;
+ border-radius:8px;
+}
+#dashboard.admin-light .admin-doc-preview img{
+ display:block;
+ max-width:100%;
+ max-height:360px;
+ object-fit:contain;
+ margin:8px auto;
+}
+#dashboard.admin-light .admin-doc-preview figcaption{
+ font-size:14px;
+ font-weight:800;
+ color:#173b63;
+}
+@media(max-width:640px){
+ #dashboard.admin-light .admin-driver-profile{grid-template-columns:1fr}
+ #dashboard.admin-light .admin-driver-profile button{grid-column:auto;width:100%}
+ #dashboard.admin-light .admin-driver-tools{padding:10px}
+}
+
