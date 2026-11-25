@@ -29,6 +29,7 @@ async function driverView(){
  $('#dashboard').innerHTML=`
  <div class="driver-overview">
   <div class="metric-card"><span>ՀԱՇՎԵԿՇԻՌ</span><strong>${money(u.balanceAmd)}</strong></div>
+  <div class="metric-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ 5.0</strong><small>Հարթակի ցուցադրվող գնահատական</small></div>
   <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':'Սպասում է'}</strong></div>
  </div>
  <details class="dash-section" open><summary>Վարորդական տվյալներ</summary>
