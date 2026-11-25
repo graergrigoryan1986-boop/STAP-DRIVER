@@ -448,6 +448,7 @@ app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) 
 
 app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, res) => {
   if (req.user.isVerified) return res.status(403).json({ error: 'Հաստատված փաստաթղթերը փոփոխել կարող է միայն ադմինը։' });
+  if (req.user.driverDocumentsStatus === 'PENDING_REVIEW') return res.status(409).json({ error: 'Փաստաթղթերն արդեն ուղարկված են և սպասում են ադմինի ստուգմանը։' });
   const input=z.object({
     front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),selfie:z.string().min(100).max(3500000),
     passportDocumentType:z.enum(['PASSPORT','ID_CARD']),
