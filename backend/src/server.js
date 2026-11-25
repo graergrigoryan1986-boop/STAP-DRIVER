@@ -164,8 +164,24 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
     return res.json({ orders });
   }
   const where = req.user.role === 'CUSTOMER' ? { customerId: req.user.id } : {};
-  const orders = await prisma.order.findMany({ where, orderBy: { createdAt: 'desc' } });
-  res.json({ orders });
+  const orders = await prisma.order.findMany({
+    where, orderBy: { createdAt: 'desc' },
+    include: req.user.role === 'CUSTOMER' ? { driver: { select: {
+      id:true,name:true,rating:true,driverFirstNameLatin:true,driverLastNameLatin:true,
+      driverLicenseIssuedAt:true,driverLicenseCategories:true,driverTransmission:true,
+      isVerified:true,driverProfilePhoto:true
+    }}} : undefined
+  });
+  const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => ({
+    ...o, driver: o.driver ? {
+      id:o.driver.id,name:o.driver.name,rating:o.driver.rating,
+      driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
+      driverLicenseIssuedAt:o.driver.driverLicenseIssuedAt,driverLicenseCategories:o.driver.driverLicenseCategories,
+      driverTransmission:o.driver.driverTransmission,isVerified:o.driver.isVerified,
+      profilePhoto:o.driver.driverProfilePhoto ? 'data:image/jpeg;base64,'+decryptPrivate(o.driver.driverProfilePhoto).toString('base64') : null
+    } : null
+  })) : orders;
+  res.json({ orders: safeOrders });
 }));
 
 app.post('/api/orders/:id/skip', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
