@@ -35,7 +35,7 @@ async function driverView(){
  <div class="driver-overview">
   <div class="metric-card"><span>ՀԱՇՎԵԿՇԻՌ</span><strong>${money(u.balanceAmd)}</strong></div>
   <div class="metric-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ 5.0</strong><small>Հարթակի ցուցադրվող գնահատական</small></div>
-  <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':'Սպասում է'}</strong></div>
+  <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Մերժված':'Սպասում է'}</strong></div>
  </div>
  <details class="dash-section" open style="${u.isVerified?'display:none':''}"><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>
   <form id="driverProfileForm" class="profile-form">
@@ -71,7 +71,7 @@ async function driverView(){
 <small class="secure-note">Փաստաթղթերը տեսանելի են միայն ադմինիստրատորին։</small>
 </form>
 ${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
-${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">Փաստաթղթերը մերժվել են։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։</p>':''}
+${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">'+esc(u.driverVerificationMessage||'Փաստաթղթերը մերժվել են։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։')+'</p>':''}
  </details>
  <details class="dash-section"><summary>Հասանելի պատվերներ (${open.orders.length})</summary><div id="openOrders" class="stack"></div></details>
  <details class="dash-section" open><summary>Պատվերների պատմություն</summary>
