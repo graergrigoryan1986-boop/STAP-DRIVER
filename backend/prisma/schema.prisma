@@ -51,7 +51,7 @@ model User {
   driverOrders   Order[]  @relation("DriverOrders")
   transactions   WalletTransaction[]
   ratingsGiven   Rating[] @relation("RatingsGiven")
-  ratingsReceived Rating[] @relation("RatingsReceived")
+  ratingsReceived Rating[] @relation("RatingsReceived")\n  skippedOrders SkippedOrder[]
 }
 
 model Order {
@@ -109,4 +109,18 @@ model Rating {
   fromUser User  @relation("RatingsGiven", fields: [fromUserId], references: [id])
   toUser   User  @relation("RatingsReceived", fields: [toUserId], references: [id])
   @@unique([orderId, fromUserId])
+}
+
+
+model SkippedOrder {
+  id        String   @id @default(cuid())
+  orderId   String
+  driverId  String
+  createdAt DateTime @default(now())
+
+  order  Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driver User  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, driverId])
+  @@index([driverId, createdAt])
 }
