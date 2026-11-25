@@ -50,6 +50,16 @@ model User {
   driverLicenseSelfie Bytes?
   driverDocumentsStatus String @default("NOT_SUBMITTED")
   driverOcrText String?
+  passportDocumentType String?
+  passportNumberEncrypted Bytes?
+  passportIssuedByEncrypted Bytes?
+  passportIssueDate DateTime?
+  passportExpiryDate DateTime?
+  passportFront Bytes?
+  passportBack Bytes?
+  driverProfilePhoto Bytes?
+  driverVerifiedAt DateTime?
+  driverVerificationMessage String?
   rating          Float    @default(5.0)
   balanceAmd     Int      @default(0)
   createdAt      DateTime @default(now())
