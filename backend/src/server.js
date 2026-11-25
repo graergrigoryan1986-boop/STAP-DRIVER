@@ -266,5 +266,9 @@ async function bootstrapAdmin() {
   });
 }
 
-await bootstrapAdmin();
-server.listen(PORT, '0.0.0.0', () => console.log('STAP DRIVER API listening on ' + PORT));
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('STAP DRIVER API listening on ' + PORT);
+  bootstrapAdmin().catch(error => {
+    console.error('Admin bootstrap failed:', error);
+  });
+});
