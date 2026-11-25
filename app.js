@@ -55,9 +55,7 @@
       if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հասցե չգտնվեց</span><span class="suggestion-sub">Գրեք փողոցի ամբողջական անունը և շենքի համարը։</span></div>';
       list.hidden=false;
     };
-    const fetchWithTimeout=async(url,ms=6500)=>{
-      // Each provider gets its own request controller. A Photon timeout must
-      // not cancel the Nominatim fallback request.
+    const fetchWithTimeout=async(url,ms=4500)=>{
       const requestController=new AbortController();
       const cancelRequest=()=>requestController.abort();
       controller.signal.addEventListener('abort',cancelRequest,{once:true});
@@ -76,29 +74,33 @@
       const expanded=variants.find(term=>term!==q&&/[\u0530-\u058F]/.test(term))||q;
       const term=expanded+', Yerevan, Armenia';
       const photonParams=new URLSearchParams({q:term,limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
-      let photonFeatures=[];
-      try{
-        const photon=await fetchWithTimeout('https://photon.komoot.io/api/?'+photonParams.toString());
-        photonFeatures=(photon.features||[]).filter(x=>x.geometry?.coordinates?.length===2);
-      }catch(photonError){console.warn('Photon unavailable; trying backup geocoder:',photonError)}
-      if(!stillCurrent())return;
-      if(photonFeatures.length){showItems(photonFeatures);return}
-      // Try the backup geocoder when Photon fails or returns no matches.
       const nomParams=new URLSearchParams({q:term,format:'jsonv2',limit:'8',countrycodes:'am',addressdetails:'1',accept_language:addressLanguage(q),viewbox:'44.20,40.35,44.75,40.00'});
-      const results=await fetchWithTimeout('https://nominatim.openstreetmap.org/search?'+nomParams.toString());
+      // Ask both providers at once; display whichever returns useful results first.
+      const photonSearch=(async()=>{
+        const data=await fetchWithTimeout('https://photon.komoot.io/api/?'+photonParams.toString());
+        const found=(data.features||[]).filter(x=>x.geometry?.coordinates?.length===2);
+        if(!found.length)throw new Error('Photon returned no matches');
+        return found;
+      })();
+      const nominatimSearch=(async()=>{
+        const data=await fetchWithTimeout('https://nominatim.openstreetmap.org/search?'+nomParams.toString());
+        const found=(data||[]).map(item=>({
+          geometry:{coordinates:[Number(item.lon),Number(item.lat)]},
+          properties:{
+            name:item.name||item.display_name?.split(',')[0]||'Վայր',
+            street:item.address?.road||item.address?.pedestrian||'',
+            housenumber:item.address?.house_number||'',
+            district:item.address?.suburb||item.address?.city_district||'',
+            city:item.address?.city||item.address?.town||item.address?.village||'Երևան',
+            country:'Հայաստան',osm_value:item.type||'Հասցե'
+          }
+        })).filter(x=>x.geometry.coordinates.every(Number.isFinite));
+        if(!found.length)throw new Error('Nominatim returned no matches');
+        return found;
+      })();
+      const found=await Promise.any([photonSearch,nominatimSearch]);
       if(!stillCurrent())return;
-      const mapped=(results||[]).map(item=>({
-        geometry:{coordinates:[Number(item.lon),Number(item.lat)]},
-        properties:{
-          name:item.name||item.display_name?.split(',')[0]||'Վայր',
-          street:item.address?.road||item.address?.pedestrian||'',
-          housenumber:item.address?.house_number||'',
-          district:item.address?.suburb||item.address?.city_district||'',
-          city:item.address?.city||item.address?.town||item.address?.village||'Երևան',
-          country:'Հայաստան',osm_value:item.type||'Հասցե'
-        }
-      }));
-      showItems(mapped);
+      showItems(found);
     }catch(error){
       if(input.value.trim()!==q)return;
       if(error.name==='AbortError'&&suggestControllers[id]!==controller)return;
