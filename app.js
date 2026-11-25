@@ -39,19 +39,21 @@
     if(!list)return;
     if(q.length<2){list.hidden=true;return}
     suggestControllers[id]?.abort();
-    const controller=new AbortController();suggestControllers[id]=controller;
+    let controller=new AbortController();suggestControllers[id]=controller;
     list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Որոնում…</span></div>';
     list.hidden=false;
     try{
       // Search the typed fragment first, then add Yerevan context and transliterations.
       // One failed variant must not discard successful autocomplete results from the others.
       const variants=[...new Set(queryVariants(q).flatMap(term=>[term,term+' Yerevan']))];
-      const responses=await Promise.allSettled(variants.map(async term=>{
+      const photonTimer=setTimeout(()=>controller.abort(),9000);
+      let responses;
+      try{responses=await Promise.allSettled(variants.map(async term=>{
         const params=new URLSearchParams({q:term,limit:'10',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
         const response=await fetch('https://photon.komoot.io/api/?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}});
         if(!response.ok)throw new Error('HTTP '+response.status);
         return response.json();
-      }));
+      }));}finally{clearTimeout(photonTimer)}
       if(input.value.trim()!==q)return;
       const seen=new Set(),items=[];
       responses.filter(result=>result.status==='fulfilled').forEach(result=>(result.value.features||[]).forEach(feature=>{
@@ -71,12 +73,16 @@
       if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Դեռ առաջարկներ չկան</span><span class="suggestion-sub">Շարունակեք գրել ևս մի քանի տառ կամ ավելացրեք փողոցի անունը։</span></div>';
       list.hidden=false;
     }catch(error){
+      if(input.value.trim()!==q)return;
       if(error.name==='AbortError')return;
       console.warn('Photon autocomplete unavailable; trying Nominatim:',error);
       try{
-        const expanded=queryVariants(q).find(term=>term!==q)||q;
+        if(controller.signal.aborted){controller=new AbortController();suggestControllers[id]=controller;}
+        const expanded=queryVariants(q).find(term=>term!==q&&/[\\u0530-\\u058F]/.test(term))||queryVariants(q).find(term=>term!==q)||q;
         const params=new URLSearchParams({q:expanded+', Yerevan, Armenia',format:'jsonv2',limit:'8',countrycodes:'am',addressdetails:'1',accept_language:addressLanguage(q),viewbox:'44.20,40.35,44.75,40.00'});
-        const response=await fetch('https://nominatim.openstreetmap.org/search?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}});
+        const fallbackTimer=setTimeout(()=>controller.abort(),9000);
+        let response;
+        try{response=await fetch('https://nominatim.openstreetmap.org/search?'+params.toString(),{signal:controller.signal,headers:{Accept:'application/json'}})}finally{clearTimeout(fallbackTimer)}
         if(!response.ok)throw new Error('HTTP '+response.status);
         const results=await response.json();
         if(input.value.trim()!==q)return;
@@ -101,9 +107,9 @@
         if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հուշումներ չգտնվեցին</span><span class="suggestion-sub">Կարող եք շարունակել՝ գրելով ամբողջական հասցեն ձեռքով։</span></div>';
         list.hidden=false;
       }catch(fallbackError){
-        if(fallbackError.name==='AbortError')return;
+        if(input.value.trim()!==q)return;
         console.error('Address autocomplete fallback failed:',fallbackError);
-        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հասցեի հուշումները ժամանակավորապես անհասանելի են</span><span class="suggestion-sub">Գրեք ամբողջական հասցեն ձեռքով և սեղմեք «Հաշվել երթուղին»։</span></div>';
+        list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հասցեի որոնումը չավարտվեց</span><span class="suggestion-sub">Ստուգեք ինտերնետ կապը կամ շարունակեք գրել ամբողջական հասցեն։</span></div>';
         list.hidden=false;
       }
     }
