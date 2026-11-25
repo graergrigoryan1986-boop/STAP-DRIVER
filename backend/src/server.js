@@ -168,13 +168,13 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
     where, orderBy: { createdAt: 'desc' },
     include: req.user.role === 'CUSTOMER' ? { driver: { select: {
       id:true,name:true,rating:true,driverFirstNameLatin:true,driverLastNameLatin:true,
-      driverLicenseIssuedAt:true,driverLicenseCategories:true,driverTransmission:true,
+      driverLicenseIssuedAt:true,driverLicenseCategories:true,driverTransmission:true,dateOfBirth:true,
       isVerified:true,driverProfilePhoto:true
     }}} : undefined
   });
   const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => ({
     ...o, driver: o.driver ? {
-      id:o.driver.id,name:o.driver.name,rating:o.driver.rating,
+      id:o.driver.id,name:o.driver.name,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
       driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
       driverLicenseIssuedAt:o.driver.driverLicenseIssuedAt,driverLicenseCategories:o.driver.driverLicenseCategories,
       driverTransmission:o.driver.driverTransmission,isVerified:o.driver.isVerified,
@@ -393,7 +393,7 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   if (req.user.isVerified) return res.status(403).json({ error: 'Հաստատված փաստաթղթերը փոփոխել կարող է միայն ադմինը։' });
   const input = z.object({
     front:z.string().min(100).max(3500000), back:z.string().min(100).max(3500000), selfie:z.string().min(100).max(3500000),
-    passportDocumentType:z.enum(['PASSPORT','ID_CARD']), passportNumber:z.string().trim().min(4).max(40),
+    passportDocumentType:z.enum(['PASSPORT','ID_CARD']), dateOfBirth:z.iso.date(), passportNumber:z.string().trim().min(4).max(40),
     passportIssuedBy:z.string().trim().min(2).max(120), passportIssueDate:z.iso.date(), passportExpiryDate:z.iso.date(),
     passportFront:z.string().min(100).max(3500000), passportBack:z.string().min(100).max(3500000),
     profilePhoto:z.string().min(100).max(3500000), ocrText:z.string().max(12000).optional(), passportOcrText:z.string().max(12000).optional()
@@ -413,21 +413,21 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const namesReadable=first.length>=2&&last.length>=2&&licenseOcr.includes(first)&&licenseOcr.includes(last)&&passportOcr.includes(first)&&passportOcr.includes(last);
   const normalizeNumber=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
   const passportNumberReadable=normalizeNumber(input.passportNumber).length>=4&&passportOcrAlnum.includes(normalizeNumber(input.passportNumber));
-  const now=new Date(),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
+  const now=new Date(),birthDate=new Date(input.dateOfBirth+'T00:00:00Z'),ageAtNow=now.getUTCFullYear()-birthDate.getUTCFullYear()-((now.getUTCMonth()<birthDate.getUTCMonth()||(now.getUTCMonth()===birthDate.getUTCMonth()&&now.getUTCDate()<birthDate.getUTCDate()))?1:0),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
   const ocrCategoryMatches=(req.user.driverLicenseCategories||[]).length>0&&(req.user.driverLicenseCategories||[]).every(category=>new RegExp('(^|[^A-Z0-9])'+category+'([^A-Z0-9]|$)','i').test(input.ocrText||''));
   const autoPassed=namesReadable&&passportNumberReadable&&datesValid&&ocrCategoryMatches&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt);
   const licenseExpiry=req.user.driverLicenseExpiresAt?new Date(req.user.driverLicenseExpiresAt):null,passportExpiry=new Date(input.passportExpiryDate+'T00:00:00Z'),licenseIssue=req.user.driverLicenseIssuedAt?new Date(req.user.driverLicenseIssuedAt):null,passportIssue=new Date(input.passportIssueDate+'T00:00:00Z');
-  const objectivelyExpired=(licenseExpiry&&licenseExpiry<=now)||(passportExpiry<=now)||(licenseIssue&&licenseIssue>now)||(passportIssue>now);
+  const objectivelyExpired=(licenseExpiry&&licenseExpiry<=now)||(passportExpiry<=now)||(licenseIssue&&licenseIssue>now)||(passportIssue>now)||birthDate>now||ageAtNow<18;
   const status=autoPassed?'AUTO_APPROVED':objectivelyExpired?'REJECTED':'REVIEW_REQUIRED';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
     driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,
-    passportDocumentType:input.passportDocumentType,passportNumberEncrypted:encryptPrivate(input.passportNumber),
+    passportDocumentType:input.passportDocumentType,dateOfBirth:birthDate,passportNumberEncrypted:encryptPrivate(input.passportNumber),
     passportIssuedByEncrypted:encryptPrivate(input.passportIssuedBy),
     passportIssueDate:new Date(input.passportIssueDate+'T00:00:00.000Z'),passportExpiryDate:new Date(input.passportExpiryDate+'T00:00:00.000Z'),
     passportFront:docs.passportFront,passportBack:docs.passportBack,driverProfilePhoto:docs.profilePhoto,
     driverOcrText:input.ocrText||null,driverDocumentsStatus:status,isVerified:autoPassed,
     driverVerifiedAt:autoPassed?new Date():null,
-    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։':objectivelyExpired?'Փաստաթղթի գործողության ժամկետը լրացած է կամ տրման ամսաթիվը սխալ է։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։':'OCR տվյալները ամբողջությամբ չեն համընկել։ Լրացուցիչ ստուգումը կարող է տևել մինչև 24 ժամ։',
+    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։':ageAtNow<18?'Վարորդը պետք է լինի առնվազն 18 տարեկան։':objectivelyExpired?'Փաստաթղթի գործողության ժամկետը լրացած է կամ տրման ամսաթիվը սխալ է։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։':'OCR տվյալները ամբողջությամբ չեն համընկել։ Լրացուցիչ ստուգումը կարող է տևել մինչև 24 ժամ։',
     driverDocumentsPdf:encryptPrivate(makeDocumentsPdf('STAP DRIVER identity documents',[['Driver license front',docs.front],['Driver license back',docs.back],['Driver selfie',docs.selfie],['Passport or ID front',docs.passportFront],['Passport or ID back',docs.passportBack],['Driver profile photo',docs.profilePhoto]].map(([label,data])=>({label,data}))))
   }});
   res.json({success:true,user:publicUser(user),message:autoPassed?'Ավտոմատ ստուգումն անցավ․ պատվերներն արդեն հասանելի են։':'Փաստաթղթերն ուղարկվեցին ստուգման։ Ստուգումը կարող է տևել մինչև 24 ժամ։' });
@@ -452,7 +452,7 @@ app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(asyn
   const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{
     id:true,name:true,email:true,phone:true,driverFirstNameLatin:true,driverLastNameLatin:true,driverPatronymicLatin:true,
     driverLicenseSeries:true,driverLicenseIssuedAt:true,driverLicenseExpiresAt:true,driverLicenseCategories:true,driverTransmission:true,
-    driverDocumentsStatus:true,driverOcrText:true,driverVerificationMessage:true,passportDocumentType:true,passportIssueDate:true,passportExpiryDate:true,
+    driverDocumentsStatus:true,driverOcrText:true,driverVerificationMessage:true,dateOfBirth:true,passportDocumentType:true,passportIssueDate:true,passportExpiryDate:true,
     passportNumberEncrypted:true,passportIssuedByEncrypted:true,driverLicenseFront:true,driverLicenseBack:true,driverLicenseSelfie:true,
     passportFront:true,passportBack:true,driverProfilePhoto:true
   }});
