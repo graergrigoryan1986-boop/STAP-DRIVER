@@ -100,46 +100,40 @@
     }
     return Infinity;
   }
-  let routeRequest=0, addressTimer;
-  function calculateRoute(automatic=false){
-    const pickupCommunity=$('#pickupCommunity').value;
-    const destinationCommunity=$('#destinationCommunity').value;
-    const pickupAddress=$('#pickup').value.trim();
-    const destinationAddress=$('#destination').value.trim();
-    if(!pickupCommunity||!destinationCommunity){
-      if(!automatic)notify('Ընտրեք սկզբնակետի և նպատակակետի համայնքները։');
-      $('#routeHelp').textContent='Ընտրեք սկզբնակետի և նպատակակետի համայնքները․ հասցեները կարող եք լրացնել առանձին։';
-      return;
+  function calculateRoute(){
+    const from=$('#pickupCommunity').value;
+    const to=$('#destinationCommunity').value;
+    if(!from||!to){
+      routeKm=0;
+      $('#routeResult').hidden=true;
+      $('#routeHelp').textContent='Ընտրեք երկու համայնքները՝ նախնական արժեքը տեսնելու համար։';
+      return false;
     }
-    const distance=districtDistance(pickupCommunity,destinationCommunity);
-    if(!Number.isFinite(distance)){notify('Այս համայնքների միջև սակագինը հնարավոր չեղավ որոշել։');return;}
+    const distance=districtDistance(from,to);
+    if(!Number.isFinite(distance)){
+      routeKm=0;
+      $('#routeResult').hidden=true;
+      $('#routeHelp').textContent='Այս երթուղու արժեքը հնարավոր չեղավ հաշվարկել։';
+      return false;
+    }
     const intermediate=Math.max(0,distance-1);
-    routeFare=distance<=1?10000:12000+intermediate*1000;
+    routeFare=distance<=1?MIN_FARE:12000+intermediate*1000;
     routeKm=1;
     routeText=distance===0?'Նույն համայնքի ներսում':distance===1?'Հարևան համայնքներ':intermediate+' միջանկյալ համայնք';
     $('#routeDistance').textContent=routeText;
     $('#routePrice').textContent=money(routeFare);
     $('#priceModalAmount').textContent=money(routeFare);
-    $('#priceModalRoute').textContent=pickupCommunity+' → '+destinationCommunity+' · '+routeText;
+    $('#priceModalRoute').textContent=from+' → '+to+' · '+routeText;
     $('#routeResult').hidden=false;
-    $('#routeHelp').textContent='Համայնքների միջև հաշվարկված սակագին՝ '+intermediate+' միջանկյալ համայնք։ Հասցեները լրացվում են առանձին։';
-    if(!automatic)notify('Համայնքային արժեքը հաշվարկվեց։');
+    $('#routeHelp').textContent='Նախնական արժեքը հաշվարկվեց ըստ ընտրված համայնքների։ Հասցեները լրացրեք պատվերը պահպանելուց առաջ։';
+    $('#bookingRateNote').textContent='Նախնական արժեք՝ '+money(routeFare)+'։ Սպասաժամ՝ 1 ժամ = 1,500 ֏ (առանձին)։';
+    return true;
   }
-  $('#calculateRoute').onclick=()=>{calculateRoute(false);if(routeKm)openModal('routePriceModal')};
-  $('#calculateRoute').hidden=false;
-  function scheduleRouteCalculation(){
-    clearTimeout(addressTimer);
-    routeKm=0;
-    $('#routeResult').hidden=true;
-    const ready=$('#pickupCommunity').value&&$('#destinationCommunity').value;
-    if(ready){$('#routeHelp').textContent='Համայնքներն ու հասցեները լրացված են․ արժեքը հաշվարկվում է…';addressTimer=setTimeout(()=>calculateRoute(true),100)}
-    else $('#routeHelp').textContent='Ընտրեք սկզբնակետի և նպատակակետի համայնքները։ Հասցեները լրացվում են առանձին։';
-  }
-  ['pickupCommunity','destinationCommunity','pickup','destination'].forEach(id=>{
-    $('#'+id).addEventListener('input',scheduleRouteCalculation);
-    $('#'+id).addEventListener('change',scheduleRouteCalculation);
-  });
-  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');updateBookingTimeLimits();if(!f.get('scheduledAt')||f.get('scheduledAt')<$('#scheduledAt').min||($('#scheduledAt').max&&f.get('scheduledAt')>$('#scheduledAt').max)){notify(selectedMode==='now'?'Շտապ պատվերի ժամը պետք է լինի այսօր՝ առաջիկա 2 ժամվա ընթացքում։':'Նշեք վավեր ամսաթիվ և ժամ։');return}if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+f.get('pickup'),to:f.get('destinationCommunity')+' · '+f.get('destination'),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),km:0,price:service==='sober'?routeFare:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:(selectedMode==='now'?'Շտապ՝ այսօր ':'Նախնական՝ ')+new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;routeFare=10000;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
+  $('#calculateRoute')?.remove();
+  $('#pickupCommunity').addEventListener('change',calculateRoute);
+  $('#destinationCommunity').addEventListener('change',calculateRoute);
+  calculateRoute();
+  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');updateBookingTimeLimits();if(!f.get('scheduledAt')||f.get('scheduledAt')<$('#scheduledAt').min||($('#scheduledAt').max&&f.get('scheduledAt')>$('#scheduledAt').max)){notify(selectedMode==='now'?'Շտապ պատվերի ժամը պետք է լինի այսօր՝ առաջիկա 2 ժամվա ընթացքում։':'Նշեք վավեր ամսաթիվ և ժամ։');return}if(!calculateRoute()){notify('Նախ ընտրեք սկզբնակետի և նպատակակետի համայնքները։');return}if(!String(f.get('pickup')||'').trim()||!String(f.get('destination')||'').trim()){notify('Պատվերը պահպանելու համար լրացրեք երկու հասցեներն էլ՝ փողոց, շենք կամ օբյեկտի անուն։');(!String(f.get('pickup')||'').trim()?$('#pickup'):$('#destination')).focus();return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+String(f.get('pickup')).trim(),to:f.get('destinationCommunity')+' · '+String(f.get('destination')).trim(),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),km:0,price:service==='sober'?routeFare:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:(selectedMode==='now'?'Շտապ՝ այսօր ':'Նախնական՝ ')+new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;routeFare=10000;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
   $('#year').textContent=new Date().getFullYear();
