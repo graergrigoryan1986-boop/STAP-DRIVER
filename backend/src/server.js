@@ -424,6 +424,11 @@ app.post('/api/drivers/profile-photo', auth, only('DRIVER'), asyncRoute(async(re
   res.json({success:true,message:'Պրոֆիլի լուսանկարը պահպանվեց։'});
 }));
 
+app.get('/api/drivers/profile-photo',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
+  if(!req.user.driverProfilePhoto)return res.json({photo:null});
+  res.json({photo:'data:image/jpeg;base64,'+decryptPrivate(req.user.driverProfilePhoto).toString('base64')});
+}));
+
 app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(async(req,res)=>{
   const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{
     id:true,name:true,email:true,phone:true,driverFirstNameLatin:true,driverLastNameLatin:true,driverPatronymicLatin:true,
