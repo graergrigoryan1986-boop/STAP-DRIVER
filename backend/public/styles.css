@@ -36,3 +36,33 @@
 #appPanel .dash-top h2{font-size:30px}
 #appPanel .dash-top{margin-bottom:15px}
 @media(max-width:560px){#dashboard .grid{grid-template-columns:1fr}#dashboard .inline-form{display:grid}.account-head{align-items:flex-start}}
+
+/* Refined authenticated dashboards */
+#publicAuthActions.hidden{display:none!important}
+.logout-bottom{display:flex;justify-content:flex-end;border-top:1px solid var(--line);padding-top:18px;margin-top:28px}
+#appPanel .dash-top{border-bottom:1px solid var(--line);padding-bottom:14px}
+.driver-overview,.admin-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 20px}
+.metric-card{padding:16px;border:1px solid var(--line);background:linear-gradient(145deg,#191a1d,#101114)}
+.metric-card span{display:block;color:var(--muted);font-size:9px;letter-spacing:1.4px}
+.metric-card strong{display:block;color:var(--gold2);font:500 25px "Playfair Display",serif;margin-top:5px}
+.metric-card small{color:var(--muted);font-size:9px}
+.metric-card .compact-value{font-size:17px}
+.dash-section{border:1px solid #39342b;background:#101216;margin:12px 0;padding:0 16px}
+.dash-section summary{cursor:pointer;list-style:none;padding:15px 0;color:var(--gold2);font-weight:800;font-size:12px}
+.dash-section summary::-webkit-details-marker{display:none}
+.dash-section summary:after{content:"＋";float:right;color:var(--gold)}
+.dash-section[open] summary:after{content:"−"}
+.profile-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 0 15px}
+.profile-form label{display:block;color:#c9b78f;font-size:10px}
+.profile-form input,.admin-search{display:block;width:100%;margin-top:6px;background:#0c0d10;border:1px solid #3b3933;color:#f6f1e8;padding:12px;font-size:11px}
+.profile-form button{align-self:end}
+.order-filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.order-filters .active{background:var(--gold);color:#17130d}
+.ledger-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #2b2924}
+.ledger-row strong{display:block;font-size:11px}
+.ledger-row small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.ledger-row b{white-space:nowrap;font-size:11px}
+.ledger-row .positive{color:#9dc8a7}.ledger-row .negative{color:#f0a0a0}
+.admin-search{margin:12px 0}
+#dashboard .driver{padding:20px}
+@media(max-width:560px){.driver-overview,.admin-overview{grid-template-columns:1fr 1fr}.profile-form{grid-template-columns:1fr}.logout-bottom{justify-content:stretch}.logout-bottom button{width:100%}}
