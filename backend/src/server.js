@@ -403,6 +403,15 @@ app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(asyn
   res.json({ driver: { ...driver, driverLicenseFront: encode(driver.driverLicenseFront), driverLicenseBack: encode(driver.driverLicenseBack), driverLicenseSelfie: encode(driver.driverLicenseSelfie) } });
 }));
 
+app.patch('/api/admin/drivers/:id/documents/review', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const { approved } = z.object({ approved: z.boolean() }).parse(req.body);
+  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
+  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
+  if (approved && (!driver.driverLicenseFront || !driver.driverLicenseBack || !driver.driverLicenseSelfie)) return res.status(409).json({ error: 'Բոլոր երեք լուսանկարները պարտադիր են։' });
+  const user = await prisma.user.update({ where: { id: driver.id }, data: { driverDocumentsStatus: approved ? 'APPROVED' : 'REJECTED', isVerified: approved } });
+  res.json({ driver: publicUser(user), message: approved ? 'Փաստաթղթերը հաստատվեցին։' : 'Փաստաթղթերը մերժվեցին․ վարորդը կարող է կրկին ուղարկել։' });
+}));
+
 app.patch('/api/admin/drivers/:id/verify', auth, only('ADMIN'), asyncRoute(async (req, res) => {
   const { verified } = z.object({ verified: z.boolean() }).parse(req.body);
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
