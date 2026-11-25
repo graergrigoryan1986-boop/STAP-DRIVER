@@ -37,7 +37,7 @@ async function driverView(){
  <div class="driver-overview">
   <div class="metric-card"><span>ՀԱՇՎԵԿՇԻՌ</span><strong>${money(u.balanceAmd)}</strong></div>
   <div class="metric-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ 5.0</strong><small>Հարթակի ցուցադրվող գնահատական</small></div>
-  <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Մերժված':'Սպասում է'}</strong></div>
+  <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='PENDING_REVIEW'?'Ադմինի ստուգմանը':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Կրկին ուղարկեք':'Սպասում է'}</strong></div>
  </div>
  <details class="dash-section" open style="${u.isVerified?'display:none':''}"><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>
   <p class="secure-note">Անունը, ազգանունը, ծննդյան ամսաթիվը, վարորդական կարգերն ու վկայականի ժամկետները կարդացվում են փաստաթղթերից։ Ձեռքով լրացնել պետք չէ։</p>
@@ -56,7 +56,7 @@ async function driverView(){
 <small class="secure-note">Պարտադիր է բոլոր 5 լուսանկարները։ Լուսանկարները պետք է լինեն ամբողջական և հստակ։</small>
 </form>
 ${u.driverDocumentsStatus==='PENDING_REVIEW'?'<p class="secure-note">Լուսանկարներն ուղարկվել են ադմինին։ Սպասեք ստուգման արդյունքին։ Ներբեռնման բաժինը փակ է մինչև ադմինի որոշումը։</p>':''}${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
-${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">'+esc(u.driverVerificationMessage||'Փաստաթղթերը մերժվել են։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։')+'</p>':''}
+${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք ուղղել լուսանկարները և կրկին ուղարկել ստուգման։ Նախորդ մերժման ծանուցումը չի խանգարում նոր ուղարկմանը։</p>':''}
  </details>
  <details class="dash-section"><summary>Հասանելի պատվերներ (${open.orders.length})</summary><div id="openOrders" class="stack"></div></details>
  <details class="dash-section" open><summary>Պատվերների պատմություն</summary>
