@@ -51,7 +51,7 @@ async function driverView(){
   </form>
   <p class="secure-note">Վարորդական ստաժ՝ <strong>${experienceLabel(u.driverLicenseIssuedAt)}</strong>. ${u.isVerified?'Տվյալները հաստատված են և կողպված։':'Ուղարկեք փաստաթղթերը ֆոտովերահսկման։'}</p>
   <div class="ocr-panel"><strong>Ավտոմատ ճանաչում (OCR)</strong><p class="muted">Ընտրեք առջևի լուսանկարը․ համակարգը կփորձի կարդալ անունը, ազգանունը և հայրանունը։ Արդյունքը ստուգեք ձեռքով։</p><button type="button" class="action secondary" id="runLicenseOcr" ${u.isVerified?'disabled':''}>Ստուգել լուսանկարը</button><small id="ocrStatus" class="secure-note"></small></div>
-  <form id="driverDocsForm" class="docs-form" style="\${u.isVerified||u.driverDocumentsStatus==='REVIEW_REQUIRED'?'display:none':''}">
+  <form id="driverDocsForm" class="docs-form" style="${u.isVerified||u.driverDocumentsStatus==='REVIEW_REQUIRED'?'display:none':''}">
 <h4>Վարորդական իրավունքի լուսանկարներ</h4>
 <label>Վարորդականի առջևի կողմ<input type="file" name="front" accept="image/*" capture="environment" required></label>
 <label>Վարորդականի հետևի կողմ<input type="file" name="back" accept="image/*" capture="environment" required></label>
@@ -70,8 +70,8 @@ async function driverView(){
 <button class="action" type="submit">Ուղարկել ավտոմատ ստուգման</button>
 <small class="secure-note">Փաստաթղթերը տեսանելի են միայն ադմինիստրատորին։</small>
 </form>
-\${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
-\${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">Փաստաթղթերը մերժվել են։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։</p>':''}
+${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
+${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note error">Փաստաթղթերը մերժվել են։ Խնդրում ենք ուղղել տվյալները և կրկին ուղարկել։</p>':''}
  </details>
  <details class="dash-section"><summary>Հասանելի պատվերներ (${open.orders.length})</summary><div id="openOrders" class="stack"></div></details>
  <details class="dash-section" open><summary>Պատվերների պատմություն</summary>
