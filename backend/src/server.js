@@ -390,10 +390,10 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   };
   const docs={front:decode(input.front),back:decode(input.back),selfie:decode(input.selfie),passportFront:decode(input.passportFront),passportBack:decode(input.passportBack),profilePhoto:decode(input.profilePhoto)};
   const clean=x=>String(x||'').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zա-ֆа-я]/g,'');
-  const ocr=clean((input.ocrText||'')+' '+(input.passportOcrText||''));
+  const licenseOcr=clean(input.ocrText||''),passportOcr=clean(input.passportOcrText||'');
   const first=clean(req.user.driverFirstNameLatin),last=clean(req.user.driverLastNameLatin);
-  const namesReadable=first.length>=2&&last.length>=2&&ocr.includes(first)&&ocr.includes(last);
-  const datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>new Date()&&new Date(input.passportIssueDate+'T00:00:00Z')<=new Date();
+  const namesReadable=first.length>=2&&last.length>=2&&licenseOcr.includes(first)&&licenseOcr.includes(last)&&passportOcr.includes(first)&&passportOcr.includes(last);
+  const now=new Date(),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
   const autoPassed=namesReadable&&datesValid&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt&&req.user.driverLicenseCategories?.length);
   const status=autoPassed?'AUTO_APPROVED':'REVIEW_REQUIRED';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
@@ -404,7 +404,8 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
     passportFront:docs.passportFront,passportBack:docs.passportBack,driverProfilePhoto:docs.profilePhoto,
     driverOcrText:input.ocrText||null,driverDocumentsStatus:status,isVerified:autoPassed,
     driverVerifiedAt:autoPassed?new Date():null,
-    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։': 'Լուսանկարները կամ OCR տվյալները լրացուցիչ ստուգման կարիք ունեն։ Մինչև 24 ժամ։'
+    driverVerificationMessage:autoPassed?'Ավտոմատ ստուգումն անցել է։': 'Լուսանկարները կամ OCR տվյալները լրացուցիչ ստուգման կարիք ունեն։ Մինչև 24 ժամ։',
+    driverDocumentsPdf:encryptPrivate(makeDocumentsPdf('STAP DRIVER identity documents',[['Driver license front',docs.front],['Driver license back',docs.back],['Driver selfie',docs.selfie],['Passport or ID front',docs.passportFront],['Passport or ID back',docs.passportBack],['Driver profile photo',docs.profilePhoto]].map(([label,data])=>({label,data}))))
   }});
   res.json({success:true,user:publicUser(user),message:autoPassed?'Ավտոմատ ստուգումն անցավ․ պատվերներն արդեն հասանելի են։':'Փաստաթղթերն ուղարկվեցին ստուգման։ Ստուգումը կարող է տևել մինչև 24 ժամ։' });
 }));
@@ -457,7 +458,7 @@ app.get('/api/admin/drivers/:id/documents.pdf',auth,only('ADMIN'),asyncRoute(asy
   if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել'});
   const pages=[['Driver license front',d.driverLicenseFront],['Driver license back',d.driverLicenseBack],['Driver selfie',d.driverLicenseSelfie],['Passport or ID front',d.passportFront],['Passport or ID back',d.passportBack],['Driver profile photo',d.driverProfilePhoto]].filter(x=>x[1]).map(([label,data])=>({label,data}));
   if(!pages.length)return res.status(404).json({error:'Փաստաթղթեր չկան'});
-  const pdf=makeDocumentsPdf('STAP DRIVER documents',pages);
+  const pdf=d.driverDocumentsPdf?decryptPrivate(d.driverDocumentsPdf):makeDocumentsPdf('STAP DRIVER documents',pages);
   res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition','attachment; filename="driver-'+d.id+'-documents.pdf"');res.send(pdf);
 }));
 
