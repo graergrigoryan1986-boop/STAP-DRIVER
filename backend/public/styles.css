@@ -280,3 +280,9 @@ body.authenticated footer{display:none!important}
  #dashboard.admin-light .admin-driver-tools{padding:10px}
 }
 
+
+
+/* Compact driver age and experience fields beside rating */
+.driver-rating-card .driver-mini-facts{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.driver-rating-card .driver-mini-facts span{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border:1px solid rgba(190,157,92,.28);border-radius:7px;background:rgba(190,157,92,.08);font-size:10px;line-height:1.25;color:inherit}
+.driver-rating-card .driver-mini-facts b{font-size:9px;font-weight:700;opacity:.72}
