@@ -106,3 +106,5 @@ body.authenticated footer{display:none!important}
 .profile-photo-preview{width:128px;height:128px;border-radius:50%;object-fit:cover;border:2px solid var(--gold2);margin:8px 0;background:#171717}
 
 .driver-profile-photo-block{display:flex;align-items:center;justify-content:center;margin:0 0 18px}.driver-profile-photo-block img{width:112px;height:112px;border-radius:50%;object-fit:cover;border:2px solid var(--gold2);box-shadow:0 6px 24px rgba(0,0,0,.35)}.driver-profile-photo-block span{font-size:12px;color:var(--muted)}
+
+.customer-driver-profile{display:flex;align-items:center;gap:14px;margin:14px 0;padding:14px;border:1px solid rgba(201,164,93,.35);border-radius:14px;background:rgba(201,164,93,.06)}.customer-driver-profile img{width:76px;height:76px;flex:0 0 76px;object-fit:cover;border-radius:50%;border:2px solid var(--gold2)}.customer-driver-profile p{margin:5px 0;font-size:13px;color:var(--muted)}.customer-driver-profile strong{color:var(--gold2)}
