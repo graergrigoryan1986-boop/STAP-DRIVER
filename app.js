@@ -89,9 +89,9 @@
     const destinationCommunity=$('#destinationCommunity').value;
     const pickupAddress=$('#pickup').value.trim();
     const destinationAddress=$('#destination').value.trim();
-    if(!pickupCommunity||!destinationCommunity||!pickupAddress||!destinationAddress){
-      if(!automatic)notify('Ընտրեք երկու համայնքները և լրացրեք երկու հասցեները։');
-      $('#routeHelp').textContent='Ընտրեք սկզբնակետի ու վերջնակետի համայնքները և գրեք հասցեները։';
+    if(!pickupCommunity||!destinationCommunity){
+      if(!automatic)notify('Ընտրեք սկզբնակետի և նպատակակետի համայնքները։');
+      $('#routeHelp').textContent='Ընտրեք սկզբնակետի և նպատակակետի համայնքները․ հասցեները կարող եք լրացնել առանձին։';
       return;
     }
     const distance=districtDistance(pickupCommunity,destinationCommunity);
@@ -103,7 +103,7 @@
     $('#routeDistance').textContent=routeText;
     $('#routePrice').textContent=money(routeFare);
     $('#routeResult').hidden=false;
-    $('#routeHelp').textContent='Համայնքների միջև հաշվարկված սակագին՝ '+intermediate+' միջանկյալ համայնք։ Գինը ֆիքսված է և հաշվարկվում է անմիջապես։';
+    $('#routeHelp').textContent='Համայնքների միջև հաշվարկված սակագին՝ '+intermediate+' միջանկյալ համայնք։ Հասցեները լրացվում են առանձին։';
     if(!automatic)notify('Համայնքային արժեքը հաշվարկվեց։');
   }
   $('#calculateRoute').onclick=()=>calculateRoute(false);
@@ -112,9 +112,9 @@
     clearTimeout(addressTimer);
     routeKm=0;
     $('#routeResult').hidden=true;
-    const ready=$('#pickupCommunity').value&&$('#destinationCommunity').value&&$('#pickup').value.trim()&&$('#destination').value.trim();
+    const ready=$('#pickupCommunity').value&&$('#destinationCommunity').value;
     if(ready){$('#routeHelp').textContent='Համայնքներն ու հասցեները լրացված են․ արժեքը հաշվարկվում է…';addressTimer=setTimeout(()=>calculateRoute(true),100)}
-    else $('#routeHelp').textContent='Ընտրեք երկու համայնքները և լրացրեք երկու հասցեները։';
+    else $('#routeHelp').textContent='Ընտրեք սկզբնակետի և նպատակակետի համայնքները։ Հասցեները լրացվում են առանձին։';
   }
   ['pickupCommunity','destinationCommunity','pickup','destination'].forEach(id=>{
     $('#'+id).addEventListener('input',scheduleRouteCalculation);
