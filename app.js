@@ -52,7 +52,24 @@
   $$('.modal-close').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal').id)));
   $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal.open').forEach(m=>closeModal(m.id))});
-  $$('.mode-btn').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;$$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#scheduleFields').hidden=selectedMode!=='scheduled';$('#scheduledAt').required=selectedMode==='scheduled';}));
+  function updateBookingTimeLimits(){
+    const input=$('#scheduledAt'),now=new Date(),pad=n=>String(n).padStart(2,'0');
+    const localValue=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+    if(selectedMode==='now'){
+      const max=new Date(now.getTime()+2*60*60*1000);
+      input.min=localValue(now);input.max=localValue(max);
+      $('#scheduledAtLabel').textContent='ՇՏԱՊ ՊԱՏՎԵՐԻ ԺԱՄԸ · ԱՅՍՕՐ՝ ՄՈՏԱԿԱ 1–2 ԺԱՄՈՒՄ';
+      $('#scheduledAtHint').textContent='Ընտրեք այսօրվա ժամը․ թույլատրվում է միայն ներկա պահից մինչև առաջիկա 2 ժամը։';
+      if(!input.value||input.value<input.min||input.value>input.max)input.value=localValue(new Date(Math.ceil(now.getTime()/60000)*60000+60*60000));
+    }else{
+      input.min=localValue(new Date(now.getTime()+15*60000));input.removeAttribute('max');
+      $('#scheduledAtLabel').textContent='ՆԱԽՆԱԿԱՆ ՊԱՏՎԵՐԻ ԱՄՍԱԹԻՎ ԵՎ ԺԱՄ';
+      $('#scheduledAtHint').textContent='Ընտրեք նախնական ամրագրման օրը և ժամը։';
+      if(!input.value||input.value<input.min)input.value='';
+    }
+  }
+  $('.mode-btn').forEach(b=>b.addEventListener('click',()=>{selectedMode=b.dataset.mode;$('.mode-btn').forEach(x=>x.classList.toggle('active',x===b));$('#scheduleFields').hidden=false;$('#scheduledAt').required=true;updateBookingTimeLimits();}));
+  updateBookingTimeLimits();
   $('#serviceType').addEventListener('change',e=>{const v=e.target.value;$('#carSpecs').hidden=v!=='sober'; $('#destination').required=true;$('#calculateRoute').closest('.field').hidden=false;$('#bookingRateNote').textContent='Սակագին՝ 1 կմ = 1,000 ֏։ Վարորդը վարում է ձեր մեքենան։'});
   $$('.choice-btn').forEach(b=>b.addEventListener('click',()=>{const group=b.dataset.group;$$('.choice-btn[data-group="'+group+'"]').forEach(x=>x.classList.toggle('active',x===b));$('#'+(group==='transmission'?'transmissionType':'powerType')).value=b.dataset.value;}));
   $('#serviceType').dispatchEvent(new Event('change'));
@@ -122,7 +139,7 @@
     $('#'+id).addEventListener('input',scheduleRouteCalculation);
     $('#'+id).addEventListener('change',scheduleRouteCalculation);
   });
-  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+f.get('pickup')+(f.get('pickupObject')?' · '+f.get('pickupObject'):''),to:f.get('destinationCommunity')+' · '+f.get('destination')+(f.get('destinationObject')?' · '+f.get('destinationObject'):''),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),pickupObject:f.get('pickupObject')||'',destinationObject:f.get('destinationObject')||'',km:0,price:service==='sober'?routeFare:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ՝ հիմա':new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;routeFare=10000;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
+  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');updateBookingTimeLimits();if(!f.get('scheduledAt')||f.get('scheduledAt')<$('#scheduledAt').min||($('#scheduledAt').max&&f.get('scheduledAt')>$('#scheduledAt').max)){notify(selectedMode==='now'?'Շտապ պատվերի ժամը պետք է լինի այսօր՝ առաջիկա 2 ժամվա ընթացքում։':'Նշեք վավեր ամսաթիվ և ժամ։');return}if(!routeKm){notify('Նախ հաշվարկեք երթուղին։');return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+f.get('pickup')+(f.get('pickupObject')?' · '+f.get('pickupObject'):''),to:f.get('destinationCommunity')+' · '+f.get('destination')+(f.get('destinationObject')?' · '+f.get('destinationObject'):''),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),pickupObject:f.get('pickupObject')||'',destinationObject:f.get('destinationObject')||'',km:0,price:service==='sober'?routeFare:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:(selectedMode==='now'?'Շտապ՝ այսօր ':'Նախնական՝ ')+new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;routeFare=10000;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
   $('#year').textContent=new Date().getFullYear();
