@@ -414,7 +414,8 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const normalizeNumber=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]/g,'');
   const passportNumberReadable=normalizeNumber(input.passportNumber).length>=4&&passportOcrAlnum.includes(normalizeNumber(input.passportNumber));
   const now=new Date(),datesValid=new Date(input.passportExpiryDate+'T00:00:00Z')>now&&new Date(input.passportIssueDate+'T00:00:00Z')<=now&&req.user.driverLicenseExpiresAt>now&&req.user.driverLicenseIssuedAt<=now;
-  const autoPassed=namesReadable&&passportNumberReadable&&datesValid&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt&&req.user.driverLicenseCategories?.length);
+  const ocrCategoryMatches=(req.user.driverLicenseCategories||[]).length>0&&(req.user.driverLicenseCategories||[]).every(category=>new RegExp('(^|[^A-Z0-9])'+category+'([^A-Z0-9]|$)','i').test(input.ocrText||''));
+  const autoPassed=namesReadable&&passportNumberReadable&&datesValid&&ocrCategoryMatches&&Boolean(req.user.driverLicenseIssuedAt&&req.user.driverLicenseExpiresAt);
   const status=autoPassed?'AUTO_APPROVED':'REVIEW_REQUIRED';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
     driverLicenseFront:docs.front,driverLicenseBack:docs.back,driverLicenseSelfie:docs.selfie,
