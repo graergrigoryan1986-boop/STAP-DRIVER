@@ -186,6 +186,21 @@ app.post('/api/admin/drivers/:id/top-up', auth, only('ADMIN'), asyncRoute(async 
   res.json({ driver: publicUser(updated) });
 }));
 
+app.patch('/api/admin/users/convert-to-driver', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const { email, driverLicense } = z.object({
+    email: z.email().transform(v => v.toLowerCase()),
+    driverLicense: z.string().trim().min(3).max(100)
+  }).parse(req.body);
+  const target = await prisma.user.findUnique({ where: { email } });
+  if (!target) return res.status(404).json({ error: 'Այս էլ․ փոստով հաշիվ չի գտնվել' });
+  if (target.role !== 'CUSTOMER') return res.status(409).json({ error: 'Միայն հաճախորդի հաշիվը կարելի է փոխել վարորդի հաշվի' });
+  const user = await prisma.user.update({
+    where: { id: target.id },
+    data: { role: 'DRIVER', driverLicense: driverLicense.trim(), isVerified: false }
+  });
+  res.json({ success: true, user: publicUser(user), message: 'Հաշիվը փոխվեց վարորդի։ Վարորդը սպասում է ադմինի հաստատմանը։' });
+}));
+
 app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (req, res) => {
   const { email } = z.object({ email: z.email().transform(v => v.toLowerCase()) }).parse(req.body);
   const target = await prisma.user.findUnique({ where: { email } });
