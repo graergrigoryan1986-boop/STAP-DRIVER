@@ -80,5 +80,5 @@ body.authenticated .booking-layout{display:block;max-width:1000px}
 body.authenticated .booking-intro{display:none!important}
 body.authenticated #appPanel{width:100%;max-width:none}
 body.authenticated #appPanel .dash-top{margin-bottom:18px}
-.driver-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media(max-width:560px){.driver-overview{grid-template-columns:1fr 1fr}}
+.driver-overview{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:560px){.driver-overview{grid-template-columns:1fr}}
