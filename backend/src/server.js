@@ -41,7 +41,7 @@ app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHe
 const publicUser = user => ({
   id: user.id, name: user.name, email: user.email, phone: user.phone,
   role: user.role, isBlocked: user.isBlocked, isVerified: user.isVerified,
-  balanceAmd: user.balanceAmd, createdAt: user.createdAt
+  balanceAmd: user.balanceAmd, driverLicense: user.driverLicense,\n  driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,\n  driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,\n  driverLicenseExpiresAt: user.driverLicenseExpiresAt, rating: user.rating, createdAt: user.createdAt
 });
 const signToken = user => jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '12h', issuer: 'stap-driver-api' });
 
@@ -77,15 +77,14 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     phone: z.string().trim().min(7).max(30),
     password: z.string().min(10).max(128),
     role: z.enum(['CUSTOMER', 'DRIVER']).default('CUSTOMER'),
-    driverLicense: z.string().trim().max(100).optional()
-  }).parse(req.body);
+    driverLicense: z.string().trim().max(100).optional(),\n    driverFirstNameLatin: z.string().trim().max(80).optional(),\n    driverLastNameLatin: z.string().trim().max(80).optional(),\n    driverPatronymicLatin: z.string().trim().max(80).optional(),\n    driverLicenseSeries: z.string().trim().max(40).optional(),\n    driverLicenseExpiresAt: z.iso.date().optional()\n  }).parse(req.body);
   if (input.role === 'DRIVER' && !input.driverLicense) return res.status(400).json({ error: 'Վարորդական իրավունքի տվյալները պարտադիր են' });
   const exists = await prisma.user.findUnique({ where: { email: input.email } });
   if (exists) return res.status(409).json({ error: 'Այս էլ․ փոստն արդեն գրանցված է' });
   const passwordHash = await bcrypt.hash(input.password, 12);
   const user = await prisma.user.create({ data: {
     name: input.name, email: input.email, phone: input.phone, passwordHash,
-    role: input.role, driverLicense: input.driverLicense || null
+    role: input.role, driverLicense: input.driverLicense || null,\n    driverFirstNameLatin: input.driverFirstNameLatin || null, driverLastNameLatin: input.driverLastNameLatin || null,\n    driverPatronymicLatin: input.driverPatronymicLatin || null, driverLicenseSeries: input.driverLicenseSeries || null,\n    driverLicenseExpiresAt: input.driverLicenseExpiresAt ? new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z') : null
   }});
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
 }));
@@ -161,6 +160,34 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), asyncRoute(async (req
   res.json({ success: true, settlement: result });
 }));
 
+app.patch('/api/drivers/profile', auth, only('DRIVER'), asyncRoute(async (req, res) => {
+  const input = z.object({
+    driverFirstNameLatin: z.string().trim().min(2).max(80),
+    driverLastNameLatin: z.string().trim().min(2).max(80),
+    driverPatronymicLatin: z.string().trim().max(80).optional().or(z.literal('')),
+    driverLicenseSeries: z.string().trim().min(3).max(40),
+    driverLicenseExpiresAt: z.iso.date()
+  }).parse(req.body);
+  const user = await prisma.user.update({ where: { id: req.user.id }, data: {
+    ...input, driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z')
+  }});
+  res.json({ user: publicUser(user), message: 'Վարորդական տվյալները պահպանվեցին։' });
+}));
+
+app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res) => {
+  const transactions = await prisma.walletTransaction.findMany({
+    where: { userId: req.user.id }, orderBy: { createdAt: 'desc' }, take: 100
+  });
+  res.json({ transactions });
+}));
+
+app.get('/api/admin/drivers/:id/transactions', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const transactions = await prisma.walletTransaction.findMany({
+    where: { userId: req.params.id }, orderBy: { createdAt: 'desc' }, take: 100
+  });
+  res.json({ transactions });
+}));
+
 app.post('/api/drivers/location', auth, only('DRIVER'), asyncRoute(async (req, res) => {
   const { latitude, longitude, orderId } = z.object({
     latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180),
@@ -221,7 +248,7 @@ app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (r
 }));
 
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
-  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, createdAt: true } });
+  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, rating: true, createdAt: true } });
   res.json({ drivers });
 }));
 
