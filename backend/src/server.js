@@ -41,7 +41,10 @@ app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHe
 const publicUser = user => ({
   id: user.id, name: user.name, email: user.email, phone: user.phone,
   role: user.role, isBlocked: user.isBlocked, isVerified: user.isVerified,
-  balanceAmd: user.balanceAmd, driverLicense: user.driverLicense,\n  driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,\n  driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,\n  driverLicenseExpiresAt: user.driverLicenseExpiresAt, rating: user.rating, createdAt: user.createdAt
+  balanceAmd: user.balanceAmd, driverLicense: user.driverLicense,
+  driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,
+  driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
+  driverLicenseExpiresAt: user.driverLicenseExpiresAt, rating: user.rating, createdAt: user.createdAt
 });
 const signToken = user => jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '12h', issuer: 'stap-driver-api' });
 
@@ -77,14 +80,23 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     phone: z.string().trim().min(7).max(30),
     password: z.string().min(10).max(128),
     role: z.enum(['CUSTOMER', 'DRIVER']).default('CUSTOMER'),
-    driverLicense: z.string().trim().max(100).optional(),\n    driverFirstNameLatin: z.string().trim().max(80).optional(),\n    driverLastNameLatin: z.string().trim().max(80).optional(),\n    driverPatronymicLatin: z.string().trim().max(80).optional(),\n    driverLicenseSeries: z.string().trim().max(40).optional(),\n    driverLicenseExpiresAt: z.iso.date().optional()\n  }).parse(req.body);
+    driverLicense: z.string().trim().max(100).optional(),
+    driverFirstNameLatin: z.string().trim().max(80).optional(),
+    driverLastNameLatin: z.string().trim().max(80).optional(),
+    driverPatronymicLatin: z.string().trim().max(80).optional(),
+    driverLicenseSeries: z.string().trim().max(40).optional(),
+    driverLicenseExpiresAt: z.iso.date().optional()
+  }).parse(req.body);
   if (input.role === 'DRIVER' && !input.driverLicense) return res.status(400).json({ error: 'Վարորդական իրավունքի տվյալները պարտադիր են' });
   const exists = await prisma.user.findUnique({ where: { email: input.email } });
   if (exists) return res.status(409).json({ error: 'Այս էլ․ փոստն արդեն գրանցված է' });
   const passwordHash = await bcrypt.hash(input.password, 12);
   const user = await prisma.user.create({ data: {
     name: input.name, email: input.email, phone: input.phone, passwordHash,
-    role: input.role, driverLicense: input.driverLicense || null,\n    driverFirstNameLatin: input.driverFirstNameLatin || null, driverLastNameLatin: input.driverLastNameLatin || null,\n    driverPatronymicLatin: input.driverPatronymicLatin || null, driverLicenseSeries: input.driverLicenseSeries || null,\n    driverLicenseExpiresAt: input.driverLicenseExpiresAt ? new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z') : null
+    role: input.role, driverLicense: input.driverLicense || null,
+    driverFirstNameLatin: input.driverFirstNameLatin || null, driverLastNameLatin: input.driverLastNameLatin || null,
+    driverPatronymicLatin: input.driverPatronymicLatin || null, driverLicenseSeries: input.driverLicenseSeries || null,
+    driverLicenseExpiresAt: input.driverLicenseExpiresAt ? new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z') : null
   }});
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
 }));
