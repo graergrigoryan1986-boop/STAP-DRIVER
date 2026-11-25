@@ -40,8 +40,6 @@ async function driverView(){
   <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='PENDING_REVIEW'?'Ադմինի ստուգմանը':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Կրկին ուղարկեք':'Սպասում է'}</strong></div>
  </div>
  ${u.driverDocumentsStatus==='PENDING_REVIEW'?'<div class="secure-note docs-sent-status">ՈւՂԱՐԿՎԵՑ</div>':u.isVerified?'':'<details class="dash-section" open><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>'}
-  <p class="secure-note">Անունը, ազգանունը, ծննդյան ամսաթիվը, վարորդական կարգերն ու վկայականի ժամկետները կարդացվում են փաստաթղթերից։ Ձեռքով լրացնել պետք չէ։</p>
-  <p class="secure-note">Վարորդական ստաժ՝ <strong>${experienceLabel(u.driverLicenseIssuedAt)}</strong>. ${u.isVerified?'Տվյալները հաստատված են և կողպված։':'Ուղարկեք փաստաթղթերը ֆոտովերահսկման։'}</p>
   <div class="driver-admin-data"><strong>Վարորդական կարգեր՝</strong> ${esc((u.driverLicenseCategories||[]).join(', ')||'Դեռ նշված չէ')}<br><strong>Փոխանցման տուփ՝</strong> ${u.driverTransmission==='MANUAL'?'Ավտոմատ / մեխանիկական':'Ավտոմատ'}</div>
   <form id="driverDocsForm" class="docs-form" style="${u.isVerified||u.driverDocumentsStatus==='PENDING_REVIEW'?'display:none':''}">
 <h4>1. Վարորդական իրավունք</h4>
