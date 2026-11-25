@@ -643,6 +643,30 @@ async function bootstrapAdmin() {
   });
 }
 
+
+// Recalculate all driver ratings daily at 00:01 Yerevan time.
+let lastRatingRefreshDay='';
+async function refreshDriverRatings(){
+ const drivers=await prisma.user.findMany({where:{role:'DRIVER'},select:{id:true}});
+ for(const driver of drivers){
+  const result=await prisma.rating.aggregate({where:{toUserId:driver.id},_avg:{score:true}});
+  const rating=result._avg.score===null?5:Number(result._avg.score.toFixed(2));
+  await prisma.user.update({where:{id:driver.id},data:{rating}});
+ }
+}
+setInterval(async()=>{
+ try{
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Yerevan',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  const value=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+  const day=value.year+'-'+value.month+'-'+value.day;
+  if(value.hour==='00'&&value.minute==='01'&&lastRatingRefreshDay!==day){
+   lastRatingRefreshDay=day;
+   await refreshDriverRatings();
+   console.log('Daily driver ratings refreshed for',day);
+  }
+ }catch(error){console.error('Daily rating refresh failed:',error)}
+},15000).unref();
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log('STAP DRIVER API listening on ' + PORT);
   bootstrapAdmin().catch(error => {
