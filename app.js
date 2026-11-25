@@ -53,18 +53,21 @@
   $$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal.open').forEach(m=>closeModal(m.id))});
   function updateBookingTimeLimits(){
-    const input=$('#scheduledAt'),now=new Date(),pad=n=>String(n).padStart(2,'0');
+    const input=$('#scheduledAt'),field=$('#scheduleFields'),now=new Date(),pad=n=>String(n).padStart(2,'0');
     const localValue=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
     if(selectedMode==='now'){
-      const max=new Date(now.getTime()+2*60*60*1000);
-      input.min=localValue(now);input.max=localValue(max);
-      $('#scheduledAtLabel').textContent='ՇՏԱՊ ՊԱՏՎԵՐԻ ԺԱՄԸ · ԱՅՍՕՐ՝ ՄՈՏԱԿԱ 1–2 ԺԱՄՈՒՄ';
-      $('#scheduledAtHint').textContent='Ընտրեք այսօրվա ժամը․ թույլատրվում է միայն ներկա պահից մինչև առաջիկա 2 ժամը։';
-      if(!input.value||input.value<input.min||input.value>input.max)input.value=localValue(new Date(Math.ceil(now.getTime()/60000)*60000+60*60000));
+      input.required=false;
+      input.value=localValue(now);
+      input.removeAttribute('min');input.removeAttribute('max');
+      field.hidden=true;
+      $('#scheduledAtLabel').textContent='ՇՏԱՊ ՊԱՏՎԵՐ';
+      $('#scheduledAtHint').textContent='Վարորդը պահանջվում է հիմա՝ հնարավորինս արագ։';
     }else{
+      field.hidden=false;
+      input.required=true;
       input.min=localValue(new Date(now.getTime()+15*60000));input.removeAttribute('max');
       $('#scheduledAtLabel').textContent='ՆԱԽՆԱԿԱՆ ՊԱՏՎԵՐԻ ԱՄՍԱԹԻՎ ԵՎ ԺԱՄ';
-      $('#scheduledAtHint').textContent='Ընտրեք նախնական ամրագրման օրը և ժամը։';
+      $('#scheduledAtHint').textContent='Ընտրեք նախապես ամրագրման օրը և ժամը։';
       if(!input.value||input.value<input.min)input.value='';
     }
   }
@@ -133,7 +136,7 @@
   $('#pickupCommunity').addEventListener('change',calculateRoute);
   $('#destinationCommunity').addEventListener('change',calculateRoute);
   calculateRoute();
-  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');updateBookingTimeLimits();if(!f.get('scheduledAt')||f.get('scheduledAt')<$('#scheduledAt').min||($('#scheduledAt').max&&f.get('scheduledAt')>$('#scheduledAt').max)){notify(selectedMode==='now'?'Շտապ պատվերի ժամը պետք է լինի այսօր՝ առաջիկա 2 ժամվա ընթացքում։':'Նշեք վավեր ամսաթիվ և ժամ։');return}if(!calculateRoute()){notify('Նախ ընտրեք սկզբնակետի և նպատակակետի համայնքները։');return}if(!String(f.get('pickup')||'').trim()||!String(f.get('destination')||'').trim()){notify('Պատվերը պահպանելու համար լրացրեք երկու հասցեներն էլ՝ փողոց, շենք կամ օբյեկտի անուն։');(!String(f.get('pickup')||'').trim()?$('#pickup'):$('#destination')).focus();return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+String(f.get('pickup')).trim(),to:f.get('destinationCommunity')+' · '+String(f.get('destination')).trim(),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),km:0,price:service==='sober'?routeFare:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:(selectedMode==='now'?'Շտապ՝ այսօր ':'Նախնական՝ ')+new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;routeFare=10000;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
+  $('#bookingForm').addEventListener('submit',e=>{e.preventDefault();const u=user();if(!u){notify('Պատվեր ստեղծելու համար նախ գրանցվեք կամ մուտք գործեք։');openModal('loginModal');return}const f=new FormData(e.target),service=f.get('service');updateBookingTimeLimits();if(selectedMode==='scheduled'&&(!f.get('scheduledAt')||f.get('scheduledAt')<$('#scheduledAt').min)){notify('Նշեք վավեր նախնական ամսաթիվ և ժամ։');return}if(!calculateRoute()){notify('Նախ ընտրեք սկզբնակետի և նպատակակետի համայնքները։');return}if(!String(f.get('pickup')||'').trim()||!String(f.get('destination')||'').trim()){notify('Պատվերը պահպանելու համար լրացրեք երկու հասցեներն էլ՝ փողոց, շենք կամ օբյեկտի անուն։');(!String(f.get('pickup')||'').trim()?$('#pickup'):$('#destination')).focus();return}const order={id:'SD-'+Date.now(),customerId:u.id,orgId:u.role==='organization'?u.id:null,waitingRatePerHour:1500,from:f.get('pickupCommunity')+' · '+String(f.get('pickup')).trim(),to:f.get('destinationCommunity')+' · '+String(f.get('destination')).trim(),pickupCommunity:f.get('pickupCommunity'),destinationCommunity:f.get('destinationCommunity'),km:0,price:service==='sober'?routeFare:null,service,transmissionType:f.get('transmissionType')||'',powerType:f.get('powerType')||'',mode:selectedMode,scheduledAt:f.get('scheduledAt')||'',dateLabel:selectedMode==='now'?'Շտապ պատվեր՝ հիմա, հնարավորինս արագ':'Նախնական՝ '+new Date(f.get('scheduledAt')).toLocaleString('hy-AM'),status:'Նոր հայտ',createdAt:new Date().toISOString()};db.orders.push(order);save();e.target.reset();routeKm=0;routeFare=10000;$('#routeResult').hidden=true;$('#bookingNotice').hidden=false;$('#bookingNotice').textContent='Հայտը պահպանվեց այս սարքի ցուցադրական համակարգում։ Իրական վարորդներին այն դեռ չի ուղարկվել։';notify('Ցուցադրական պատվերը ստեղծվեց։');setTimeout(()=>{showDashboard()},450)});
   $('#switchToLogin').onclick=()=>{closeModal('registerModal');openModal('loginModal')};
   $('#switchToRegister').onclick=()=>{closeModal('loginModal');switchAuth('customer')};
   $('#year').textContent=new Date().getFullYear();
