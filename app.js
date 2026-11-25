@@ -55,13 +55,21 @@
       if(!list._items.length)list.innerHTML='<div class="suggestion-item"><span class="suggestion-main">Հասցե չգտնվեց</span><span class="suggestion-sub">Գրեք փողոցի ամբողջական անունը և շենքի համարը։</span></div>';
       list.hidden=false;
     };
-    const fetchWithTimeout=async(url,ms=7000)=>{
-      const timer=setTimeout(()=>controller.abort(),ms);
+    const fetchWithTimeout=async(url,ms=6500)=>{
+      // Each provider gets its own request controller. A Photon timeout must
+      // not cancel the Nominatim fallback request.
+      const requestController=new AbortController();
+      const cancelRequest=()=>requestController.abort();
+      controller.signal.addEventListener('abort',cancelRequest,{once:true});
+      const timer=setTimeout(()=>requestController.abort(),ms);
       try{
-        const response=await fetch(url,{signal:controller.signal,headers:{Accept:'application/json'}});
+        const response=await fetch(url,{signal:requestController.signal,headers:{Accept:'application/json'}});
         if(!response.ok)throw new Error('HTTP '+response.status);
         return await response.json();
-      }finally{clearTimeout(timer)}
+      }finally{
+        clearTimeout(timer);
+        controller.signal.removeEventListener('abort',cancelRequest);
+      }
     };
     try{
       const variants=queryVariants(q);
