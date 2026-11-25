@@ -40,7 +40,7 @@ async function driverView(){
  <div class="driver-profile-photo-block">${profilePhoto?'<img src="'+profilePhoto+'" alt="Վարորդի պրոֆիլային լուսանկար">':'<span>Պրոֆիլի լուսանկարը դեռ ներբեռնված չէ</span>'}</div>
  <div class="driver-overview">
   <div class="metric-card"><span>ՀԱՇՎԵԿՇԻՌ</span><strong>${money(u.balanceAmd)}</strong></div>
-  <div class="metric-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ ${Number(u.rating??5).toFixed(1)}</strong><small>Ակտիվ վարկանիշ</small></div>
+  <div class="metric-card driver-rating-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ ${Number(u.rating??5).toFixed(1)}</strong><small>Ակտիվ վարկանիշ</small><div class="driver-mini-facts"><span><b>Տարիք</b> ${driverAgeLabel(u.dateOfBirth)}</span><span><b>Ստաժ</b> ${driverExperienceLabel(u.driverLicenseIssuedAt)}</span></div></div>
   <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='PENDING_REVIEW'?'Ադմինի ստուգմանը':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Կրկին ուղարկեք':'Սպասում է'}</strong></div>
  </div>
  ${u.driverDocumentsStatus==='PENDING_REVIEW'?'<div class="secure-note docs-sent-status">ՈւՂԱՐԿՎԵՑ</div>':u.isVerified?'':'<details class="dash-section" open><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>'}
