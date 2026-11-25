@@ -68,11 +68,14 @@
       const expanded=variants.find(term=>term!==q&&/[\u0530-\u058F]/.test(term))||q;
       const term=expanded+', Yerevan, Armenia';
       const photonParams=new URLSearchParams({q:term,limit:'8',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
-      const photon=await fetchWithTimeout('https://photon.komoot.io/api/?'+photonParams.toString());
+      let photonFeatures=[];
+      try{
+        const photon=await fetchWithTimeout('https://photon.komoot.io/api/?'+photonParams.toString());
+        photonFeatures=(photon.features||[]).filter(x=>x.geometry?.coordinates?.length===2);
+      }catch(photonError){console.warn('Photon unavailable; trying backup geocoder:',photonError)}
       if(!stillCurrent())return;
-      const features=(photon.features||[]).filter(x=>x.geometry?.coordinates?.length===2);
-      if(features.length){showItems(features);return}
-      // Try the backup geocoder when Photon returns no matches.
+      if(photonFeatures.length){showItems(photonFeatures);return}
+      // Try the backup geocoder when Photon fails or returns no matches.
       const nomParams=new URLSearchParams({q:term,format:'jsonv2',limit:'8',countrycodes:'am',addressdetails:'1',accept_language:addressLanguage(q),viewbox:'44.20,40.35,44.75,40.00'});
       const results=await fetchWithTimeout('https://nominatim.openstreetmap.org/search?'+nomParams.toString());
       if(!stillCurrent())return;
