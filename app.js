@@ -213,10 +213,8 @@
         if(!Number.isFinite(result.lon)||!Number.isFinite(result.lat))throw Error('Invalid coordinates');
         return result;
       };
-      const p=await geo(a,$('#pickup'));
-      if(requestId!==routeRequest)return;
-      $('#routeHelp').textContent='Մեկնարկի հասցեն գտնվեց․ որոնվում է նպատակակետը…';
-      const d=await geo(b,$('#destination'));
+      $('#routeHelp').textContent='Երկու հասցեներն էլ որոնվում են միաժամանակ…';
+      const [p,d]=await Promise.all([geo(a,$('#pickup')),geo(b,$('#destination'))]);
       if(requestId!==routeRequest)return;
       $('#routeHelp').textContent='Հասցեները գտնվեցին․ հաշվարկվում է մեքենայի երթուղին…';
       const routeUrl='https://router.project-osrm.org/route/v1/driving/'+p.lon+','+p.lat+';'+d.lon+','+d.lat+'?overview=false&alternatives=true&steps=false';
