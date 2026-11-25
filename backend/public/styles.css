@@ -67,3 +67,18 @@
 .admin-search{margin:12px 0}
 #dashboard .driver{padding:20px}
 @media(max-width:560px){.driver-overview,.admin-overview{grid-template-columns:1fr 1fr}.profile-form{grid-template-columns:1fr}.logout-bottom{justify-content:stretch}.logout-bottom button{width:100%}}
+
+/* Authenticated accounts take priority over public landing content */
+body.authenticated .hero,
+body.authenticated #services,
+body.authenticated #accounts,
+body.authenticated #how,
+body.authenticated .contact-band,
+body.authenticated footer{display:none!important}
+body.authenticated .booking-section{padding:24px 0 36px}
+body.authenticated .booking-layout{display:block;max-width:1000px}
+body.authenticated .booking-intro{display:none!important}
+body.authenticated #appPanel{width:100%;max-width:none}
+body.authenticated #appPanel .dash-top{margin-bottom:18px}
+.driver-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:560px){.driver-overview{grid-template-columns:1fr 1fr}}
