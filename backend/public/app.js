@@ -77,13 +77,13 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
  identityType?.addEventListener('change',updateIdentityLabels);updateIdentityLabels();
  if(docsForm)docsForm.onsubmit=async e=>{
   e.preventDefault();
+  const f=new FormData(docsForm),keys=['front','back','selfie','passportFront','passportBack'];
   const submitButton=docsForm.querySelector('button[type="submit"]');
   const controls=[...docsForm.querySelectorAll('input,select,button,textarea')];
   controls.forEach(control=>control.disabled=true);
   if(submitButton)submitButton.textContent='ՆԿԱՐՆԵՐԸ ՈՒՂԱՐԿՎՈՒՄ ԵՆ...';
   docsForm.setAttribute('aria-busy','true');
   try{
-   const f=new FormData(docsForm),keys=['front','back','selfie','passportFront','passportBack'];
    if(keys.some(k=>!(f.get(k) instanceof File)||!f.get(k).size))throw new Error('Խնդրում ենք ընտրել բոլոր 5 լուսանկարները։');
    if(!window.Tesseract)throw new Error('OCR գրադարանը հասանելի չէ։ Փորձեք մի փոքր ուշ։');
    message('#ocrStatus','Կարդում և համեմատում ենք փաստաթղթերը։ Մի փակեք էջը...');
