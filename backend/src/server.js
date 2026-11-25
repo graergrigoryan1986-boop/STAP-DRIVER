@@ -434,7 +434,8 @@ app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(asyn
   }});
   if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
   const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
-  res.json({driver:{...driver,passportNumber:decryptPrivate(driver.passportNumberEncrypted)?.toString('utf8')||null,passportIssuedBy:decryptPrivate(driver.passportIssuedByEncrypted)?.toString('utf8')||null,
+  const {passportNumberEncrypted,passportIssuedByEncrypted,...safeDriver}=driver;
+  res.json({driver:{...safeDriver,passportNumber:decryptPrivate(passportNumberEncrypted)?.toString('utf8')||null,passportIssuedBy:decryptPrivate(passportIssuedByEncrypted)?.toString('utf8')||null,
     driverLicenseFront:image(driver.driverLicenseFront),driverLicenseBack:image(driver.driverLicenseBack),driverLicenseSelfie:image(driver.driverLicenseSelfie),
     passportFront:image(driver.passportFront),passportBack:image(driver.passportBack),driverProfilePhoto:image(driver.driverProfilePhoto)}});
 }));
