@@ -27,7 +27,7 @@ const io = new SocketServer(server, {
   cors: { origin: allowedOrigins.length ? allowedOrigins : false, methods: ['GET', 'POST'] }
 });
 
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', "'wasm-unsafe-eval'"], workerSrc: ["'self'", 'blob:'], connectSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://tessdata.projectnaptha.com'], imgSrc: ["'self'", 'data:', 'blob:'], styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'], fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'] } } }));
 app.use(express.static('public'));
 app.use(cors({
   origin(origin, callback) {
@@ -407,7 +407,7 @@ app.patch('/api/admin/drivers/:id/verify', auth, only('ADMIN'), asyncRoute(async
   const { verified } = z.object({ verified: z.boolean() }).parse(req.body);
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
   if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
-  if (verified && (!driver.driverLicenseFront || !driver.driverLicenseBack || !driver.driverLicenseSelfie || driver.driverDocumentsStatus !== 'PENDING' || !driver.driverLicenseIssuedAt || !driver.driverLicenseCategories.length)) {
+  if (verified && (!driver.driverLicenseFront || !driver.driverLicenseBack || !driver.driverLicenseSelfie || driver.driverDocumentsStatus !== 'PENDING' || !driver.driverLicenseIssuedAt || !driver.driverLicenseExpiresAt || !driver.driverLicenseCategories.length || !driver.driverFirstNameLatin || !driver.driverLastNameLatin)) {
     return res.status(409).json({ error: 'Հաստատման համար անհրաժեշտ են երեք լուսանկար, տրման ամսաթիվ և վարորդական կարգեր։' });
   }
   const user = await prisma.user.update({ where: { id: driver.id }, data: { isVerified: verified, driverDocumentsStatus: verified ? 'APPROVED' : driver.driverDocumentsStatus } });
