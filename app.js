@@ -46,7 +46,8 @@
       // Search the typed fragment first, then add Yerevan context and transliterations.
       // One failed variant must not discard successful autocomplete results from the others.
       const variants=[...new Set(queryVariants(q).flatMap(term=>[term,term+' Yerevan']))];
-      const photonTimer=setTimeout(()=>controller.abort(),9000);
+      let photonTimedOut=false;
+      const photonTimer=setTimeout(()=>{photonTimedOut=true;controller.abort()},9000);
       let responses;
       try{responses=await Promise.allSettled(variants.map(async term=>{
         const params=new URLSearchParams({q:term,limit:'10',lat:'40.1792',lon:'44.4991',zoom:'12',lang:addressLanguage(q)});
@@ -74,11 +75,11 @@
       list.hidden=false;
     }catch(error){
       if(input.value.trim()!==q)return;
-      if(error.name==='AbortError')return;
+      if(error.name==='AbortError'&&!photonTimedOut)return;
       console.warn('Photon autocomplete unavailable; trying Nominatim:',error);
       try{
         if(controller.signal.aborted){controller=new AbortController();suggestControllers[id]=controller;}
-        const expanded=queryVariants(q).find(term=>term!==q&&/[\\u0530-\\u058F]/.test(term))||queryVariants(q).find(term=>term!==q)||q;
+        const expanded=queryVariants(q).find(term=>term!==q&&/[\u0530-\u058F]/.test(term))||queryVariants(q).find(term=>term!==q)||q;
         const params=new URLSearchParams({q:expanded+', Yerevan, Armenia',format:'jsonv2',limit:'8',countrycodes:'am',addressdetails:'1',accept_language:addressLanguage(q),viewbox:'44.20,40.35,44.75,40.00'});
         const fallbackTimer=setTimeout(()=>controller.abort(),9000);
         let response;
