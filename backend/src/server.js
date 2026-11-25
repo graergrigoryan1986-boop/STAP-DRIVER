@@ -464,12 +464,14 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const surname=clean(identity?.surname),firstName=clean(identity?.firstName),licenseLatin=clean(transliterateArmenian(licenseText));
   const namesMatch=Boolean(surname.length>=3&&firstName.length>=2&&(licenseClean.includes(surname)&&licenseClean.includes(firstName)||licenseLatin.includes(surname)&&licenseLatin.includes(firstName)));
   const detectedLicenseCategories=extractLicenseCategories(licenseText);
+  const licenseBirthDate=labelledDate(licenseText,[/\b3\b/i,/date of birth/i,/birth date/i,/ծննդյան ամսաթիվ/i]);
   const issueDate=labelledDate(licenseText,[/\b4a\b/i,/date of issue/i,/issue date/i,/issued/i,/տրման ամսաթիվ/i,/տրամադրման ամսաթիվ/i]);
   const licenseExpiry=labelledDate(licenseText,[/\b4b\b/i,/date of expiry/i,/expiry date/i,/valid until/i,/վավեր է մինչև/i,/գործողության ավարտ/i]);
   const now=new Date(),birthDate=identity?.birthDate||null,passportExpiry=identity?.expiryDate||null;
   const age=birthDate?now.getUTCFullYear()-birthDate.getUTCFullYear()-((now.getUTCMonth()<birthDate.getUTCMonth()||(now.getUTCMonth()===birthDate.getUTCMonth()&&now.getUTCDate()<birthDate.getUTCDate()))?1:0):null;
   const expired=Boolean((birthDate&&birthDate>now)||(age!==null&&age<18)||(passportExpiry&&passportExpiry<=now)||(licenseExpiry&&licenseExpiry<=now));
-  const allReadable=Boolean(identity&&birthDate&&passportExpiry&&licenseExpiry&&namesMatch&&detectedLicenseCategories.length>0);
+  const datesMatch=Boolean(birthDate&&licenseBirthDate&&birthDate.getTime()===licenseBirthDate.getTime());
+  const allReadable=Boolean(identity&&birthDate&&passportExpiry&&licenseBirthDate&&licenseExpiry&&datesMatch&&namesMatch&&detectedLicenseCategories.length>0);
   const autoPassed=allReadable&&!expired,status=autoPassed?'AUTO_APPROVED':'REJECTED';
   const passportNumber=identity?.passportNumber||'';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
