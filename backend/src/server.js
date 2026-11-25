@@ -35,7 +35,7 @@ app.use(cors({
     return callback(new Error('Origin is not allowed by CORS'));
   }
 }));
-app.use(express.json({ limit: '32kb' }));
+app.use(express.json({ limit: '12mb' }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false }));
 
 const publicUser = user => ({
@@ -44,7 +44,7 @@ const publicUser = user => ({
   balanceAmd: user.balanceAmd, driverLicense: user.driverLicense,
   driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
-  driverLicenseExpiresAt: user.driverLicenseExpiresAt, createdAt: user.createdAt
+  driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, driverDocumentsStatus: user.driverDocumentsStatus, createdAt: user.createdAt
 });
 const signToken = user => jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '12h', issuer: 'stap-driver-api' });
 
@@ -85,7 +85,8 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     driverLastNameLatin: z.string().trim().max(80).optional(),
     driverPatronymicLatin: z.string().trim().max(80).optional(),
     driverLicenseSeries: z.string().trim().max(40).optional(),
-    driverLicenseExpiresAt: z.iso.date().optional()
+    driverLicenseExpiresAt: z.iso.date().optional(),
+    driverLicenseIssuedAt: z.iso.date().optional()
   }).parse(req.body);
   if (input.role === 'DRIVER' && !input.driverLicense) return res.status(400).json({ error: 'Վարորդական իրավունքի տվյալները պարտադիր են' });
   const exists = await prisma.user.findUnique({ where: { email: input.email } });
@@ -96,7 +97,8 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     role: input.role, driverLicense: input.driverLicense || null,
     driverFirstNameLatin: input.driverFirstNameLatin || null, driverLastNameLatin: input.driverLastNameLatin || null,
     driverPatronymicLatin: input.driverPatronymicLatin || null, driverLicenseSeries: input.driverLicenseSeries || null,
-    driverLicenseExpiresAt: input.driverLicenseExpiresAt ? new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z') : null
+    driverLicenseExpiresAt: input.driverLicenseExpiresAt ? new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z') : null,
+    driverLicenseIssuedAt: input.driverLicenseIssuedAt ? new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z') : null
   }});
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
 }));
@@ -120,6 +122,8 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
     destinationLat: z.number().min(-90).max(90).optional(),
     destinationLng: z.number().min(-180).max(180).optional(),
     fareAmd: z.number().int().min(1000).max(1000000),
+    requiredLicenseCategory: z.string().trim().min(1).max(5).default('B'),
+    transmissionType: z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note: z.string().max(1000).optional()
   }).parse(req.body);
   const order = await prisma.order.create({ data: { ...input, customerId: req.user.id } });
@@ -129,7 +133,12 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
 
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const orders = await prisma.order.findMany({ where: { status: 'OPEN', skippedBy: { none: { driverId: req.user.id } } }, orderBy: { createdAt: 'asc' } });
-  res.json({ orders });
+  const categories = req.user.driverLicenseCategories || [];
+  const ordersForDriver = orders.filter(order =>
+    categories.includes(order.requiredLicenseCategory) &&
+    (order.transmissionType !== 'MANUAL' || req.user.driverTransmission === 'MANUAL')
+  );
+  res.json({ orders: ordersForDriver });
 }));
 
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
@@ -167,6 +176,12 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 }));
 
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
+  const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', driverId: null } });
+  if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
+  if (!(req.user.driverLicenseCategories || []).includes(requestedOrder.requiredLicenseCategory) ||
+      (requestedOrder.transmissionType === 'MANUAL' && req.user.driverTransmission !== 'MANUAL')) {
+    return res.status(403).json({ error: 'Այս պատվերի մեքենայի կարգը կամ փոխանցման տուփը ձեր իրավասության մեջ չէ։' });
+  }
   const result = await prisma.order.updateMany({
     where: { id: req.params.id, status: 'OPEN', driverId: null },
     data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date() }
@@ -206,10 +221,15 @@ app.patch('/api/drivers/profile', auth, only('DRIVER'), asyncRoute(async (req, r
     driverLastNameLatin: z.string().trim().min(2).max(80),
     driverPatronymicLatin: z.string().trim().max(80).optional().or(z.literal('')),
     driverLicenseSeries: z.string().trim().min(3).max(40),
-    driverLicenseExpiresAt: z.iso.date()
+    driverLicenseExpiresAt: z.iso.date(),
+    driverLicenseIssuedAt: z.iso.date(),
+    driverLicenseCategories: z.array(z.string().min(1).max(5)).min(1).max(15),
+    driverTransmission: z.enum(['AUTOMATIC','MANUAL'])
   }).parse(req.body);
   const user = await prisma.user.update({ where: { id: req.user.id }, data: {
-    ...input, driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z')
+    ...input,
+    driverLicenseExpiresAt: new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z'),
+    driverLicenseIssuedAt: new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z')
   }});
   res.json({ user: publicUser(user), message: 'Վարորդական տվյալները պահպանվեցին։' });
 }));
@@ -220,7 +240,10 @@ app.patch('/api/admin/drivers/:id/profile', auth, only('ADMIN'), asyncRoute(asyn
     driverLastNameLatin: z.string().trim().min(2).max(80),
     driverPatronymicLatin: z.string().trim().max(80).optional().or(z.literal('')),
     driverLicenseSeries: z.string().trim().min(3).max(40),
-    driverLicenseExpiresAt: z.iso.date()
+    driverLicenseExpiresAt: z.iso.date(),
+    driverLicenseIssuedAt: z.iso.date().optional(),
+    driverLicenseCategories: z.array(z.string().min(1).max(5)).optional(),
+    driverTransmission: z.enum(['AUTOMATIC','MANUAL']).optional()
   }).parse(req.body);
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
   if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
@@ -333,15 +356,53 @@ app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (r
 }));
 
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
-  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, createdAt: true } });
+  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverLicenseCategories: true, driverTransmission: true, driverDocumentsStatus: true, createdAt: true } });
   res.json({ drivers });
+}));
+
+app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, res) => {
+  if (req.user.isVerified) return res.status(403).json({ error: 'Հաստատված պրոֆիլի փաստաթղթերը փոփոխել կարող է միայն ադմինը։' });
+  const input = z.object({
+    front: z.string().min(100).max(3500000),
+    back: z.string().min(100).max(3500000),
+    selfie: z.string().min(100).max(3500000),
+    ocrText: z.string().max(12000).optional()
+  }).parse(req.body);
+  const decode = value => {
+    const raw = value.replace(/^data:image\/(jpeg|jpg|png|webp);base64,/i, '');
+    if (!/^[A-Za-z0-9+/=]+$/.test(raw)) throw new Error('Նկարի ձևաչափը սխալ է');
+    const buffer = Buffer.from(raw, 'base64');
+    if (!buffer.length || buffer.length > 2500000) throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ');
+    return buffer;
+  };
+  const [front, back, selfie] = [decode(input.front), decode(input.back), decode(input.selfie)];
+  const user = await prisma.user.update({ where: { id: req.user.id }, data: {
+    driverLicenseFront: front, driverLicenseBack: back, driverLicenseSelfie: selfie,
+    driverDocumentsStatus: 'PENDING', driverOcrText: input.ocrText || null, isVerified: false
+  }});
+  res.json({ success: true, driverDocumentsStatus: user.driverDocumentsStatus, message: 'Փաստաթղթերն ուղարկվեցին ադմինի ֆոտովերահսկմանը։' });
+}));
+
+app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(async (req, res) => {
+  const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' }, select: {
+    id: true, name: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true,
+    driverLicenseSeries: true, driverLicenseIssuedAt: true, driverLicenseExpiresAt: true,
+    driverLicenseCategories: true, driverTransmission: true, driverDocumentsStatus: true, driverOcrText: true,
+    driverLicenseFront: true, driverLicenseBack: true, driverLicenseSelfie: true
+  }});
+  if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
+  const encode = value => value ? 'data:image/jpeg;base64,'+Buffer.from(value).toString('base64') : null;
+  res.json({ driver: { ...driver, driverLicenseFront: encode(driver.driverLicenseFront), driverLicenseBack: encode(driver.driverLicenseBack), driverLicenseSelfie: encode(driver.driverLicenseSelfie) } });
 }));
 
 app.patch('/api/admin/drivers/:id/verify', auth, only('ADMIN'), asyncRoute(async (req, res) => {
   const { verified } = z.object({ verified: z.boolean() }).parse(req.body);
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
   if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
-  const user = await prisma.user.update({ where: { id: driver.id }, data: { isVerified: verified } });
+  if (verified && (!driver.driverLicenseFront || !driver.driverLicenseBack || !driver.driverLicenseSelfie || driver.driverDocumentsStatus !== 'PENDING' || !driver.driverLicenseIssuedAt || !driver.driverLicenseCategories.length)) {
+    return res.status(409).json({ error: 'Հաստատման համար անհրաժեշտ են երեք լուսանկար, տրման ամսաթիվ և վարորդական կարգեր։' });
+  }
+  const user = await prisma.user.update({ where: { id: driver.id }, data: { isVerified: verified, driverDocumentsStatus: verified ? 'APPROVED' : driver.driverDocumentsStatus } });
   res.json({ driver: publicUser(user) });
 }));
 
