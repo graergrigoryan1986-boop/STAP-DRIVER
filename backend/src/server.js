@@ -472,7 +472,7 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
   const age=birthDate?now.getUTCFullYear()-birthDate.getUTCFullYear()-((now.getUTCMonth()<birthDate.getUTCMonth()||(now.getUTCMonth()===birthDate.getUTCMonth()&&now.getUTCDate()<birthDate.getUTCDate()))?1:0):null;
   const expired=Boolean((birthDate&&birthDate>now)||(age!==null&&age<18)||(passportExpiry&&passportExpiry<=now)||(licenseExpiry&&licenseExpiry<=now));
   const datesMatch=Boolean(birthDate&&licenseBirthDate&&birthDate.getTime()===licenseBirthDate.getTime());
-  const allReadable=Boolean(identity&&birthDate&&passportExpiry&&licenseBirthDate&&licenseExpiry&&datesMatch&&namesMatch&&detectedLicenseCategories.length>0);
+  const allReadable=Boolean(identity&&birthDate&&passportExpiry&&licenseBirthDate&&issueDate&&licenseExpiry&&datesMatch&&namesMatch&&detectedLicenseCategories.length>0);
   const autoPassed=allReadable&&!expired,status=autoPassed?'AUTO_APPROVED':'REJECTED';
   const passportNumber=identity?.passportNumber||'';
   const user=await prisma.user.update({where:{id:req.user.id},data:{
