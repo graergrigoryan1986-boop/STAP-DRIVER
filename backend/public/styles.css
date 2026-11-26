@@ -340,3 +340,13 @@ body.authenticated footer{display:none!important}
 .driver-gallery-form .doc-upload-tile{min-width:180px}
 .driver-gallery-form .docs-submit{width:auto!important;min-width:200px}
 @media(max-width:620px){#dashboard.admin-light .admin-doc-preview{grid-template-columns:1fr}.driver-gallery-form{display:grid;grid-template-columns:1fr}.driver-gallery-form .docs-submit{width:100%!important}}
+
+/* Strong, readable review status colors */
+#dashboard.admin-light article.driver.driver-status-pending{border:2px solid #eab308!important;border-left:9px solid #eab308!important;background:#fffbea!important}
+#dashboard.admin-light article.driver.driver-status-approved{border:2px solid #16a34a!important;border-left:9px solid #16a34a!important;background:#f0fdf4!important}
+#dashboard.admin-light article.driver.driver-status-rejected{border:2px solid #dc2626!important;border-left:9px solid #dc2626!important;background:#fff1f2!important}
+#dashboard.admin-light .admin-doc-preview{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:16px}
+#dashboard.admin-light .admin-doc-preview figure img{max-height:560px;object-fit:contain;cursor:zoom-in;background:#e5e7eb}
+#dashboard.admin-light .admin-doc-preview figure img:active{max-height:none}
+#dashboard.admin-light .admin-doc-preview figcaption{font-size:14px;font-weight:800;padding:8px;color:#173b63}
+#dashboard.admin-light .document-actions{display:flex;gap:10px;flex-wrap:wrap;padding:12px}
