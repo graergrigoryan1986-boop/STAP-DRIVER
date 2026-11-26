@@ -527,7 +527,7 @@ app.patch('/api/admin/drivers/:id/profile', auth, only('ADMIN'), asyncRoute(asyn
     driverExperienceMonths: z.number().int().min(0).max(1200).optional(),
     dateOfBirth: z.iso.date().optional().or(z.literal('')),
     rating: z.number().min(0).max(5).optional(),
-    driverNegativeBalanceLimitAmd: z.number().int().min(0).max(100000000).optional()
+    driverNegativeBalanceLimitAmd: z.number().int().min(0).max(100000).optional()
   }).strict().refine(v=>Object.keys(v).length>0,'Փոփոխության տվյալներ չկան').parse(req.body);
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
   if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
