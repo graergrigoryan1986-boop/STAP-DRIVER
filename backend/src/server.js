@@ -651,6 +651,17 @@ app.patch('/api/admin/drivers/:id/verify',auth,only('ADMIN'),asyncRoute(async(re
 
 
 // Admin can inspect and remove individual ratings. Driver score is recomputed by the daily job.
+app.get('/api/admin/ratings/overview',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const users=await prisma.user.findMany({
+  where:{role:{in:['DRIVER','CUSTOMER']}},
+  select:{id:true,name:true,role:true,rating:true,ratingsReceived:{
+   orderBy:{createdAt:'desc'},
+   include:{fromUser:{select:{name:true,role:true}},order:{select:{id:true,createdAt:true}}}
+  }}
+ });
+ res.json({users});
+}));
+
 app.get('/api/admin/drivers/:id/ratings',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
  if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
