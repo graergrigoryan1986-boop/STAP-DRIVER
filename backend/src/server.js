@@ -266,6 +266,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     phoneSecondary:z.string().trim().min(5).max(30).optional().or(z.literal('')),
     passengerCount:z.number().int().min(1).max(8).default(1),
     transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
+    vehicleFuelType:z.enum(['PETROL','ELECTRIC','HYBRID']).default('PETROL'),
     note:z.string().max(1000).optional(),
     dispatchMode:z.enum(['NETWORK','CATEGORY','DIRECT']).default('NETWORK'),
     driverId:z.string().optional().or(z.literal('')),
@@ -289,7 +290,8 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     order=await prisma.order.create({data:{
       customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,requiredLicenseCategory:'',pickupAddress:input.pickupAddress,
       destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
-      transmissionType:input.transmissionType,note:input.note
+      transmissionType:input.transmissionType,
+      vehicleFuelType:input.vehicleFuelType,note:input.note
     }});
   } catch(error) {
     console.error('Admin order creation failed:',{code:error.code,message:error.message,meta:error.meta});
