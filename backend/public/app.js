@@ -47,15 +47,20 @@ async function driverView(){
   <div class="driver-admin-data"><strong>Վարորդական կարգեր՝</strong> ${esc((u.driverLicenseCategories||[]).join(', ')||'Դեռ նշված չէ')}<br><strong>Փոխանցման տուփ՝</strong> ${u.driverTransmission==='MANUAL'?'Ավտոմատ / մեխանիկական':'Ավտոմատ'}</div>
   <form id="driverDocsForm" class="docs-form" style="${u.isVerified||u.driverDocumentsStatus==='PENDING_REVIEW'?'display:none':''}">
 <h4>1. Վարորդական իրավունք</h4>
-<label>Վարորդականի առջևի կողմ<input type="file" name="front" accept="image/*" capture="environment" required></label>
-<label>Վարորդականի հետևի կողմ<input type="file" name="back" accept="image/*" capture="environment" required></label>
-<label>Սելֆի՝ վարորդականի հետ<input type="file" name="selfie" accept="image/*" capture="user" required></label>
+<div class="docs-upload-grid">
+<label class="doc-upload-tile">Վարորդական՝ առջև<input type="file" name="front" accept="image/*" capture="environment" required><span class="doc-file-name">Ներբեռնված չէ</span></label>
+<label class="doc-upload-tile">Վարորդական՝ հետև<input type="file" name="back" accept="image/*" capture="environment" required><span class="doc-file-name">Ներբեռնված չէ</span></label>
+<label class="doc-upload-tile">Սելֆի<input type="file" name="selfie" accept="image/*" capture="user" required><span class="doc-file-name">Ներբեռնված չէ</span></label>
+</div>
 <h4>2. Անձնագիր կամ նույնականացման քարտ</h4>
-<label>Փաստաթղթի տեսակ<select name="passportDocumentType" required><option value="PASSPORT">Անձնագիր</option><option value="ID_CARD">Նույնականացման քարտ</option></select></label>
-<label id="identityFrontLabel">Անձնագրի լուսանկարով էջ<input type="file" name="passportFront" accept="image/*" capture="environment" required></label>
-<label id="identityBackLabel">Անձնագրի գրանցման էջ<input type="file" name="passportBack" accept="image/*" capture="environment" required></label>
+<label class="doc-type-select">Փաստաթղթի տեսակ<select name="passportDocumentType" required><option value="PASSPORT">Անձնագիր</option><option value="ID_CARD">Նույնականացման քարտ</option></select></label>
+<div class="docs-upload-grid">
+<label id="identityFrontLabel" class="doc-upload-tile">Անձնագրի լուսանկարով էջ<input type="file" name="passportFront" accept="image/*" capture="environment" required><span class="doc-file-name">Ներբեռնված չէ</span></label>
+<label id="identityBackLabel" class="doc-upload-tile">Անձնագրի գրանցման էջ<input type="file" name="passportBack" accept="image/*" capture="environment" required><span class="doc-file-name">Ներբեռնված չէ</span></label>
+<label class="doc-upload-tile">Պրոֆիլի լուսանկար<input type="file" name="profilePhoto" accept="image/*" capture="user"><span class="doc-file-name">Ներբեռնված չէ</span></label>
+</div>
 <button class="action docs-submit" type="submit"><span aria-hidden="true">⬆</span> ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ</button>
-<small class="secure-note">Պարտադիր է բոլոր 5 լուսանկարները։ Լուսանկարները պետք է լինեն ամբողջական և հստակ։</small>
+<small class="secure-note">Պարտադիր է առաջին 5 փաստաթղթային լուսանկարները։ Պրոֆիլի լուսանկարը լրացուցիչ է։ Բոլոր նկարները պետք է լինեն ամբողջական և հստակ։</small>
 </form>
 ${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.driverVerificationMessage||'Փաստաթղթերը լրացուցիչ ստուգման մեջ են։ Ստուգումը կարող է տևել մինչև 24 ժամ։')+' Մինչև հաստատումը պատվերները հասանելի չեն։</p>':''}
 ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք ուղղել լուսանկարները և կրկին ուղարկել ստուգման։ Նախորդ մերժման ծանուցումը չի խանգարում նոր ուղարկմանը։</p>':''}
@@ -75,8 +80,9 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
  document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>drawOrders(b.dataset.filter));
  const docsForm=$('#driverDocsForm');
  const identityType=docsForm?.elements.passportDocumentType;
- const updateIdentityLabels=()=>{const isId=identityType?.value==='ID_CARD';$('#identityFrontLabel').firstChild.textContent=isId?'Նույնականացման քարտի առջևի կողմ':'Անձնագրի լուսանկարով էջ';$('#identityBackLabel').firstChild.textContent=isId?'Նույնականացման քարտի հետևի կողմ':'Անձնագրի գրանցման էջ'};
- identityType?.addEventListener('change',updateIdentityLabels);updateIdentityLabels();
+ const updateIdentityLabels=()=>{const isId=identityType?.value==='ID_CARD';const front=$('#identityFrontLabel'),back=$('#identityBackLabel');if(front?.childNodes[0])front.childNodes[0].textContent=isId?'Նույնականացման քարտի առջևի կողմ':'Անձնագրի լուսանկարով էջ';if(back?.childNodes[0])back.childNodes[0].textContent=isId?'Նույնականացման քարտի հետևի կողմ':'Անձնագրի գրանցման էջ'};
+ identityType?.addEventListener('change',updateIdentityLabels);if(docsForm)updateIdentityLabels();
+ docsForm?.querySelectorAll('.doc-upload-tile input[type="file"]').forEach(input=>input.addEventListener('change',()=>{const label=input.closest('.doc-upload-tile'),name=label?.querySelector('.doc-file-name');if(name)name.textContent=input.files?.[0]?.name||'Ներբեռնված չէ';label?.classList.toggle('has-file',Boolean(input.files?.length))}));
  if(docsForm)docsForm.onsubmit=async e=>{
   e.preventDefault();
   const f=new FormData(docsForm),keys=['front','back','selfie','passportFront','passportBack'];
@@ -94,6 +100,7 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
    const passportText='ԱՆՁՆԱԳԻՐ ԿԱՄ ID ԱՌՋԵՎ\n'+(scans[3].data.text||'')+'\nԱՆՁՆԱԳԻՐ ԿԱՄ ID ՀԵՏԵՎ\n'+(scans[4].data.text||'');
    const images=await Promise.all(keys.map(k=>compressDriverImage(f.get(k))));
    const result=await api('/api/drivers/documents',{method:'POST',body:JSON.stringify({front:images[0],back:images[1],selfie:images[2],passportFront:images[3],passportBack:images[4],passportDocumentType:f.get('passportDocumentType'),ocrText:licenseText,passportOcrText:passportText})});
+   const profileFile=f.get('profilePhoto');if(profileFile instanceof File&&profileFile.size){const profileImage=await compressDriverImage(profileFile);await api('/api/drivers/profile-photo',{method:'POST',body:JSON.stringify({photo:profileImage})})}
    message('#appMessage',result.message);await showApp();
   }catch(err){controls.forEach(control=>control.disabled=false);if(submitButton)submitButton.textContent='⬆ ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ';docsForm.removeAttribute('aria-busy');message('#appMessage',err.message,true);message('#ocrStatus',err.message,true)}
  };
