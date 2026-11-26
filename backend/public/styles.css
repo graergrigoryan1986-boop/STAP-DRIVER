@@ -319,3 +319,24 @@ body.authenticated footer{display:none!important}
 #dashboard.admin-light .site-preview iframe{width:100%;height:78vh;border:0}
 #dashboard.admin-light .site-preview header{display:flex;justify-content:space-between;padding:10px}
 @media(max-width:700px){#dashboard.admin-light .cms-layout{grid-template-columns:1fr}#dashboard.admin-light .cms-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Admin driver review states */
+#dashboard.admin-light .driver-status-pending{border-left:6px solid #eab308;background:#fffdf2}
+#dashboard.admin-light .driver-status-approved{border-left:6px solid #16a34a;background:#f3fff6}
+#dashboard.admin-light .driver-status-rejected{border-left:6px solid #dc2626;background:#fff5f5}
+#dashboard.admin-light .driver-status-pending .driver-admin-overview{background:#fff3c4;color:#805b00}
+#dashboard.admin-light .driver-status-approved .driver-admin-overview{background:#dcfce7;color:#166534}
+#dashboard.admin-light .driver-status-rejected .driver-admin-overview{background:#fee2e2;color:#991b1b}
+#dashboard.admin-light .admin-doc-preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px;background:#f8fafc;border:1px solid #dbe3ed;border-radius:12px}
+#dashboard.admin-light .admin-doc-preview figure{margin:0;padding:10px;background:#fff;border:1px solid #dbe3ed;border-radius:9px;min-width:0}
+#dashboard.admin-light .admin-doc-preview figure img{display:block;width:100%;max-height:480px;object-fit:contain;background:#eef2f7;cursor:zoom-in}
+#dashboard.admin-light .admin-doc-preview figcaption{padding:8px 0;font-weight:800;color:#173b63}
+.driver-gallery-section{margin:18px 0}
+.driver-gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:12px 0}
+.driver-gallery-grid figure{margin:0;position:relative;border:1px solid #dbe3ed;border-radius:9px;padding:6px;background:#fff}
+.driver-gallery-grid img{width:100%;height:130px;object-fit:cover;border-radius:6px}
+.driver-gallery-grid button{width:100%;margin-top:5px}
+.driver-gallery-form{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.driver-gallery-form .doc-upload-tile{min-width:180px}
+.driver-gallery-form .docs-submit{width:auto!important;min-width:200px}
+@media(max-width:620px){#dashboard.admin-light .admin-doc-preview{grid-template-columns:1fr}.driver-gallery-form{display:grid;grid-template-columns:1fr}.driver-gallery-form .docs-submit{width:100%!important}}
