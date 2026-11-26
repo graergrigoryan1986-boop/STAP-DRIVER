@@ -788,3 +788,7 @@ body.authenticated footer{display:none!important}
 .admin-order-form-pane #adminTestOrderForm .admin-form-field select{width:100%;min-width:0}
 .admin-order-form-pane #adminTestOrderForm [name="dispatchMode"]{grid-column:1/-1}
 .admin-order-form-pane #adminTestOrderForm [name="driverId"]{grid-column:1/-1}
+
+/* Driver profile photo is displayed once, beside the welcome heading. */
+.driver-profile-photo-block{display:none!important}
+.driver-pending-bookings{margin-bottom:22px}
