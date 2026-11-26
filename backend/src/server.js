@@ -238,7 +238,8 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),
     transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),
-    driverId:z.string().optional().or(z.literal(''))
+    driverId:z.string().optional().or(z.literal('')),
+    isTest:z.boolean().default(false)
   }).parse(req.body);
   let driverId=null;
   if(input.driverId){
@@ -248,13 +249,13 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     driverId=driver.id;
   }
   const order=await prisma.order.create({data:{
-    customerId:req.user.id,driverId,isTest:true,pickupAddress:input.pickupAddress,
+    customerId:req.user.id,driverId,isTest:input.isTest,pickupAddress:input.pickupAddress,
     destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
     requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note
   }});
-  if(driverId)io.to('user:'+driverId).emit('order:new',{id:order.id,isTest:true});
-  else io.to('drivers').emit('order:new',{id:order.id,isTest:true});
-  res.status(201).json({order,message:'Փորձնական պատվերը ստեղծվեց։'});
+  if(driverId)io.to('user:'+driverId).emit('order:new',{id:order.id,isTest:order.isTest});
+  else io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
+  res.status(201).json({order,message:order.isTest?'Փորձնական պատվերը ստեղծվեց։':'Իրական պատվերը ստեղծվեց և հասանելի է վարորդներին։'});
 }));
 
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
