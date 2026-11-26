@@ -101,6 +101,8 @@ model Order {
   requiredLicenseCategory String @default("B")
   transmissionType String @default("AUTOMATIC")
   vehicleFuelType String @default("PETROL")
+  scheduleType String @default("NOW")
+  scheduledAt DateTime?
   commissionRate     Int         @default(25)
   commissionAmd      Int         @default(0)
   driverEarningAmd   Int         @default(0)
