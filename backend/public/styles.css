@@ -564,3 +564,70 @@ body.authenticated footer{display:none!important}
 .driver-sidebar-notifications .driver-notification{margin:0;padding:11px;border-radius:10px}
 .driver-sidebar-notifications .driver-notification p{margin:6px 0;font-size:13px;line-height:1.45}
 .driver-sidebar-notifications .driver-notification small{font-size:11px;opacity:.8}
+
+
+/* ADMIN ALERT FIX — calm static indicators, never flash or pulse */
+#dashboard.admin-light .driver-notification,
+#dashboard.admin-light .driver-notification.unread,
+#dashboard.admin-light article.driver.driver-status-pending,
+#dashboard.admin-light .driver-status-group:has(article.driver-status-pending),
+#dashboard.admin-light .driver-status-group:has(article.driver-status-pending)>h3,
+#dashboard.admin-light article.driver.driver-status-pending:before,
+#dashboard.admin-light .driver-notification.unread:before{
+  animation:none!important;
+  transition:none!important;
+  transform:none!important;
+}
+#dashboard.admin-light .driver-notification.unread{
+  border:1px solid #e5b94f!important;
+  border-left:5px solid #d6a12b!important;
+  background:#fffaf0!important;
+  color:#493712!important;
+  box-shadow:none!important;
+}
+#dashboard.admin-light .driver-notification.unread:before{
+  background:#f6e6b8!important;
+  color:#624915!important;
+  box-shadow:none!important;
+}
+#dashboard.admin-light article.driver.driver-status-pending{
+  border:1px solid #e7c66e!important;
+  border-left:6px solid #d6a12b!important;
+  background:#fffdf5!important;
+  color:#493712!important;
+  box-shadow:none!important;
+}
+#dashboard.admin-light article.driver.driver-status-pending:before{
+  content:"ՍՏՈՒԳՄԱՆ ՍՊԱՍՈՒՄ Է";
+  display:block;
+  margin:0 0 10px;
+  padding:7px 10px;
+  border-radius:7px;
+  background:#fff1c9!important;
+  color:#765313!important;
+  font-size:12px;
+  font-weight:800;
+  text-align:left;
+  box-shadow:none!important;
+}
+#dashboard.admin-light article.driver.driver-status-pending .driver-admin-overview{
+  background:#fff3d6!important;
+  color:#765313!important;
+  border:0!important;
+}
+#dashboard.admin-light .driver-status-group:has(article.driver-status-pending){
+  border:1px solid #ead9aa!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+#dashboard.admin-light .driver-status-group:has(article.driver-status-pending)>h3{
+  background:transparent!important;
+  color:#805d20!important;
+  text-align:left!important;
+  padding:0!important;
+}
+@media(prefers-reduced-motion:reduce){
+  #dashboard.admin-light *,
+  #dashboard.admin-light *:before,
+  #dashboard.admin-light *:after{animation:none!important;scroll-behavior:auto!important}
+}
