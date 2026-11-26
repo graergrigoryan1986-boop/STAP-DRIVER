@@ -350,3 +350,10 @@ body.authenticated footer{display:none!important}
 #dashboard.admin-light .admin-doc-preview figure img:active{max-height:none}
 #dashboard.admin-light .admin-doc-preview figcaption{font-size:14px;font-weight:800;padding:8px;color:#173b63}
 #dashboard.admin-light .document-actions{display:flex;gap:10px;flex-wrap:wrap;padding:12px}
+
+.driver-profile-photo-form{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0;padding:14px;border:1px solid #d8dee8;border-radius:12px}
+.driver-profile-photo-form .doc-upload-tile{min-width:220px}
+.driver-profile-photo-form button{min-height:44px}
+#dashboard .approve-docs{background:#15803d!important;color:#fff!important}
+#dashboard .reject-docs{background:#b91c1c!important;color:#fff!important}
+#dashboard [data-review-docs="CANCELLED"]{background:#64748b!important;color:#fff!important}
