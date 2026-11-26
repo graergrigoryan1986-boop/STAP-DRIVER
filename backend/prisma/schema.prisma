@@ -74,6 +74,7 @@ model User {
   ratingsReceived Rating[] @relation("RatingsReceived")
   skippedOrders SkippedOrder[]
   driverPhotos DriverPhoto[]
+  notifications Notification[]
 }
 
 model Order {
@@ -164,4 +165,16 @@ model DriverPhoto {
  createdAt DateTime @default(now())
  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
  @@index([userId, createdAt])
+}
+
+model Notification {
+ id String @id @default(cuid())
+ userId String
+ title String
+ message String
+ type String @default("INFO")
+ readAt DateTime?
+ createdAt DateTime @default(now())
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ @@index([userId,createdAt])
 }
