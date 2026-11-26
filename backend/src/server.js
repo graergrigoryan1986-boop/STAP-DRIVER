@@ -533,12 +533,10 @@ app.post('/api/admin/drivers/:id/withdraw', auth, only('ADMIN'), asyncRoute(asyn
   const driver = await prisma.user.findFirst({ where: { id: req.params.id, role: 'DRIVER' } });
   if (!driver) return res.status(404).json({ error: 'Վարորդը չի գտնվել' });
   const result = await prisma.$transaction(async tx => {
-    const changed = await tx.user.updateMany({
-      where: { id: driver.id, balanceAmd: { gte: amountAmd } },
+    const user = await tx.user.update({
+      where: { id: driver.id },
       data: { balanceAmd: { decrement: amountAmd } }
     });
-    if (!changed.count) return null;
-    const user = await tx.user.findUnique({ where: { id: driver.id } });
     await tx.walletTransaction.create({
       data: {
         userId: driver.id,
@@ -550,8 +548,7 @@ app.post('/api/admin/drivers/:id/withdraw', auth, only('ADMIN'), asyncRoute(asyn
     });
     return user;
   });
-  if (!result) return res.status(409).json({ error: 'Վարորդի հաշվեկշռում բավարար գումար չկա։' });
-  res.json({ driver: publicUser(result), message: 'Գումարը ելքագրվեց վարորդի հաշվեկշռից։' });
+  res.json({ driver: publicUser(result), message: 'Գումարը ելքագրվեց։ Հաշվեկշիռը կարող է դառնալ բացասական։' });
 }));
 
 app.patch('/api/admin/users/convert-to-driver', auth, only('ADMIN'), asyncRoute(async (req, res) => {
