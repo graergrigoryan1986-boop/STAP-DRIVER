@@ -856,3 +856,16 @@ body.authenticated footer{display:none!important}
 .fare-field input,.fare-field select{width:100%;min-height:46px;padding:11px 13px;border:1px solid rgba(198,160,82,.45);border-radius:10px;background:#111;color:inherit;font:inherit}
 .fare-field input[readonly]{background:rgba(198,160,82,.12);border-color:#c6a052;color:#e7c77e;font-weight:800}
 .fare-breakdown{margin:4px 0 14px;padding:12px 14px;border:1px solid rgba(198,160,82,.35);border-radius:10px;background:rgba(198,160,82,.08);color:#e7c77e;font-weight:700;line-height:1.6}
+
+/* Driver completed orders: compact clickable list with expandable details */
+.driver-completed-row{display:block;margin:6px 0;border:1px solid rgba(201,164,91,.24);border-radius:11px;overflow:hidden;background:rgba(20,22,27,.82)}
+.driver-completed-row>summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 10px;padding:9px 12px;cursor:pointer;list-style:none}
+.driver-completed-row>summary::-webkit-details-marker{display:none}
+.driver-completed-id{color:#d7b875;font-size:10px;font-weight:800}
+.driver-completed-route{overflow:hidden;color:#eee8dc;font-size:12px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.driver-completed-price{color:#e8c77e;font-size:12px;white-space:nowrap}
+.driver-completed-meta{grid-column:1/3;color:#9f9a90;font-size:10px}
+.driver-completed-toggle{justify-self:end;color:#d7b875;font-size:10px;font-weight:800}
+.driver-completed-row[open]>summary{border-bottom:1px solid rgba(201,164,91,.2);background:rgba(201,164,91,.05)}
+.driver-completed-row>.driver-order-card{margin:0;border:0;border-radius:0;box-shadow:none}
+@media(max-width:560px){.driver-completed-row>summary{grid-template-columns:auto minmax(0,1fr) auto;gap:4px 7px;padding:8px 9px}.driver-completed-route{font-size:11px}.driver-completed-price{font-size:11px}.driver-completed-toggle{font-size:9px}}
