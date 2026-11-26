@@ -148,3 +148,6 @@ model SkippedOrder {
   @@unique([orderId, driverId])
   @@index([driverId, createdAt])
 }
+
+
+model SiteContent { id String @id @default("main") content Json updatedAt DateTime @updatedAt }
