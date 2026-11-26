@@ -792,3 +792,7 @@ body.authenticated footer{display:none!important}
 /* Driver profile photo is displayed once, beside the welcome heading. */
 .driver-profile-photo-block{display:none!important}
 .driver-pending-bookings{margin-bottom:22px}
+
+
+/* Fixed, dismissible balance recharge alert */
+.balance-recharge-notice{position:fixed;z-index:10050;top:14px;left:50%;transform:translateX(-50%);width:min(720px,calc(100% - 28px));display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 19px;border:1px solid #b88a42;border-left:5px solid #e0ad55;border-radius:14px;background:linear-gradient(135deg,#21190f 0%,#121212 75%);box-shadow:0 14px 42px rgba(0,0,0,.55);color:#f4e5c7;animation:balanceNoticeIn .22s ease-out}.balance-recharge-copy{display:grid;gap:5px}.balance-recharge-copy strong{font-size:14px;letter-spacing:.7px;color:#ffd27d}.balance-recharge-copy span{font-size:13px;font-weight:800;letter-spacing:.5px;color:#fff}.balance-recharge-copy small{font-size:11px;line-height:1.5;color:#c9bda9}.balance-recharge-close{flex:none;border:1px solid #b88a42;border-radius:8px;background:rgba(200,166,107,.12);color:#f6d79e;padding:10px 13px;font-size:11px;font-weight:800;cursor:pointer}.balance-recharge-close:hover{background:rgba(200,166,107,.24)}@keyframes balanceNoticeIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}@media(max-width:520px){.balance-recharge-notice{align-items:flex-start;padding:14px;gap:10px}.balance-recharge-close{padding:8px;font-size:10px}}
