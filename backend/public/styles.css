@@ -876,3 +876,49 @@ body.authenticated footer{display:none!important}
 .driver-balance-summary small{font-size:10px;color:#aaa092;font-weight:600}
 .driver-balance-summary:focus-visible{outline:2px solid #d7b875;outline-offset:3px}
 .driver-overview .driver-balance-history-panel{grid-column:1/-1;width:100%}
+
+
+/* Readable admin booking form: enforce dark text on light form surfaces */
+.admin-order-form-pane #adminTestOrderForm label,
+.admin-order-form-pane #adminTestOrderForm .admin-form-field,
+.admin-order-form-pane #adminTestOrderForm .fare-field,
+.admin-order-form-pane #adminTestOrderForm label span,
+.admin-order-form-pane #adminTestOrderForm .fare-field span{
+  color:#30291f!important;
+  opacity:1!important;
+  font-weight:800!important;
+}
+.admin-order-form-pane #adminTestOrderForm input,
+.admin-order-form-pane #adminTestOrderForm select,
+.admin-order-form-pane #adminTestOrderForm textarea{
+  background:#fffdf8!important;
+  color:#241f18!important;
+  -webkit-text-fill-color:#241f18!important;
+  border:1px solid #bca77f!important;
+  opacity:1!important;
+}
+.admin-order-form-pane #adminTestOrderForm select option{
+  background:#fffdf8!important;
+  color:#241f18!important;
+}
+.admin-order-form-pane #adminTestOrderForm input::placeholder,
+.admin-order-form-pane #adminTestOrderForm textarea::placeholder{
+  color:#766b5b!important;
+  opacity:1!important;
+}
+.admin-order-form-pane #adminTestOrderForm input[readonly]{
+  background:#f3ead8!important;
+  color:#6b4c17!important;
+  -webkit-text-fill-color:#6b4c17!important;
+  font-weight:900!important;
+}
+.admin-order-form-pane #adminTestOrderForm .fare-breakdown{
+  color:#5a421c!important;
+  background:#f5ead4!important;
+  border-color:#c9ad75!important;
+}
+.admin-order-form-pane #adminTestOrderForm input:focus,
+.admin-order-form-pane #adminTestOrderForm select:focus{
+  outline:2px solid #b99554!important;
+  outline-offset:1px;
+}
