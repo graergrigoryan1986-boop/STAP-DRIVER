@@ -783,3 +783,8 @@ body.authenticated footer{display:none!important}
 #adminOrdersCancelled .admin-order-history-item{border-left-color:#ef4444}
 @media(max-width:900px){.admin-order-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.admin-order-subnav{grid-template-columns:1fr 1fr}.admin-order-subnav button{min-height:58px;font-size:10px}}
+
+.admin-order-form-pane #adminTestOrderForm .admin-form-field{display:grid;gap:6px;min-width:0;color:#806b49;font-size:11px;font-weight:850}
+.admin-order-form-pane #adminTestOrderForm .admin-form-field select{width:100%;min-width:0}
+.admin-order-form-pane #adminTestOrderForm [name="dispatchMode"]{grid-column:1/-1}
+.admin-order-form-pane #adminTestOrderForm [name="driverId"]{grid-column:1/-1}
