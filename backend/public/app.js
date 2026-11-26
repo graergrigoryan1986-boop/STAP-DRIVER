@@ -44,12 +44,14 @@ async function driverView(){
  $('#dashboard').innerHTML=`
  <div class="driver-profile-photo-block">${profilePhoto?'<img src="'+profilePhoto+'" alt="Վարորդի պրոֆիլային լուսանկար">':'<span>Պրոֆիլի լուսանկարը դեռ ներբեռնված չէ</span>'}</div>
  <form id="driverProfilePhotoForm" class="driver-profile-photo-form" style="${u.isVerified?'display:none':''}"><label class="doc-upload-tile">Պրոֆիլի լուսանկար (առանձին)<input type="file" name="photo" accept="image/*" capture="user"><span class="doc-file-name">Ընտրեք պրոֆիլի լուսանկարը</span></label><button type="submit" class="action">ՊԱՀՊԱՆԵԼ ՊՐՈՖԻԼԻ ՆԿԱՐԸ</button><p id="driverProfilePhotoMessage"></p></form>
- <section class="dash-section"><h3>Ծանուցումներ</h3><div id="driverNotifications" class="driver-notifications"></div></section><section class="dash-section driver-gallery-section"><h3>Իմ պրոֆիլի լուսանկարները</h3><p>Կարող եք ավելացնել մինչև 8 լրացուցիչ լուսանկար՝ համակարգչից կամ տեսախցիկից։</p><div id="driverGalleryGrid" class="driver-gallery-grid"></div><form id="driverGalleryForm" class="driver-gallery-form"><label class="doc-upload-tile">Ընտրել լուսանկարներ<input type="file" name="photos" accept="image/*" capture="environment" multiple><span class="doc-file-name">Ընտրված չէ</span></label><button class="action docs-submit" type="submit">ՎԵՐԲԵՌՆԵԼ ԼՈՒՍԱՆԿԱՐՆԵՐԸ</button></form><p id="driverGalleryMessage"></p></section>
- <div class="driver-overview">
+ <section class="dash-section"><h3>Ծանուցումներ</h3><div id="driverNotifications" class="driver-notifications"></div></section>
+ <div class="driver-workspace"><aside class="driver-sidebar"><div class="driver-overview">
   <div class="metric-card"><span>ՀԱՇՎԵԿՇԻՌ</span><strong>${money(u.balanceAmd)}</strong></div>
   <div class="metric-card driver-rating-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ ${Number(u.rating??5).toFixed(1)}</strong><small>Ակտիվ վարկանիշ</small><div class="driver-mini-facts"><span><b>Տարիք</b> ${driverAgeLabel(u.dateOfBirth)}</span><span><b>Ստաժ</b> ${driverExperienceLabel(u.driverLicenseIssuedAt)}</span></div></div>
   <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='PENDING_REVIEW'?'Ադմինի ստուգմանը':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Կրկին ուղարկեք':'Սպասում է'}</strong></div>
  </div>
+ <section class="dash-section driver-gallery-section"><h3>Իմ պրոֆիլի լուսանկարները</h3><p>Կարող եք ավելացնել մինչև 8 լրացուցիչ լուսանկար՝ համակարգչից կամ տեսախցիկից։</p><div id="driverGalleryGrid" class="driver-gallery-grid"></div><form id="driverGalleryForm" class="driver-gallery-form"><label class="doc-upload-tile">Ընտրել լուսանկարներ<input type="file" name="photos" accept="image/*" capture="environment" multiple><span class="doc-file-name">Ընտրված չէ</span></label><button class="action docs-submit" type="submit">ՎԵՐԲԵՌՆԵԼ ԼՈՒՍԱՆԿԱՐՆԵՐԸ</button></form><p id="driverGalleryMessage"></p></section>
+ </aside><main class="driver-main">
  ${u.isVerified?'':` ${u.driverDocumentsStatus==='PENDING_REVIEW'?'<div class="secure-note docs-sent-status">ՈւՂԱՐԿՎԵՑ</div>':u.isVerified?'':'<details class="dash-section" open><summary>Վարորդական և անձը հաստատող փաստաթղթեր</summary>'}
   <div class="driver-admin-data"><strong>Վարորդական կարգեր՝</strong> ${esc((u.driverLicenseCategories||[]).join(', ')||'Դեռ նշված չէ')}<br><strong>Փոխանցման տուփ՝</strong> ${u.driverTransmission==='MANUAL'?'Ավտոմատ / մեխանիկական':'Ավտոմատ'}</div>
   <form id="driverDocsForm" class="docs-form" style="${u.isVerified||u.driverDocumentsStatus==='PENDING_REVIEW'?'display:none':''}">
@@ -79,7 +81,8 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
  </details>
  <details class="dash-section"><summary>Հաշվեկշռի պատմություն (${wallet.transactions.length})</summary>
   <div class="ledger-list">${wallet.transactions.length?wallet.transactions.map(t=>'<article class="ledger-row"><div><strong>'+esc(t.description)+'</strong><small>'+new Date(t.createdAt).toLocaleString('hy-AM')+' · '+esc(t.type)+'</small></div><b class="'+(t.amountAmd>=0?'positive':'negative')+'">'+(t.amountAmd>0?'+':'')+money(t.amountAmd)+'</b></article>').join(''):'<p class="empty-state">Գործարքներ դեռ չկան։</p>'}</div>
- </details>`;
+ </details>
+ </main></div>`;
 
  const profilePhotoForm=$('#driverProfilePhotoForm');
  if(profilePhotoForm){
