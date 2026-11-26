@@ -869,3 +869,10 @@ body.authenticated footer{display:none!important}
 .driver-completed-row[open]>summary{border-bottom:1px solid rgba(201,164,91,.2);background:rgba(201,164,91,.05)}
 .driver-completed-row>.driver-order-card{margin:0;border:0;border-radius:0;box-shadow:none}
 @media(max-width:560px){.driver-completed-row>summary{grid-template-columns:auto minmax(0,1fr) auto;gap:4px 7px;padding:8px 9px}.driver-completed-route{font-size:11px}.driver-completed-price{font-size:11px}.driver-completed-toggle{font-size:9px}}
+
+/* Clickable balance summary opens wallet history */
+.driver-balance-summary{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;cursor:pointer;border:1px solid rgba(201,164,91,.35);font:inherit;color:inherit}
+.driver-balance-summary strong{font-size:22px;color:#e8c77e}
+.driver-balance-summary small{font-size:10px;color:#aaa092;font-weight:600}
+.driver-balance-summary:focus-visible{outline:2px solid #d7b875;outline-offset:3px}
+.driver-overview .driver-balance-history-panel{grid-column:1/-1;width:100%}
