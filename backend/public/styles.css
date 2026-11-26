@@ -631,3 +631,6 @@ body.authenticated footer{display:none!important}
   #dashboard.admin-light *:before,
   #dashboard.admin-light *:after{animation:none!important;scroll-behavior:auto!important}
 }
+
+/* Circular profile image beside the account welcome heading */
+.welcome-line{display:flex;align-items:center;gap:14px;min-width:0}.welcome-line h2{margin:0}.welcome-avatar{width:58px;height:58px;flex:0 0 58px;border-radius:50%;display:grid;place-items:center;overflow:hidden;border:2px solid var(--gold2);background-color:#211c13;background-position:center;background-size:cover;color:var(--gold2);font-family:'Playfair Display',serif;font-size:24px;font-weight:600;box-shadow:0 0 0 3px rgba(200,166,107,.12)}.welcome-avatar.has-photo{background-repeat:no-repeat}@media(max-width:560px){.welcome-line{gap:10px}.welcome-avatar{width:48px;height:48px;flex-basis:48px}.welcome-line h2{font-size:23px!important}}
