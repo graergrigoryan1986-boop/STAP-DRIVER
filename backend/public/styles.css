@@ -358,3 +358,41 @@ body.authenticated footer{display:none!important}
 #dashboard .reject-docs{background:#b91c1c!important;color:#fff!important}
 #dashboard [data-review-docs="CANCELLED"]{background:#64748b!important;color:#fff!important}
 .driver-status-group{margin:22px 0;padding:14px;border:1px solid #dbe3ed;border-radius:14px;background:#fff}.driver-status-group h3{margin:0 0 12px;color:#173b63;font-weight:850}.driver-notifications{display:grid;gap:10px}.driver-notification{padding:12px 14px;border:1px solid #dbe3ed;border-radius:10px;background:#f8fafc}.driver-notification.unread{border-left:5px solid #d4a017;background:#fffbeb}.driver-notification p{margin:6px 0;white-space:pre-wrap}
+
+/* High-contrast animated alerts for drivers and admin review queue */
+@keyframes stap-alert-pulse{
+  0%,100%{background-color:#fff1b8;border-color:#d97706;box-shadow:0 0 0 0 rgba(217,119,6,.12)}
+  50%{background-color:#ffd166;border-color:#b45309;box-shadow:0 0 0 5px rgba(217,119,6,.18)}
+}
+@keyframes stap-pending-pulse{
+  0%,100%{background-color:#fff7d6;border-color:#d97706;box-shadow:0 0 0 0 rgba(217,119,6,.12)}
+  50%{background-color:#ffe08a;border-color:#b45309;box-shadow:0 0 0 6px rgba(217,119,6,.2)}
+}
+.driver-notification.unread{
+  color:#241600!important;
+  background:#fff1b8!important;
+  border:2px solid #d97706!important;
+  border-left:8px solid #b45309!important;
+  animation:stap-alert-pulse 1.35s ease-in-out infinite;
+}
+.driver-notification.unread strong,
+.driver-notification.unread p,
+.driver-notification.unread small{color:#241600!important;opacity:1!important;font-weight:750}
+#dashboard.admin-light article.driver.driver-status-pending{
+  color:#241600!important;
+  border:3px solid #d97706!important;
+  border-left:10px solid #b45309!important;
+  background:#fff7d6!important;
+  animation:stap-pending-pulse 1.5s ease-in-out infinite;
+}
+#dashboard.admin-light article.driver.driver-status-pending p,
+#dashboard.admin-light article.driver.driver-status-pending strong,
+#dashboard.admin-light article.driver.driver-status-pending summary{color:#241600!important}
+#dashboard.admin-light article.driver.driver-status-pending .driver-admin-overview{
+  background:#ffe08a!important;color:#4a2b00!important;font-weight:850
+}
+#dashboard.admin-light .driver-status-group:has(.driver-status-pending) h3{color:#9a3412}
+@media(prefers-reduced-motion:reduce){
+  .driver-notification.unread,
+  #dashboard.admin-light article.driver.driver-status-pending{animation:none}
+}
