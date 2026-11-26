@@ -466,21 +466,40 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
  res.json({success:true,user:publicUser(user),message:'Բոլոր 5 լուսանկարներն ուղարկվել են ադմինին՝ ձեռքով ստուգման։ OCR ստուգում չի կատարվում։'});
 }));
 app.post('/api/drivers/profile-photo', auth, only('DRIVER'), asyncRoute(async(req,res)=>{
-  if(req.user.isVerified)return res.status(403).json({error:'Հաստատված պրոֆիլի լուսանկարը փոխել կարող է միայն ադմինը։'});
-  const {photo}=z.object({photo:z.string().min(100).max(3500000)}).parse(req.body);
-  const match=photo.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);
-  if(!match)return res.status(400).json({error:'Ընտրեք JPG, PNG կամ WEBP լուսանկար։'});
-  const data=Buffer.from(match[2],'base64');if(!data.length||data.length>2500000)return res.status(400).json({error:'Լուսանկարը պետք է լինի առավելագույնը 2.5 ՄԲ։'});
-  await prisma.user.update({where:{id:req.user.id},data:{driverProfilePhoto:encryptPrivate(data)}});
-  res.json({success:true,message:'Պրոֆիլի լուսանկարը պահպանվեց։'});
+ const {photo}=z.object({photo:z.string().min(100).max(3500000)}).parse(req.body);
+ const m=photo.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);
+ if(!m)return res.status(400).json({error:'Ընտրեք JPG, PNG կամ WEBP լուսանկար։'});
+ const data=Buffer.from(m[2],'base64');if(!data.length||data.length>2500000)return res.status(400).json({error:'Լուսանկարը պետք է լինի առավելագույնը 2.5 ՄԲ։'});
+ await prisma.user.update({where:{id:req.user.id},data:{pendingDriverProfilePhoto:encryptPrivate(data),driverProfilePhotoStatus:'PENDING_REVIEW'}});
+ const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
+ if(admins.length)await prisma.notification.createMany({data:admins.map(a=>({userId:a.id,title:'Պրոֆիլի նոր լուսանկար',message:'Վարորդ '+req.user.name+' ուղարկել է նոր պրոֆիլի լուսանկար՝ հաստատման համար։',type:'PROFILE_PHOTO_REVIEW'}))});
+ res.json({success:true,message:'Լուսանկարը ուղարկվել է ադմինիստրատորին։ Գլխավոր նկարը կփոխվի միայն հաստատումից հետո։'});
 }));
-
 app.get('/api/drivers/profile-photo',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
-  if(!req.user.driverProfilePhoto)return res.json({photo:null});
-  res.json({photo:'data:image/jpeg;base64,'+decryptPrivate(req.user.driverProfilePhoto).toString('base64')});
+ const p=req.user.driverProfilePhoto;
+ res.json({photo:p?'data:image/jpeg;base64,'+decryptPrivate(p).toString('base64'):null,status:req.user.driverProfilePhotoStatus||'NONE'});
 }));
-
-
+app.post('/api/admin/drivers/:id/profile-photo/upload',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const {photo}=z.object({photo:z.string().min(100).max(3500000)}).parse(req.body);
+ const m=photo.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);
+ if(!m)return res.status(400).json({error:'Ընտրեք JPG, PNG կամ WEBP լուսանկար։'});
+ const data=Buffer.from(m[2],'base64');if(!data.length||data.length>2500000)return res.status(400).json({error:'Լուսանկարը պետք է լինի առավելագույնը 2.5 ՄԲ։'});
+ const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+ if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
+ await prisma.user.update({where:{id:driver.id},data:{pendingDriverProfilePhoto:encryptPrivate(data),driverProfilePhotoStatus:'PENDING_REVIEW'}});
+ res.json({success:true,message:'Նկարը ներբեռնվեց որպես սպասող տարբերակ։ Հաստատեք այն՝ գլխավոր դարձնելու համար։'});
+}));
+app.patch('/api/admin/drivers/:id/profile-photo/review',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const {decision,reason}=z.object({decision:z.enum(['APPROVED','REJECTED']),reason:z.string().trim().max(500).optional()}).parse(req.body);
+ const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+ if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
+ if(!driver.pendingDriverProfilePhoto)return res.status(409).json({error:'Հաստատման սպասող լուսանկար չկա։'});
+ if(decision==='REJECTED'&&!reason)return res.status(400).json({error:'Մերժման պատճառը պարտադիր է։'});
+ const approved=decision==='APPROVED';
+ await prisma.user.update({where:{id:driver.id},data:approved?{driverProfilePhoto:driver.pendingDriverProfilePhoto,pendingDriverProfilePhoto:null,driverProfilePhotoStatus:'APPROVED'}:{pendingDriverProfilePhoto:null,driverProfilePhotoStatus:'REJECTED'}});
+ await prisma.notification.create({data:{userId:driver.id,title:approved?'Պրոֆիլի լուսանկարը հաստատվեց':'Պրոֆիլի լուսանկարը մերժվեց',message:approved?'Ձեր նոր լուսանկարը հաստատվել և դարձել է պրոֆիլի գլխավոր նկարը։':'Ձեր ուղարկած լուսանկարը մերժվել է։ Պատճառ՝ '+reason,type:'PROFILE_PHOTO_'+decision}});
+ res.json({success:true,message:approved?'Լուսանկարը հաստատվեց և դարձավ գլխավոր նկարը։':'Լուսանկարը մերժվեց։'});
+}));
 app.get('/api/drivers/gallery',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
  const rows=await prisma.driverPhoto.findMany({where:{userId:req.user.id},orderBy:{createdAt:'asc'}});
  res.json({photos:rows.map(p=>({id:p.id,image:'data:image/jpeg;base64,'+decryptPrivate(p.image).toString('base64')}))});
@@ -505,14 +524,14 @@ app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(asyn
     driverLicenseSeries:true,driverLicenseIssuedAt:true,driverLicenseExpiresAt:true,driverLicenseCategories:true,driverTransmission:true,
     driverDocumentsStatus:true,driverOcrText:true,driverVerificationMessage:true,dateOfBirth:true,passportDocumentType:true,passportIssueDate:true,passportExpiryDate:true,
     passportNumberEncrypted:true,passportIssuedByEncrypted:true,driverLicenseFront:true,driverLicenseBack:true,driverLicenseSelfie:true,
-    passportFront:true,passportBack:true,driverProfilePhoto:true,driverPhotos:{orderBy:{createdAt:'asc'}}
+    passportFront:true,passportBack:true,driverProfilePhoto:true,pendingDriverProfilePhoto:true,driverProfilePhotoStatus:true,driverPhotos:{orderBy:{createdAt:'asc'}}
   }});
   if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
   const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
   const {passportNumberEncrypted,passportIssuedByEncrypted,...safeDriver}=driver;
   res.json({driver:{...safeDriver,passportNumber:decryptPrivate(passportNumberEncrypted)?.toString('utf8')||null,passportIssuedBy:decryptPrivate(passportIssuedByEncrypted)?.toString('utf8')||null,
     driverLicenseFront:image(driver.driverLicenseFront),driverLicenseBack:image(driver.driverLicenseBack),driverLicenseSelfie:image(driver.driverLicenseSelfie),
-    passportFront:image(driver.passportFront),passportBack:image(driver.passportBack),driverProfilePhoto:image(driver.driverProfilePhoto),gallery:(driver.driverPhotos||[]).map(p=>({id:p.id,image:image(p.image)}))}});
+    passportFront:image(driver.passportFront),passportBack:image(driver.passportBack),driverProfilePhoto:image(driver.driverProfilePhoto),pendingDriverProfilePhoto:image(driver.pendingDriverProfilePhoto),driverProfilePhotoStatus:driver.driverProfilePhotoStatus,gallery:(driver.driverPhotos||[]).map(p=>({id:p.id,image:image(p.image)}))}});
 }));
 
 function makeDocumentsPdf(title, pages){
