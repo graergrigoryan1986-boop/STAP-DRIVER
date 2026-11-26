@@ -59,6 +59,8 @@ model User {
   passportFront Bytes?
   passportBack Bytes?
   driverProfilePhoto Bytes?
+  pendingDriverProfilePhoto Bytes?
+  driverProfilePhotoStatus String @default("NONE")
   driverDocumentsPdf Bytes?
   driverVerifiedAt DateTime?
   driverVerificationMessage String?
