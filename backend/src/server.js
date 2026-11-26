@@ -230,6 +230,33 @@ app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,
   res.json({orders});
 }));
 
+app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
+  const existing=await prisma.order.findUnique({where:{id:req.params.id}});
+  if(!existing)return res.status(404).json({error:'Պատվերը չի գտնվել։'});
+  if(existing.status==='CANCELLED')return res.status(409).json({error:'Պատվերն արդեն չեղարկված է։'});
+  const changed=await prisma.order.updateMany({
+    where:{id:existing.id,status:{not:'CANCELLED'}},
+    data:{status:'CANCELLED'}
+  });
+  if(!changed.count)return res.status(409).json({error:'Պատվերի կարգավիճակն արդեն փոխվել է։ Թարմացրեք ցանկը։'});
+  const order=await prisma.order.findUnique({where:{id:existing.id},include:{
+    customer:{select:{id:true,name:true,phone:true}},
+    driver:{select:{id:true,name:true,phone:true}}
+  }});
+  const drivers=await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false},select:{id:true}});
+  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
+  const recipients=[...new Set([order.customerId,order.driverId,...drivers.map(x=>x.id),...admins.map(x=>x.id)].filter(Boolean))];
+  const title='Պատվերը չեղարկվել է';
+  const message='Պատվեր #'+order.id.slice(-8)+' չեղարկվել է ադմինի կողմից։ '+order.pickupAddress+' → '+order.destinationAddress;
+  if(recipients.length){
+    await prisma.notification.createMany({data:recipients.map(userId=>({userId,title,message,type:'ORDER_CANCELLED'}))});
+    for(const userId of recipients)io.to('user:'+userId).emit('notification:new',{title,message,type:'ORDER_CANCELLED',orderId:order.id,createdAt:new Date()});
+  }
+  io.to('drivers').emit('order:cancelled',{id:order.id,status:'CANCELLED',title,message});
+  io.to('order:'+order.id).emit('order:cancelled',{id:order.id,status:'CANCELLED',title,message});
+  res.json({success:true,order,message:'Պատվերը չեղարկվեց։ Ուղևորը, վարորդները և ադմինը ծանուցվեցին։'});
+}));
+
 app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const input=z.object({
     pickupAddress:z.string().trim().min(3).max(300),
@@ -265,7 +292,8 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       OR: [{ driverId: null }, { driverId: req.user.id }],
       skippedBy: { none: { driverId: req.user.id } }
     },
-    orderBy: { createdAt: 'asc' }
+    orderBy: { createdAt: 'asc' },
+    include: { customer: { select: { id: true, name: true, phone: true } } }
   });
   // Show every open real/test order to each verified driver; acceptance still validates eligibility.
   res.json({ orders });
@@ -274,7 +302,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   if (req.user.role === 'DRIVER') {
     const [assigned, skipped] = await Promise.all([
-      prisma.order.findMany({ where: { driverId: req.user.id }, orderBy: { createdAt: 'desc' } }),
+      prisma.order.findMany({ where: { driverId: req.user.id }, orderBy: { createdAt: 'desc' }, include: { customer: { select: { id: true, name: true, phone: true } } } }),
       prisma.skippedOrder.findMany({ where: { driverId: req.user.id }, include: { order: true }, orderBy: { createdAt: 'desc' } })
     ]);
     const orders = [...assigned, ...skipped.map(x => ({ ...x.order, status: 'SKIPPED', skippedAt: x.createdAt }))].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
