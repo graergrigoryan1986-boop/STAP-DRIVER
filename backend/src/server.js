@@ -372,10 +372,8 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  if (!requestedOrder.isTest && ((requestedOrder.requiredLicenseCategory && !(req.user.driverLicenseCategories || []).includes(requestedOrder.requiredLicenseCategory)) ||
-      (requestedOrder.transmissionType === 'MANUAL' && req.user.driverTransmission !== 'MANUAL'))) {
-    return res.status(403).json({ error: 'Այս պատվերի մեքենայի կարգը կամ փոխանցման տուփը ձեր իրավասության մեջ չէ։' });
-  }
+  // Accepting an order must not be blocked by legacy license-category or transmission metadata.
+  // Dispatch visibility/assignment is handled separately when the order is created.
   const settingsRow = await prisma.siteContent.findUnique({ where: { id: 'main' } });
   const rawMinimum = settingsRow?.content?.minDriverBalanceAmd;
   const minimumBalanceAmd = Number.isInteger(Number(rawMinimum)) && Number(rawMinimum) >= 0 ? Number(rawMinimum) : 0;
