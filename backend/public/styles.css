@@ -707,3 +707,38 @@ body.authenticated footer{display:none!important}
 .driver-pending-count{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:38px;padding:0 10px;border-radius:20px;background:rgba(201,164,91,.18);border:1px solid rgba(201,164,91,.6);color:var(--accent,#c9a45b);font-weight:800;font-size:1.05rem}
 .driver-pending-bookings #openOrders:empty{display:none}
 @media(max-width:600px){.driver-pending-bookings{padding:14px}.driver-pending-heading{align-items:flex-start}}
+
+
+/* STAP DRIVER — vivid, informative driver order cards */
+.driver-orders-empty{display:grid;justify-items:center;gap:8px;padding:30px 18px;border:1px dashed rgba(201,164,91,.45);border-radius:16px;background:linear-gradient(135deg,rgba(201,164,91,.09),rgba(25,35,48,.24));text-align:center;color:var(--muted,#aaa)}
+.driver-orders-empty>span{font-size:34px}.driver-orders-empty strong{color:var(--gold2,#d8b879);font-size:15px}.driver-orders-empty small{font-size:12px}
+.driver-order-card{position:relative;overflow:hidden;margin:0 0 15px;padding:17px;border:1px solid rgba(201,164,91,.35);border-radius:17px;background:linear-gradient(145deg,rgba(28,31,38,.98),rgba(12,14,19,.98));color:#f4f0e8;box-shadow:0 10px 26px rgba(0,0,0,.2)}
+.driver-order-card:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:#d6a12b}
+.driver-order-card.order-status-open:before{background:#22c55e}.driver-order-card.order-status-accepted:before{background:#60a5fa}.driver-order-card.order-status-progress:before{background:#f59e0b}.driver-order-card.order-status-completed:before{background:#10b981}.driver-order-card.order-status-cancelled:before{background:#ef4444}
+.driver-order-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.driver-order-number{font-size:10px;letter-spacing:.1em;font-weight:900;color:#cbb17d}
+.driver-order-status{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:30px;font-size:11px;font-weight:850;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+.driver-order-status.order-status-open{background:rgba(34,197,94,.13);border-color:rgba(34,197,94,.45);color:#86efac}
+.driver-order-status.order-status-accepted{background:rgba(96,165,250,.13);border-color:rgba(96,165,250,.45);color:#bfdbfe}
+.driver-order-status.order-status-progress{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.48);color:#fcd34d}
+.driver-order-status.order-status-completed{background:rgba(16,185,129,.13);border-color:rgba(16,185,129,.42);color:#6ee7b7}
+.driver-order-status.order-status-cancelled{background:rgba(239,68,68,.13);border-color:rgba(239,68,68,.45);color:#fca5a5}
+.driver-order-price{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 15px;padding:11px 13px;border-radius:12px;background:linear-gradient(90deg,rgba(201,164,91,.17),rgba(201,164,91,.04));border:1px solid rgba(201,164,91,.25)}
+.driver-order-price>strong{font-size:24px;line-height:1;color:#f3d28e;font-weight:900}.driver-order-price>span:not(.test-order-badge){font-size:11px;color:#c7bdab}
+.driver-order-route{padding:12px 13px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}
+.driver-route-point{display:flex;align-items:flex-start;gap:10px}.driver-route-point>span{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);font-size:15px}
+.driver-route-point div{display:grid;gap:4px;min-width:0}.driver-route-point small{font-size:9px;letter-spacing:.12em;font-weight:900;color:#c8ad76}.driver-route-point strong{font-size:13px;line-height:1.45;overflow-wrap:anywhere;color:#fff}
+.driver-route-line{height:17px;margin:0 0 0 13px;border-left:1px dashed rgba(201,164,91,.65)}
+.driver-order-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.driver-order-fact{display:grid;gap:4px;min-width:0;padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
+.driver-order-fact>span{font-size:10px;color:#c6b58f}.driver-order-fact>strong{font-size:12px;color:#f3f0e9;overflow-wrap:anywhere;line-height:1.4}
+.driver-order-note{grid-column:1/-1}
+.driver-order-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+.driver-order-actions button{flex:1 1 150px;min-height:43px;font-weight:850}
+.driver-accept-btn{background:linear-gradient(135deg,#166534,#15803d)!important;border-color:#22c55e!important;color:#fff!important}
+.driver-skip-btn{background:rgba(239,68,68,.12)!important;border-color:rgba(248,113,113,.5)!important;color:#fecaca!important}
+.driver-start-btn{background:linear-gradient(135deg,#1d4ed8,#2563eb)!important;border-color:#60a5fa!important;color:#fff!important}
+.driver-complete-btn{background:linear-gradient(135deg,#047857,#059669)!important;border-color:#34d399!important;color:#fff!important}
+.admin-cancel-order-btn{margin-top:8px;background:#fee2e2!important;border-color:#dc2626!important;color:#991b1b!important;font-weight:850!important}
+.admin-order-cancelled{display:inline-block;margin-top:8px;padding:6px 9px;border-radius:8px;background:#fee2e2;color:#991b1b;font-size:11px;font-weight:850}
+@media(max-width:560px){.driver-order-card{padding:13px}.driver-order-facts{grid-template-columns:1fr}.driver-order-price>strong{font-size:21px}.driver-order-actions{display:grid;grid-template-columns:1fr}.driver-order-actions button{width:100%}}
