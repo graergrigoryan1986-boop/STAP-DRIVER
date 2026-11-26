@@ -203,15 +203,51 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
     fareAmd: z.number().int().min(1000).max(1000000),
     requiredLicenseCategory: z.string().trim().min(1).max(5).default('B'),
     transmissionType: z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
-    note: z.string().max(1000).optional()
+    note: z.string().max(1000).optional(),
+    isTest: z.boolean().default(false)
   }).parse(req.body);
   const order = await prisma.order.create({ data: { ...input, customerId: req.user.id } });
   io.to('drivers').emit('order:new', { id: order.id, pickupAddress: order.pickupAddress, destinationAddress: order.destinationAddress, fareAmd: order.fareAmd, createdAt: order.createdAt });
   res.status(201).json({ order });
 }));
 
+app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
+  const orders=await prisma.order.findMany({where:{isTest:true},orderBy:{createdAt:'desc'},include:{
+    customer:{select:{id:true,name:true,phone:true}},
+    driver:{select:{id:true,name:true,phone:true,isVerified:true}}
+  }});
+  res.json({orders});
+}));
+
+app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
+  const input=z.object({
+    pickupAddress:z.string().trim().min(3).max(300),
+    destinationAddress:z.string().trim().min(3).max(300),
+    fareAmd:z.number().int().min(1000).max(1000000),
+    requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),
+    transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
+    note:z.string().max(1000).optional(),
+    driverId:z.string().optional().or(z.literal(''))
+  }).parse(req.body);
+  let driverId=null;
+  if(input.driverId){
+    const driver=await prisma.user.findFirst({where:{id:input.driverId,role:'DRIVER',isVerified:true,isBlocked:false}});
+    if(!driver)return res.status(400).json({error:'Ընտրված վարորդը հաստատված կամ ակտիվ չէ։'});
+    if(!(driver.driverLicenseCategories||[]).includes(input.requiredLicenseCategory)||(input.transmissionType==='MANUAL'&&driver.driverTransmission!=='MANUAL'))return res.status(400).json({error:'Վարորդը չունի պատվերի համար անհրաժեշտ կարգը կամ փոխանցման տուփը։'});
+    driverId=driver.id;
+  }
+  const order=await prisma.order.create({data:{
+    customerId:req.user.id,driverId,isTest:true,pickupAddress:input.pickupAddress,
+    destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
+    requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note
+  }});
+  if(driverId)io.to('user:'+driverId).emit('order:new',{id:order.id,isTest:true});
+  else io.to('drivers').emit('order:new',{id:order.id,isTest:true});
+  res.status(201).json({order,message:'Փորձնական պատվերը ստեղծվեց։'});
+}));
+
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
-  const orders = await prisma.order.findMany({ where: { status: 'OPEN', skippedBy: { none: { driverId: req.user.id } } }, orderBy: { createdAt: 'asc' } });
+  const orders = await prisma.order.findMany({ where: { status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }], skippedBy: { none: { driverId: req.user.id } } }, orderBy: { createdAt: 'asc' } });
   const categories = req.user.driverLicenseCategories || [];
   const ordersForDriver = orders.filter(order =>
     categories.includes(order.requiredLicenseCategory) &&
@@ -271,14 +307,14 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 }));
 
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
-  const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', driverId: null } });
+  const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
   if (!(req.user.driverLicenseCategories || []).includes(requestedOrder.requiredLicenseCategory) ||
       (requestedOrder.transmissionType === 'MANUAL' && req.user.driverTransmission !== 'MANUAL')) {
     return res.status(403).json({ error: 'Այս պատվերի մեքենայի կարգը կամ փոխանցման տուփը ձեր իրավասության մեջ չէ։' });
   }
   const result = await prisma.order.updateMany({
-    where: { id: req.params.id, status: 'OPEN', driverId: null },
+    where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] },
     data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date() }
   });
   if (!result.count) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
@@ -297,12 +333,14 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
   const result = await prisma.$transaction(async tx => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, driverId: req.user.id, status: 'IN_PROGRESS' } });
     if (!order) return null;
-    const commissionAmd = Math.round(order.fareAmd * 0.25);
-    const driverEarningAmd = order.fareAmd - commissionAmd;
-    await tx.order.update({ where: { id: order.id }, data: { status: 'COMPLETED', commissionRate: 25, commissionAmd, driverEarningAmd, completedAt: new Date() } });
-    await tx.user.update({ where: { id: req.user.id }, data: { balanceAmd: { increment: driverEarningAmd } } });
-    await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: driverEarningAmd, type: 'ORDER_EARNING', description: 'Վարորդի եկամուտ՝ ավարտված պատվերից', orderId: order.id } });
-    return { commissionAmd, driverEarningAmd, fareAmd: order.fareAmd };
+    const commissionAmd = order.isTest ? 0 : Math.round(order.fareAmd * 0.25);
+    const driverEarningAmd = order.isTest ? 0 : order.fareAmd - commissionAmd;
+    await tx.order.update({ where: { id: order.id }, data: { status: 'COMPLETED', commissionRate: order.isTest ? 0 : 25, commissionAmd, driverEarningAmd, completedAt: new Date() } });
+    if(!order.isTest){
+      await tx.user.update({ where: { id: req.user.id }, data: { balanceAmd: { increment: driverEarningAmd } } });
+      await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: driverEarningAmd, type: 'ORDER_EARNING', description: 'Վարորդի եկամուտ՝ ավարտված պատվերից', orderId: order.id } });
+    }
+    return { commissionAmd, driverEarningAmd, fareAmd: order.fareAmd, isTest: order.isTest };
   });
   if (!result) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ ավարտել' });
   io.emit('order:completed', { id: req.params.id });
