@@ -24,6 +24,7 @@ enum OrderStatus {
 enum WalletType {
   ADMIN_TOP_UP
   ORDER_EARNING
+  ORDER_COMMISSION
   ADMIN_ADJUSTMENT
 }
 
