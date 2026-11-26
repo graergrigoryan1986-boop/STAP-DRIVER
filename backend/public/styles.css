@@ -286,3 +286,18 @@ body.authenticated footer{display:none!important}
 .driver-rating-card .driver-mini-facts{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
 .driver-rating-card .driver-mini-facts span{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border:1px solid rgba(190,157,92,.28);border-radius:7px;background:rgba(190,157,92,.08);font-size:10px;line-height:1.25;color:inherit}
 .driver-rating-card .driver-mini-facts b{font-size:9px;font-weight:700;opacity:.72}
+
+
+/* Driver document uploads: selectable tile cards with clear selected-file state */
+#dashboard .docs-upload-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 20px}
+#dashboard .doc-upload-tile{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:84px;padding:14px 12px;background:#f7f9fc;border:1px solid #d9e2ef;border-radius:9px;color:#173b63;font-size:14px;font-weight:800;cursor:pointer;box-sizing:border-box;transition:border-color .15s,background .15s}
+#dashboard .doc-upload-tile:hover{border-color:#c5a04f;background:#fffdf7}
+#dashboard .doc-upload-tile input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+#dashboard .doc-upload-tile .doc-file-name{font-size:11px;font-weight:500;color:#667085;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dashboard .doc-upload-tile.has-file{border-color:#c5a04f;background:#fffaf0}
+#dashboard .doc-upload-tile.has-file .doc-file-name{color:#805d20;font-weight:700}
+#dashboard .doc-type-select{display:block;max-width:420px;margin:10px 0}
+#dashboard .doc-type-select select{display:block;width:100%;margin-top:7px;min-height:44px}
+#dashboard .docs-submit{display:block;width:100%;min-height:54px;margin:20px 0 10px;background:linear-gradient(135deg,#e6c36f,#bd9140)!important;border:1px solid #b88a37!important;border-radius:9px!important;color:#201707!important;font-size:16px!important;font-weight:900!important;letter-spacing:.3px;box-shadow:0 5px 14px rgba(160,116,36,.2)}
+#dashboard .docs-submit:hover{filter:brightness(1.04)}
+@media(max-width:620px){#dashboard .docs-upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#dashboard .doc-upload-tile{min-height:82px;padding:12px 10px;font-size:13px}}
