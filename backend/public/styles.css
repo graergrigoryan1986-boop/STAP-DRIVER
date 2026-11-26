@@ -496,3 +496,24 @@ body.authenticated footer{display:none!important}
   .driver-notification.unread:before,
   #dashboard.admin-light article.driver.driver-status-pending:before{animation:none!important}
 }
+
+
+/* Driver workspace: compact left sidebar with gallery at its bottom */
+.driver-workspace{display:grid;grid-template-columns:minmax(250px,320px) minmax(0,1fr);gap:20px;align-items:start}
+.driver-sidebar{min-width:0;display:flex;flex-direction:column;gap:12px}
+.driver-sidebar .driver-overview{display:flex;flex-direction:column;gap:10px;margin:0}
+.driver-sidebar .metric-card{width:100%;min-width:0}
+.driver-sidebar .driver-gallery-section{order:20;margin:12px 0 0;padding:14px;border:1px solid rgba(212,160,23,.35);border-radius:14px;background:rgba(255,255,255,.035)}
+.driver-sidebar .driver-gallery-section h3{margin:0 0 8px}
+.driver-sidebar .driver-gallery-section p{font-size:12px;line-height:1.5}
+.driver-sidebar .driver-gallery-form{display:grid;grid-template-columns:1fr;gap:8px}
+.driver-sidebar .driver-gallery-form .doc-upload-tile,
+.driver-sidebar .driver-gallery-form .docs-submit{width:100%!important;min-width:0}
+.driver-sidebar .driver-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.driver-main{min-width:0}
+@media(max-width:760px){
+ .driver-workspace{grid-template-columns:1fr}
+ .driver-sidebar{display:grid;grid-template-columns:1fr;order:0}
+ .driver-sidebar .driver-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .driver-main{order:1}
+}
