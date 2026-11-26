@@ -207,7 +207,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
     isTest: z.boolean().default(false)
   }).parse(req.body);
   const order = await prisma.order.create({ data: { ...input, customerId: req.user.id } });
-  io.to('drivers').emit('order:new', { id: order.id, pickupAddress: order.pickupAddress, destinationAddress: order.destinationAddress, fareAmd: order.fareAmd, createdAt: order.createdAt });
+  io.to('drivers').emit('order:new', { id: order.id, isTest: order.isTest, pickupAddress: order.pickupAddress, destinationAddress: order.destinationAddress, fareAmd: order.fareAmd, createdAt: order.createdAt });
   res.status(201).json({ order });
 }));
 
@@ -250,8 +250,9 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
   const orders = await prisma.order.findMany({ where: { status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }], skippedBy: { none: { driverId: req.user.id } } }, orderBy: { createdAt: 'asc' } });
   const categories = req.user.driverLicenseCategories || [];
   const ordersForDriver = orders.filter(order =>
-    categories.includes(order.requiredLicenseCategory) &&
-    (order.transmissionType !== 'MANUAL' || req.user.driverTransmission === 'MANUAL')
+    order.isTest ||
+    (categories.includes(order.requiredLicenseCategory) &&
+    (order.transmissionType !== 'MANUAL' || req.user.driverTransmission === 'MANUAL'))
   );
   res.json({ orders: ordersForDriver });
 }));
