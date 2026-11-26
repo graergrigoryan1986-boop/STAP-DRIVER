@@ -182,7 +182,7 @@ app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>
 app.get('/api/me', auth, (req, res) => res.json({ user: { ...publicUser(req.user), dateOfBirth: req.user.dateOfBirth } }));
 
 app.patch('/api/customer/profile', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
-  const { driverLicenseIssuedAt } = z.object({ driverLicenseIssuedAt: z.iso.date().or(z.literal('')) }).parse(req.body);
+  const { driverLicenseIssuedAt, dateOfBirth } = z.object({ driverLicenseIssuedAt: z.iso.date().or(z.literal('')), dateOfBirth: z.iso.date().or(z.literal('')).optional() }).parse(req.body);
   const user = await prisma.user.update({ where: { id: req.user.id }, data: {
     driverLicenseIssuedAt: driverLicenseIssuedAt ? new Date(driverLicenseIssuedAt+'T00:00:00.000Z') : null
   }});
