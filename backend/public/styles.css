@@ -357,3 +357,4 @@ body.authenticated footer{display:none!important}
 #dashboard .approve-docs{background:#15803d!important;color:#fff!important}
 #dashboard .reject-docs{background:#b91c1c!important;color:#fff!important}
 #dashboard [data-review-docs="CANCELLED"]{background:#64748b!important;color:#fff!important}
+.driver-status-group{margin:22px 0;padding:14px;border:1px solid #dbe3ed;border-radius:14px;background:#fff}.driver-status-group h3{margin:0 0 12px;color:#173b63;font-weight:850}.driver-notifications{display:grid;gap:10px}.driver-notification{padding:12px 14px;border:1px solid #dbe3ed;border-radius:10px;background:#f8fafc}.driver-notification.unread{border-left:5px solid #d4a017;background:#fffbeb}.driver-notification p{margin:6px 0;white-space:pre-wrap}
