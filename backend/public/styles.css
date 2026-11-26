@@ -548,3 +548,19 @@ body.authenticated footer{display:none!important}
 .driver-notification.unread strong,
 .driver-notification.unread p,
 .driver-notification.unread small{color:#302300!important;opacity:1!important}
+
+
+/* Driver notifications live in the left sidebar; show only the newest notice */
+.driver-sidebar-notifications{
+  order:5;
+  margin:0;
+  padding:13px;
+  border:1px solid rgba(229,169,0,.35);
+  border-radius:13px;
+  background:rgba(255,255,255,.045);
+}
+.driver-sidebar-notifications h3{margin:0 0 10px;font-size:15px}
+.driver-sidebar-notifications .driver-notifications{display:block}
+.driver-sidebar-notifications .driver-notification{margin:0;padding:11px;border-radius:10px}
+.driver-sidebar-notifications .driver-notification p{margin:6px 0;font-size:13px;line-height:1.45}
+.driver-sidebar-notifications .driver-notification small{font-size:11px;opacity:.8}
