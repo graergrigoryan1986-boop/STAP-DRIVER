@@ -104,13 +104,8 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
   docsForm.setAttribute('aria-busy','true');
   try{
    if(keys.some(k=>!(f.get(k) instanceof File)||!f.get(k).size))throw new Error('Խնդրում ենք ընտրել բոլոր 5 լուսանկարները։');
-   if(!window.Tesseract)throw new Error('OCR գրադարանը հասանելի չէ։ Փորձեք մի փոքր ուշ։');
-   message('#ocrStatus','Կարդում և համեմատում ենք փաստաթղթերը։ Մի փակեք էջը...');
-   const scans=await Promise.all(['front','back','passportFront','passportBack'].map(k=>Tesseract.recognize(f.get(k),'eng+arm')));
-   const licenseText='ՎԱՐՈՐԴԱԿԱՆ ԱՌՋԵՎ\n'+(scans[0].data.text||'')+'\nՎԱՐՈՐԴԱԿԱՆ ՀԵՏԵՎ\n'+(scans[1].data.text||'');
-   const passportText='ԱՆՁՆԱԳԻՐ ԿԱՄ ID ԱՌՋԵՎ\n'+(scans[3].data.text||'')+'\nԱՆՁՆԱԳԻՐ ԿԱՄ ID ՀԵՏԵՎ\n'+(scans[4].data.text||'');
    const images=await Promise.all(keys.map(k=>compressDriverImage(f.get(k))));
-   const result=await api('/api/drivers/documents',{method:'POST',body:JSON.stringify({front:images[0],back:images[1],selfie:images[2],passportFront:images[3],passportBack:images[4],passportDocumentType:f.get('passportDocumentType'),ocrText:licenseText,passportOcrText:passportText})});
+   const result=await api('/api/drivers/documents',{method:'POST',body:JSON.stringify({front:images[0],back:images[1],selfie:images[2],passportFront:images[3],passportBack:images[4],passportDocumentType:f.get('passportDocumentType')})});
    const profileFile=f.get('profilePhoto');if(profileFile instanceof File&&profileFile.size){const profileImage=await compressDriverImage(profileFile);await api('/api/drivers/profile-photo',{method:'POST',body:JSON.stringify({photo:profileImage})})}
    message('#appMessage',result.message);await showApp();
   }catch(err){controls.forEach(control=>control.disabled=false);if(submitButton)submitButton.textContent='⬆ ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ';docsForm.removeAttribute('aria-busy');message('#appMessage',err.message,true);message('#ocrStatus',err.message,true)}
