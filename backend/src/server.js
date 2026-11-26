@@ -350,9 +350,16 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
 }));
 
 app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
+  // Make the start action idempotent: repeated clicks or a retry after a lost response
+  // must not turn an already-started order into a misleading conflict.
+  const existing = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
+  if (!existing) return res.status(404).json({ error: 'Այս պատվերը կապված չէ ձեր վարորդական հաշվի հետ։' });
+  if (existing.status === 'IN_PROGRESS') return res.json({ order: existing, message: 'Ուղևորությունն արդեն սկսված է։' });
+  if (existing.status !== 'ACCEPTED') return res.status(409).json({ error: 'Պատվերը հնարավոր չէ սկսել։ Ընթացիկ կարգավիճակ՝ ' + existing.status });
   const result = await prisma.order.updateMany({ where: { id: req.params.id, driverId: req.user.id, status: 'ACCEPTED' }, data: { status: 'IN_PROGRESS' } });
-  if (!result.count) return res.status(409).json({ error: 'Պատվերի կարգավիճակը հնարավոր չէ փոխել' });
-  res.json({ order: await prisma.order.findUnique({ where: { id: req.params.id } }) });
+  const order = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
+  if (order?.status === 'IN_PROGRESS') return res.json({ order, message: result.count ? 'Ուղևորությունը սկսվեց։' : 'Ուղևորությունն արդեն սկսված է։' });
+  return res.status(409).json({ error: 'Պատվերի կարգավիճակը փոխվել է։ Թարմացրեք էջը և կրկին փորձեք։' });
 }));
 
 app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
