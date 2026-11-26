@@ -151,13 +151,17 @@ model SkippedOrder {
 }
 
 
-model SiteContent { id String @id @default("main") content Json updatedAt DateTime @updatedAt }
+model SiteContent {
+ id String @id @default("main")
+ content Json
+ updatedAt DateTime @updatedAt
+}
 
 model DriverPhoto {
  id String @id @default(cuid())
  userId String
  image Bytes
  createdAt DateTime @default(now())
- user User @relation(fields:[userId],references:[id],onDelete:Cascade)
- @@index([userId,createdAt])
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ @@index([userId, createdAt])
 }
