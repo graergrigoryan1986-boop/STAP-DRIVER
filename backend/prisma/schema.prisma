@@ -16,6 +16,7 @@ enum Role {
 enum OrderStatus {
   OPEN
   ACCEPTED
+  ARRIVED
   IN_PROGRESS
   COMPLETED
   CANCELLED
@@ -68,6 +69,7 @@ model User {
   driverVerificationMessage String?
   rating          Float    @default(5.0)
   balanceAmd     Int      @default(0)
+  driverNegativeBalanceLimitAmd Int @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -109,6 +111,11 @@ model Order {
   note               String?
   createdAt          DateTime    @default(now())
   acceptedAt         DateTime?
+  arrivedAt          DateTime?
+  vehicleInspectionPassed Boolean @default(false)
+  driverCancellationReason String?
+  driverFeedbackTags String[] @default([])
+  driverFeedbackComment String?
   completedAt        DateTime?
   updatedAt          DateTime    @updatedAt
 
