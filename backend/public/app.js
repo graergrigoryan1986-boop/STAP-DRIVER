@@ -113,7 +113,7 @@ ${u.driverDocumentsStatus==='REVIEW_REQUIRED'?'<p class="secure-note">'+esc(u.dr
 ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք ուղղել լուսանկարները և կրկին ուղարկել ստուգման։ Նախորդ մերժման ծանուցումը չի խանգարում նոր ուղարկմանը։</p>':''}
  ${u.driverDocumentsStatus==='PENDING_REVIEW'||u.isVerified?'':'</details>'}`}
   <details class="dash-section" open><summary>Պատվերների պատմություն</summary>
-  <div class="order-filters"><button class="action active" data-filter="ALL">Բոլորը</button><button class="action" data-filter="COMPLETED">Կատարված</button><button class="action" data-filter="SKIPPED">Բաց թողնված</button><button class="action" data-filter="ACTIVE">Ընթացքի մեջ</button><button class="action" data-filter="CANCELLED">Չեղարկված</button></div>
+  <div class="order-filters"><button class="action" data-filter="COMPLETED">Կատարված</button><button class="action" data-filter="SKIPPED">Բաց թողնված</button><button class="action" data-filter="ACTIVE">Ընթացքի մեջ</button><button class="action" data-filter="CANCELLED">Չեղարկված</button></div>
   <div id="myOrders" class="stack"></div>
  </details>
  <details class="dash-section"><summary>Հաշվեկշռի պատմություն (${wallet.transactions.length})</summary>
