@@ -396,3 +396,103 @@ body.authenticated footer{display:none!important}
   .driver-notification.unread,
   #dashboard.admin-light article.driver.driver-status-pending{animation:none}
 }
+
+
+/* EXTRA-LOUD attention mode: unread notices and pending driver approvals */
+@keyframes stap-alert-flash{
+  0%,100%{background:#fff000;border-color:#ff3b00;box-shadow:0 0 0 2px #ff3b00,0 0 14px 5px rgba(255,59,0,.55);transform:scale(1)}
+  25%{background:#ffb000;border-color:#c000ff;box-shadow:0 0 0 4px #c000ff,0 0 24px 10px rgba(192,0,255,.6);transform:scale(1.012)}
+  50%{background:#ff4d00;border-color:#fff000;box-shadow:0 0 0 3px #fff000,0 0 28px 12px rgba(255,77,0,.65);transform:scale(1.018)}
+  75%{background:#ffe600;border-color:#ff1744;box-shadow:0 0 0 4px #ff1744,0 0 22px 9px rgba(255,23,68,.55);transform:scale(1.008)}
+}
+@keyframes stap-alert-text{
+  0%,100%{color:#210000;text-shadow:0 1px 0 #fff}
+  50%{color:#650000;text-shadow:0 0 7px rgba(255,255,255,.95),0 0 12px rgba(255,255,255,.8)}
+}
+.driver-notification.unread{
+  position:relative!important;
+  overflow:visible!important;
+  border:3px solid #ff3b00!important;
+  border-left:12px solid #b00020!important;
+  border-radius:12px!important;
+  background:#fff000!important;
+  color:#210000!important;
+  animation:stap-alert-flash .72s steps(2,end) infinite!important;
+}
+.driver-notification.unread:before{
+  content:"● ՆՈՐ ԾԱՆՈՒՑՈՒՄ — ՈՒՇԱԴՐՈՒԹՅՈՒՆ";
+  display:block;
+  margin:-2px 0 9px;
+  padding:7px 10px;
+  border-radius:7px;
+  background:#b00020;
+  color:#fff!important;
+  font-size:13px;
+  line-height:1.25;
+  font-weight:1000;
+  letter-spacing:.6px;
+  text-align:center;
+  animation:stap-alert-text .72s infinite;
+}
+.driver-notification.unread strong,
+.driver-notification.unread p,
+.driver-notification.unread small{
+  color:#210000!important;
+  opacity:1!important;
+  font-weight:950!important;
+}
+#dashboard.admin-light article.driver.driver-status-pending{
+  position:relative!important;
+  border:4px solid #ff3b00!important;
+  border-left:14px solid #b00020!important;
+  border-radius:14px!important;
+  background:#fff000!important;
+  color:#210000!important;
+  animation:stap-alert-flash .72s steps(2,end) infinite!important;
+}
+#dashboard.admin-light article.driver.driver-status-pending:before{
+  content:"⚠ ՀԱՍՏԱՏՄԱՆ Է ՍՊԱՍՈՒՄ — ԱԴՄԻՆԻ ՈՒՇԱԴՐՈՒԹՅՈՒՆ";
+  display:block;
+  margin:0 0 12px;
+  padding:11px 12px;
+  border-radius:8px;
+  background:#b00020;
+  color:#fff!important;
+  font-size:14px;
+  font-weight:1000;
+  letter-spacing:.5px;
+  text-align:center;
+  animation:stap-alert-text .72s infinite;
+}
+#dashboard.admin-light article.driver.driver-status-pending p,
+#dashboard.admin-light article.driver.driver-status-pending strong,
+#dashboard.admin-light article.driver.driver-status-pending summary{
+  color:#210000!important;
+  font-weight:900!important;
+}
+#dashboard.admin-light article.driver.driver-status-pending .driver-admin-overview{
+  background:#ffb000!important;
+  color:#210000!important;
+  border:2px solid #b00020!important;
+}
+#dashboard.admin-light .driver-status-group:has(article.driver-status-pending){
+  border:3px solid #ff3b00!important;
+  background:#fff8cc!important;
+  box-shadow:0 0 18px rgba(255,59,0,.35);
+}
+#dashboard.admin-light .driver-status-group:has(article.driver-status-pending)>h3{
+  display:block;
+  padding:10px;
+  border-radius:8px;
+  background:#b00020;
+  color:#fff!important;
+  text-align:center;
+  font-weight:1000;
+  animation:stap-alert-text .72s infinite;
+}
+@media(prefers-reduced-motion:reduce){
+  .driver-notification.unread,
+  #dashboard.admin-light article.driver.driver-status-pending,
+  .driver-notification.unread:before,
+  #dashboard.admin-light article.driver.driver-status-pending:before{animation:none!important}
+}
