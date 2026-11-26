@@ -931,3 +931,11 @@ body.authenticated footer{display:none!important}
 .driver-intermediate-controls button{min-height:43px;white-space:nowrap}
 .driver-intermediate-form small{color:#c9b78f;line-height:1.5}
 @media(max-width:560px){.driver-intermediate-controls{grid-template-columns:1fr}.driver-intermediate-controls button{width:100%}}
+
+/* Keep the accepted trip prominent above the new-bookings queue */
+.driver-active-order{border:1px solid rgba(201,164,91,.7)!important;background:linear-gradient(145deg,rgba(201,164,91,.10),rgba(12,15,19,.96))!important;box-shadow:0 10px 32px rgba(0,0,0,.22)}
+.driver-active-order .driver-pending-heading h3{color:#e8c77e}
+.driver-active-order:has(#driverActiveOrder .driver-order-card){border-width:2px!important}
+.driver-active-order #driverActiveOrder:empty{display:none}
+.driver-active-order #driverActiveOrder .driver-order-card{border-color:rgba(218,185,117,.6)}
+.driver-active-order #driverActiveOrder .driver-order-card .driver-order-price strong{font-size:25px}
