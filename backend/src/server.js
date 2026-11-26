@@ -304,8 +304,10 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     if(error.code==='P2003')return res.status(400).json({error:'Պատվերի կապակցված հաշիվը չի գտնվել։ Թարմացրեք էջը և կրկին փորձեք։'});
     throw error;
   }
-  if(input.dispatchMode==='NETWORK')io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
-  else for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',{id:order.id,isTest:order.isTest});
+  if(!scheduledAt){
+    if(input.dispatchMode==='NETWORK')io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
+    else for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',{id:order.id,isTest:order.isTest});
+  }
   const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
   res.status(201).json({order,message});
 }));
