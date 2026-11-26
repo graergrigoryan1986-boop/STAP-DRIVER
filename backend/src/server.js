@@ -437,7 +437,7 @@ app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res)
 
 app.get('/api/admin/drivers/:id/transactions', auth, only('ADMIN'), asyncRoute(async (req, res) => {
   const transactions = await prisma.walletTransaction.findMany({
-    where: { userId: req.params.id }, orderBy: { createdAt: 'desc' }, take: 100
+    where: { userId: req.params.id }, orderBy: { createdAt: 'desc' }
   });
   res.json({ transactions });
 }));
