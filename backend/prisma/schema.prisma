@@ -91,6 +91,7 @@ model Order {
   destinationLat     Float?
   destinationLng     Float?
   status             OrderStatus @default(OPEN)
+  isTest             Boolean     @default(false)
   fareAmd            Int
   requiredLicenseCategory String @default("B")
   transmissionType String @default("AUTOMATIC")
