@@ -287,7 +287,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
 }));
 
 app.post('/api/orders/:id/skip', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
-  const order = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', driverId: null } });
+  const order = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!order) return res.status(404).json({ error: 'Բաց պատվերը չի գտնվել' });
   await prisma.skippedOrder.upsert({
     where: { orderId_driverId: { orderId: order.id, driverId: req.user.id } },
