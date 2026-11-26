@@ -922,3 +922,12 @@ body.authenticated footer{display:none!important}
   outline:2px solid #b99554!important;
   outline-offset:1px;
 }
+
+.driver-intermediate-form{margin:14px 0;padding:14px;border:1px solid rgba(201,164,91,.48);border-radius:12px;background:rgba(201,164,91,.07);display:grid;gap:8px}
+.driver-intermediate-form>strong{color:#e8c77e;font-size:13px}
+.driver-intermediate-form p{margin:0;color:#f1dfb9;font-size:12px;font-weight:800}
+.driver-intermediate-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.driver-intermediate-controls select{min-width:0;min-height:43px;padding:9px 11px;background:#101216;color:#f5f0e6;border:1px solid #b99554;border-radius:8px}
+.driver-intermediate-controls button{min-height:43px;white-space:nowrap}
+.driver-intermediate-form small{color:#c9b78f;line-height:1.5}
+@media(max-width:560px){.driver-intermediate-controls{grid-template-columns:1fr}.driver-intermediate-controls button{width:100%}}
