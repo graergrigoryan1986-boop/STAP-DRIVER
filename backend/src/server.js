@@ -320,11 +320,11 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
-        {dispatchMode:'CATEGORY',driverId:null,...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
+        {dispatchMode:'CATEGORY',driverId:null},
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ]
     },
-    orderBy:{createdAt:'asc'},
+    orderBy:{createdAt:'desc'},
     include:{customer:{select:{id:true,name:true,phone:true}}}
   });
   res.json({orders});
