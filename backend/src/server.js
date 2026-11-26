@@ -662,6 +662,7 @@ io.use(async (socket, next) => {
   } catch { next(new Error('Unauthorized')); }
 });
 io.on('connection', socket => {
+  socket.join('user:'+socket.user.id);
   if (socket.user.role === 'DRIVER' && socket.user.isVerified) socket.join('drivers');
   socket.on('order:subscribe', async orderId => {
     const order = await prisma.order.findUnique({ where: { id: String(orderId) } });
