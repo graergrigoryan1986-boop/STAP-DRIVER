@@ -678,3 +678,14 @@ body.authenticated footer{display:none!important}
 .hero{position:relative;isolation:isolate;overflow:hidden}
 .hero>*:not(.site-hero-video){position:relative;z-index:1}
 @media(max-width:680px){.admin-section-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.admin-section-nav button{font-size:11px!important;padding:9px 7px!important}.balance-inline-controls input{width:46%}}
+
+
+/* Distinct colors for each driver-profile management action */
+#dashboard.admin-light #adminDriversPanel [data-experience]{background:#e8efff!important;border-color:#8ca9e8!important;color:#254b91!important}
+#dashboard.admin-light #adminDriversPanel [data-docs]{background:#fff4d9!important;border-color:#e6c36a!important;color:#805b08!important}
+#dashboard.admin-light #adminDriversPanel [data-ledger]{background:#eee8ff!important;border-color:#b4a0e7!important;color:#563c91!important}
+#dashboard.admin-light #adminDriversPanel [data-rating-list]{background:#e4f5f1!important;border-color:#83c7b7!important;color:#176454!important}
+#dashboard.admin-light #adminDriversPanel [data-verify]{background:#e3f6e9!important;border-color:#8bc99e!important;color:#17633b!important}
+#dashboard.admin-light #adminDriversPanel [data-block]{background:#fde8e8!important;border-color:#e6a2a2!important;color:#923333!important}
+#dashboard.admin-light #adminDriversPanel .admin-driver-tools summary{cursor:pointer;font-weight:800;color:#314b6d;padding:7px 0}
+#dashboard.admin-light #adminDriversPanel .admin-driver-tools[open]{padding-top:5px;border-top:1px solid #e5e8ef}
