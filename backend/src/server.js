@@ -463,6 +463,44 @@ app.post('/api/orders/:id/driver-cancel', auth, only('DRIVER'), verifiedDriver, 
   res.json({ success: true, message: 'Պատվերը չեղարկվեց։ Ուղևորը և ադմինը ծանուցվեցին։' });
 }));
 
+
+app.post('/api/orders/:id/intermediate-community', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
+  const { community } = z.object({ community: z.enum(['Աջափնյակ','Ավան','Արաբկիր','Դավթաշեն','Էրեբունի','Քանաքեռ-Զեյթուն','Կենտրոն','Մալաթիա-Սեբաստիա','Նոր Նորք','Նորք-Մարաշ','Նուբարաշեն','Շենգավիթ']) }).parse(req.body);
+  const existing = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
+  if (!existing) return res.status(404).json({ error: 'Պատվերը կապված չէ ձեր վարորդական հաշվի հետ։' });
+  if (existing.status !== 'IN_PROGRESS') return res.status(409).json({ error: 'Միջանկյալ համայնք կարելի է ավելացնել միայն ուղևորության ընթացքում։' });
+  if (existing.intermediateCommunities.includes(community) || existing.pickupAddress.startsWith(community) || existing.destinationAddress.startsWith(community)) return res.status(409).json({ error: 'Այս համայնքն արդեն ներառված է երթուղում։' });
+  const addedFareAmd = 2000;
+  const commissionAmd = existing.isTest ? 0 : 500;
+  const settingsRow = await prisma.siteContent.findUnique({ where: { id: 'main' } });
+  const rawMinimum = settingsRow?.content?.minDriverBalanceAmd;
+  const minimumBalanceAmd = Number.isInteger(Number(rawMinimum)) && Number(rawMinimum) >= 0 ? Number(rawMinimum) : 0;
+  const personalNegativeLimitAmd = Number.isInteger(req.user.driverNegativeBalanceLimitAmd) ? req.user.driverNegativeBalanceLimitAmd : 0;
+  const minimumAllowedBalanceAmd = personalNegativeLimitAmd > 0 ? -personalNegativeLimitAmd : minimumBalanceAmd;
+  try {
+    const result = await prisma.$transaction(async tx => {
+      if (commissionAmd > 0) {
+        const debited = await tx.user.updateMany({ where: { id: req.user.id, balanceAmd: { gte: commissionAmd + minimumAllowedBalanceAmd } }, data: { balanceAmd: { decrement: commissionAmd } } });
+        if (!debited.count) throw new Error('WALLET_MINIMUM_NOT_MET');
+      }
+      const changed = await tx.order.updateMany({
+        where: { id: existing.id, driverId: req.user.id, status: 'IN_PROGRESS', intermediateCommunities: { hasNot: community } },
+        data: { fareAmd: { increment: addedFareAmd }, commissionAmd: { increment: commissionAmd }, intermediateCommunities: { push: community } }
+      });
+      if (!changed.count) throw new Error('INTERMEDIATE_COMMUNITY_ALREADY_ADDED');
+      if (commissionAmd > 0) await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: -commissionAmd, type: 'ORDER_COMMISSION', description: 'Միջանկյալ համայնքի հավելավճարի միջնորդավճար՝ ' + community, orderId: existing.id } });
+      const [order, driver] = await Promise.all([tx.order.findUnique({ where: { id: existing.id } }), tx.user.findUnique({ where: { id: req.user.id }, select: { balanceAmd: true } })]);
+      return { order, balanceAmd: driver.balanceAmd, commissionAmd, addedFareAmd };
+    });
+    io.to('user:' + existing.customerId).emit('order:fare-updated', { id: existing.id, fareAmd: result.order.fareAmd, intermediateCommunities: result.order.intermediateCommunities });
+    return res.json(result);
+  } catch (error) {
+    if (error.message === 'WALLET_MINIMUM_NOT_MET') return res.status(409).json({ error: 'Հաշվեկշիռը բավարար չէ միջանկյալ համայնքի հավելավճարի միջնորդավճարի համար։' });
+    if (error.message === 'INTERMEDIATE_COMMUNITY_ALREADY_ADDED') return res.status(409).json({ error: 'Այս համայնքն արդեն ավելացվել է։ Թարմացրեք պատվերը։' });
+    throw error;
+  }
+}));
+
 app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const input = z.object({
     score: z.number().int().min(1).max(5),
