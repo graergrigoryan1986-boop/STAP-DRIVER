@@ -115,6 +115,7 @@ model Order {
   vehicleInspectionPassed Boolean @default(false)
   driverCancellationReason String?
   driverFeedbackTags String[] @default([])
+  intermediateCommunities String[] @default([])
   driverFeedbackComment String?
   completedAt        DateTime?
   updatedAt          DateTime    @updatedAt
