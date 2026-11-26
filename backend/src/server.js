@@ -135,6 +135,8 @@ const verifiedDriver = (req, res, next) => {
 };
 const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+app.get('/api/notifications',auth,asyncRoute(async(req,res)=>{const notifications=await prisma.notification.findMany({where:{userId:req.user.id},orderBy:{createdAt:'desc'},take:30});res.json({notifications})}));
+app.patch('/api/notifications/:id/read',auth,asyncRoute(async(req,res)=>{await prisma.notification.updateMany({where:{id:req.params.id,userId:req.user.id},data:{readAt:new Date()}});res.json({success:true})}));
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'STAP DRIVER API' }));
 
 app.post('/api/auth/register', asyncRoute(async (req, res) => {
@@ -568,15 +570,16 @@ app.delete('/api/admin/ratings/:id',auth,only('ADMIN'),asyncRoute(async(req,res)
 }));
 
 app.patch('/api/admin/drivers/:id/documents/review',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const {decision}=z.object({decision:z.enum(['APPROVED','REJECTED','CANCELLED'])}).parse(req.body);
+ const {decision,reason}=z.object({decision:z.enum(['APPROVED','REJECTED','CANCELLED']),reason:z.string().trim().max(500).optional()}).parse(req.body);
  const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
  if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
  if(decision==='APPROVED'&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack))return res.status(409).json({error:'Հաստատման համար լրացրեք բոլոր փաստաթղթերը և լուսանկարները։'});
- const approved=decision==='APPROVED';
- const status=approved?'APPROVED':decision;
- const note=approved?'Փաստաթղթերը հաստատվեցին։':decision==='REJECTED'?'Փաստաթղթերը մերժվել են։ Կարող եք նորից ներբեռնել և ուղարկել ստուգման։':'Ադմինը չեղարկել է ստուգման հարցումը։ Կարող եք նորից ներբեռնել և ուղարկել ստուգման։';
+ if(decision==='REJECTED'&&!reason)return res.status(400).json({error:'Մերժման պատճառը պարտադիր է։'});
+ const approved=decision==='APPROVED',status=approved?'APPROVED':decision;
+ const note=approved?'Ձեր փաստաթղթերի և լուսանկարների ստուգումը հաջողությամբ անցել է։ Ձեր վարորդի պրոֆիլը հաստատված է։':decision==='REJECTED'?'Փաստաթղթերը մերժվել են։ Պատճառ՝ '+reason+'։ Խնդրում ենք ուղղել և կրկին ուղարկել։':'Ստուգման հարցումը չեղարկվել է ադմինի կողմից։ Կարող եք կրկին ներբեռնել և ուղարկել փաստաթղթերը։';
  const user=await prisma.user.update({where:{id:driver.id},data:{driverDocumentsStatus:status,isVerified:approved,driverVerifiedAt:approved?new Date():null,driverVerificationMessage:note}});
- res.json({driver:publicUser(user),message:approved?'Փաստաթղթերը հաստատվեցին։':decision==='REJECTED'?'Փաստաթղթերը մերժվեցին։ Վարորդը կարող է կրկին ուղարկել։':'Ստուգման հարցումը չեղարկվեց։ Վարորդը կարող է կրկին ուղարկել։'});
+ await prisma.notification.create({data:{userId:driver.id,title:approved?'Վարորդի պրոֆիլը հաստատված է':decision==='REJECTED'?'Փաստաթղթերը մերժվել են':'Ստուգման հարցումը չեղարկվել է',message:note,type:decision}});
+ res.json({driver:publicUser(user),message:approved?'Փաստաթղթերի ստուգումը հաջողությամբ ավարտվեց։':decision==='REJECTED'?'Մերժման ծանուցումն ուղարկվեց վարորդին։':'Չեղարկման ծանուցումն ուղարկվեց վարորդին։'});
 }));
 
 app.patch('/api/admin/users/:id/block', auth, only('ADMIN'), asyncRoute(async (req, res) => {
