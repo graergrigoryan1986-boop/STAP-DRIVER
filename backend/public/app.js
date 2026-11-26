@@ -88,6 +88,7 @@ async function driverView(){
   <div class="metric-card driver-rating-card"><span>ՎԱՐԿԱՆԻՇ</span><strong>★ ${Number(u.rating??5).toFixed(1)}</strong><small>Ակտիվ վարկանիշ</small><div class="driver-mini-facts"><span><b>Տարիք</b> ${driverAgeLabel(u.dateOfBirth)}</span><span><b>Ստաժ</b> ${driverExperienceLabel(u.driverExperienceMonths,u.driverLicenseIssuedAt)}</span></div></div>
   <div class="metric-card"><span>ԿԱՐԳԱՎԻՃԱԿ</span><strong class="compact-value">${u.isVerified?'Հաստատված':u.driverDocumentsStatus==='PENDING_REVIEW'?'Ադմինի ստուգմանը':u.driverDocumentsStatus==='REVIEW_REQUIRED'?'Ստուգվում է՝ մինչև 24 ժամ':u.driverDocumentsStatus==='REJECTED'?'Կրկին ուղարկեք':'Սպասում է'}</strong></div>
  </div>
+ <section class="dash-section driver-balance-menu"><button type="button" id="driverBalanceMenuButton" class="driver-side-menu-item" aria-expanded="false"><span>💰</span><span>Հաշվեկշիռ</span><span class="driver-side-menu-chevron">›</span></button><div id="driverBalanceHistoryPanel" class="driver-balance-history-panel" hidden><h3>Հաշվեկշռի պատմություն (\${wallet.transactions.length})</h3><div class="ledger-list">\${wallet.transactions.length?wallet.transactions.map(t=>'<article class="ledger-row"><div><strong>'+esc(t.description)+'</strong><small>'+new Date(t.createdAt).toLocaleString('hy-AM')+' · '+esc(t.type)+'</small></div><b class="'+(t.amountAmd>=0?'positive':'negative')+'">'+(t.amountAmd>0?'+':'')+money(t.amountAmd)+'</b></article>').join(''):'<p class="empty-state">Գործարքներ դեռ չկան։</p>'}</div></div></section>
  <section class="dash-section driver-sidebar-notifications"><h3>Ծանուցումներ</h3><div id="driverNotifications" class="driver-notifications"></div></section>
  <section class="dash-section driver-gallery-section"><h3>Իմ պրոֆիլի լուսանկարները</h3><p>Կարող եք ավելացնել մինչև 8 լրացուցիչ լուսանկար՝ համակարգչից կամ տեսախցիկից։</p><div id="driverGalleryGrid" class="driver-gallery-grid"></div><form id="driverGalleryForm" class="driver-gallery-form"><label class="doc-upload-tile">Ընտրել լուսանկարներ<input type="file" name="photos" accept="image/*" capture="environment" multiple><span class="doc-file-name">Ընտրված չէ</span></label><button class="action docs-submit" type="submit">ՎԵՐԲԵՌՆԵԼ ԼՈՒՍԱՆԿԱՐՆԵՐԸ</button></form><p id="driverGalleryMessage"></p></section>
  </aside><main class="driver-main">
@@ -117,11 +118,11 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
   <div class="order-filters"><button class="action" data-filter="COMPLETED">Կատարված</button><button class="action" data-filter="SKIPPED">Բաց թողնված</button><button class="action" data-filter="ACTIVE">Ընթացքի մեջ</button><button class="action" data-filter="CANCELLED">Չեղարկված</button></div>
   <div id="myOrders" class="stack"></div>
  </details>
- <details class="dash-section"><summary>Հաշվեկշռի պատմություն (${wallet.transactions.length})</summary>
-  <div class="ledger-list">${wallet.transactions.length?wallet.transactions.map(t=>'<article class="ledger-row"><div><strong>'+esc(t.description)+'</strong><small>'+new Date(t.createdAt).toLocaleString('hy-AM')+' · '+esc(t.type)+'</small></div><b class="'+(t.amountAmd>=0?'positive':'negative')+'">'+(t.amountAmd>0?'+':'')+money(t.amountAmd)+'</b></article>').join(''):'<p class="empty-state">Գործարքներ դեռ չկան։</p>'}</div>
- </details>
+
  </main></div>`;
 
+ const balanceMenuButton=$('#driverBalanceMenuButton'),balanceHistoryPanel=$('#driverBalanceHistoryPanel');
+ if(balanceMenuButton&&balanceHistoryPanel)balanceMenuButton.onclick=()=>{const opening=balanceHistoryPanel.hidden;balanceHistoryPanel.hidden=!opening;balanceMenuButton.setAttribute('aria-expanded',String(opening));balanceMenuButton.classList.toggle('active',opening);if(opening)balanceHistoryPanel.scrollIntoView({behavior:'smooth',block:'nearest'});};
  const profilePhotoForm=$('#driverProfilePhotoForm');
  if(profilePhotoForm){
   const photoInput=profilePhotoForm.elements.photo;
