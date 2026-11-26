@@ -281,11 +281,19 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{isEmpty:false},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
     if(!eligibleDrivers.length)return res.status(400).json({error:'Այս կարգով և փոխանցման տուփով ակտիվ հաստատված վարորդներ չկան։'});
   }
-  const order=await prisma.order.create({data:{
-    customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,pickupAddress:input.pickupAddress,
-    destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
-    transmissionType:input.transmissionType,note:input.note
-  }});
+  let order;
+  try {
+    order=await prisma.order.create({data:{
+      customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,pickupAddress:input.pickupAddress,
+      destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
+      transmissionType:input.transmissionType,note:input.note
+    }});
+  } catch(error) {
+    console.error('Admin order creation failed:',{code:error.code,message:error.message,meta:error.meta});
+    if(error.code==='P2021'||error.code==='P2022')return res.status(503).json({error:'Պատվերների տվյալների բազայի կառուցվածքը դեռ չի թարմացվել։ Render-ում կատարեք Manual Deploy → Deploy latest commit։'});
+    if(error.code==='P2003')return res.status(400).json({error:'Պատվերի կապակցված հաշիվը չի գտնվել։ Թարմացրեք էջը և կրկին փորձեք։'});
+    throw error;
+  }
   if(input.dispatchMode==='NETWORK')io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
   else for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',{id:order.id,isTest:order.isTest});
   const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
