@@ -300,7 +300,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
-        {dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories},OR:[{transmissionType:'AUTOMATIC'},{transmissionType:'MANUAL',...(req.user.driverTransmission==='MANUAL'?{}:{id:'__no_match__'})}]},
+        {dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories},...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ]
     },
