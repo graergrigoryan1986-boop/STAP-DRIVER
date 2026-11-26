@@ -43,7 +43,7 @@ async function driverView(){
  const latinName=[u.driverFirstNameLatin,u.driverLastNameLatin,u.driverPatronymicLatin].filter(Boolean).join(' ');
  $('#dashboard').innerHTML=`
  <div class="driver-profile-photo-block">${profilePhoto?'<img src="'+profilePhoto+'" alt="Վարորդի պրոֆիլային լուսանկար">':'<span>Պրոֆիլի լուսանկարը դեռ ներբեռնված չէ</span>'}</div>
- <form id="driverProfilePhotoForm" class="driver-profile-photo-form"><label class="doc-upload-tile">Պրոֆիլի լուսանկար (առանձին)<input type="file" name="photo" accept="image/*" capture="user"><span class="doc-file-name">Ընտրեք պրոֆիլի լուսանկարը</span></label><button type="submit" class="action">ՊԱՀՊԱՆԵԼ ՊՐՈՖԻԼԻ ՆԿԱՐԸ</button><p id="driverProfilePhotoMessage"></p></form>
+ <form id="driverProfilePhotoForm" class="driver-profile-photo-form" style="${u.isVerified?'display:none':''}"><label class="doc-upload-tile">Պրոֆիլի լուսանկար (առանձին)<input type="file" name="photo" accept="image/*" capture="user"><span class="doc-file-name">Ընտրեք պրոֆիլի լուսանկարը</span></label><button type="submit" class="action">ՊԱՀՊԱՆԵԼ ՊՐՈՖԻԼԻ ՆԿԱՐԸ</button><p id="driverProfilePhotoMessage"></p></form>
  <section class="dash-section driver-gallery-section"><h3>Իմ պրոֆիլի լուսանկարները</h3><p>Կարող եք ավելացնել մինչև 8 լրացուցիչ լուսանկար՝ համակարգչից կամ տեսախցիկից։</p><div id="driverGalleryGrid" class="driver-gallery-grid"></div><form id="driverGalleryForm" class="driver-gallery-form"><label class="doc-upload-tile">Ընտրել լուսանկարներ<input type="file" name="photos" accept="image/*" capture="environment" multiple><span class="doc-file-name">Ընտրված չէ</span></label><button class="action docs-submit" type="submit">ՎԵՐԲԵՌՆԵԼ ԼՈՒՍԱՆԿԱՐՆԵՐԸ</button></form><p id="driverGalleryMessage"></p></section>
  <div class="driver-overview">
   <div class="metric-card"><span>ՀԱՇՎԵԿՇԻՌ</span><strong>${money(u.balanceAmd)}</strong></div>
@@ -114,7 +114,6 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
    if(keys.some(k=>!(f.get(k) instanceof File)||!f.get(k).size))throw new Error('Խնդրում ենք ընտրել բոլոր 5 լուսանկարները։');
    const images=await Promise.all(keys.map(k=>compressDriverImage(f.get(k))));
    const result=await api('/api/drivers/documents',{method:'POST',body:JSON.stringify({front:images[0],back:images[1],selfie:images[2],passportFront:images[3],passportBack:images[4],passportDocumentType:f.get('passportDocumentType')})});
-   const profileFile=f.get('profilePhoto');if(profileFile instanceof File&&profileFile.size){const profileImage=await compressDriverImage(profileFile);await api('/api/drivers/profile-photo',{method:'POST',body:JSON.stringify({photo:profileImage})})}
    message('#appMessage',result.message);await showApp();
   }catch(err){controls.forEach(control=>control.disabled=false);if(submitButton)submitButton.textContent='⬆ ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ';docsForm.removeAttribute('aria-busy');message('#appMessage',err.message,true);message('#ocrStatus',err.message,true)}
  };
