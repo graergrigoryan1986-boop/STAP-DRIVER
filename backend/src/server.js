@@ -278,13 +278,13 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     driverId=driver.id;
     eligibleDrivers=[driver];
   } else if(input.dispatchMode==='CATEGORY'){
-    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{has:'B'},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
+    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
     if(!eligibleDrivers.length)return res.status(400).json({error:'Այս կարգով և փոխանցման տուփով ակտիվ հաստատված վարորդներ չկան։'});
   }
   let order;
   try {
     order=await prisma.order.create({data:{
-      customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,pickupAddress:input.pickupAddress,
+      customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,requiredLicenseCategory:'',pickupAddress:input.pickupAddress,
       destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
       transmissionType:input.transmissionType,note:input.note
     }});
@@ -307,7 +307,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
-        {dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories},...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
+        {dispatchMode:'CATEGORY',driverId:null,...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ]
     },
@@ -369,7 +369,7 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  if (!requestedOrder.isTest && (!(req.user.driverLicenseCategories || []).includes(requestedOrder.requiredLicenseCategory) ||
+  if (!requestedOrder.isTest && ((requestedOrder.requiredLicenseCategory && !(req.user.driverLicenseCategories || []).includes(requestedOrder.requiredLicenseCategory)) ||
       (requestedOrder.transmissionType === 'MANUAL' && req.user.driverTransmission !== 'MANUAL'))) {
     return res.status(403).json({ error: 'Այս պատվերի մեքենայի կարգը կամ փոխանցման տուփը ձեր իրավասության մեջ չէ։' });
   }
