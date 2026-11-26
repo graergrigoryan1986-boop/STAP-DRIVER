@@ -95,6 +95,9 @@ model Order {
   status             OrderStatus @default(OPEN)
   isTest             Boolean     @default(false)
   fareAmd            Int
+  phonePrimary       String      @default("")
+  phoneSecondary     String?
+  passengerCount     Int         @default(1)
   requiredLicenseCategory String @default("B")
   transmissionType String @default("AUTOMATIC")
   commissionRate     Int         @default(25)
