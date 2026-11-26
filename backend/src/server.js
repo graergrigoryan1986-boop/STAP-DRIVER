@@ -175,6 +175,8 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
   res.json({ token: signToken(user), user: publicUser(user) });
 }));
 
+app.get('/api/site-content',asyncRoute(async(_req,res)=>{const r=await prisma.siteContent.findUnique({where:{id:'main'}});res.json({content:r?.content||{}})}));
+app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const input=z.object({content:z.record(z.string(),z.string())}).parse(req.body);const content=Object.fromEntries(Object.entries(input.content).map(([k,v])=>[k,v.slice(0,12000)]));const r=await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});res.json({success:true,content:r.content,updatedAt:r.updatedAt,message:'Կայքի բովանդակությունը պահպանվեց և հրապարակվեց։'})}));
 app.get('/api/me', auth, (req, res) => res.json({ user: publicUser(req.user) }));
 
 app.patch('/api/customer/profile', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
