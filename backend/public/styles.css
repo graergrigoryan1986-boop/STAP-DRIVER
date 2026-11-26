@@ -846,3 +846,6 @@ body.authenticated footer{display:none!important}
 .driver-balance-history-panel[hidden]{display:none}
 .driver-balance-history-panel h3{margin:0 0 10px;color:#e8c77e;font-size:13px}
 .driver-balance-history-panel .ledger-list{max-height:440px;overflow:auto}
+
+
+.driver-accept-balance-hint{display:block;margin:8px 0 7px;padding:9px 12px;border:1px solid rgba(238,190,65,.58);border-left:3px solid #efc34f;border-radius:9px;background:rgba(239,195,79,.11);color:#f4d36f;font-size:12px;font-weight:750;line-height:1.5;box-shadow:0 3px 12px rgba(0,0,0,.12)}
