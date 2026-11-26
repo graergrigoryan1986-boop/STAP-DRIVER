@@ -265,40 +265,50 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),
     transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),
+    dispatchMode:z.enum(['NETWORK','CATEGORY','DIRECT']).default('NETWORK'),
     driverId:z.string().optional().or(z.literal('')),
     isTest:z.boolean().default(false)
   }).parse(req.body);
-  let driverId=null;
-  if(input.driverId){
-    const driver=await prisma.user.findFirst({where:{id:input.driverId,role:'DRIVER',isVerified:true,isBlocked:false}});
+  let driverId=null, eligibleDrivers=[];
+  const driverWhere={role:'DRIVER',isVerified:true,isBlocked:false};
+  if(input.dispatchMode==='DIRECT'){
+    if(!input.driverId)return res.status(400).json({error:'Ընտրեք կոնկրետ վարորդ։'});
+    const driver=await prisma.user.findFirst({where:{id:input.driverId,...driverWhere}});
     if(!driver)return res.status(400).json({error:'Ընտրված վարորդը հաստատված կամ ակտիվ չէ։'});
     if(!(driver.driverLicenseCategories||[]).includes(input.requiredLicenseCategory)||(input.transmissionType==='MANUAL'&&driver.driverTransmission!=='MANUAL'))return res.status(400).json({error:'Վարորդը չունի պատվերի համար անհրաժեշտ կարգը կամ փոխանցման տուփը։'});
     driverId=driver.id;
+    eligibleDrivers=[driver];
+  } else if(input.dispatchMode==='CATEGORY'){
+    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{has:input.requiredLicenseCategory},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
+    if(!eligibleDrivers.length)return res.status(400).json({error:'Այս կարգով և փոխանցման տուփով ակտիվ հաստատված վարորդներ չկան։'});
   }
   const order=await prisma.order.create({data:{
-    customerId:req.user.id,driverId,isTest:input.isTest,pickupAddress:input.pickupAddress,
+    customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,pickupAddress:input.pickupAddress,
     destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
     requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note
   }});
-  if(driverId)io.to('user:'+driverId).emit('order:new',{id:order.id,isTest:order.isTest});
-  else io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
-  res.status(201).json({order,message:order.isTest?'Փորձնական պատվերը ստեղծվեց։':'Իրական պատվերը ստեղծվեց և հասանելի է վարորդներին։'});
+  if(input.dispatchMode==='NETWORK')io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
+  else for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',{id:order.id,isTest:order.isTest});
+  const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
+  res.status(201).json({order,message});
 }));
-
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
+  const categories=req.user.driverLicenseCategories||[];
   const orders = await prisma.order.findMany({
     where: {
-      status: 'OPEN',
-      OR: [{ driverId: null }, { driverId: req.user.id }],
-      skippedBy: { none: { driverId: req.user.id } }
+      status:'OPEN',
+      skippedBy:{none:{driverId:req.user.id}},
+      OR:[
+        {dispatchMode:'NETWORK',driverId:null},
+        {dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories},OR:[{transmissionType:'AUTOMATIC'},{transmissionType:'MANUAL',...(req.user.driverTransmission==='MANUAL'?{}:{id:'__no_match__'})}]},
+        {dispatchMode:'DIRECT',driverId:req.user.id}
+      ]
     },
-    orderBy: { createdAt: 'asc' },
-    include: { customer: { select: { id: true, name: true, phone: true } } }
+    orderBy:{createdAt:'asc'},
+    include:{customer:{select:{id:true,name:true,phone:true}}}
   });
-  // Show every open real/test order to each verified driver; acceptance still validates eligibility.
-  res.json({ orders });
+  res.json({orders});
 }));
-
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   if (req.user.role === 'DRIVER') {
     const [assigned, skipped] = await Promise.all([
