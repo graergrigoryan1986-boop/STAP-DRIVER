@@ -521,20 +521,39 @@ app.get('/api/drivers/profile-photo',auth,only('DRIVER'),asyncRoute(async(req,re
   res.json({photo:'data:image/jpeg;base64,'+decryptPrivate(req.user.driverProfilePhoto).toString('base64')});
 }));
 
+
+app.get('/api/drivers/gallery',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
+ const rows=await prisma.driverPhoto.findMany({where:{userId:req.user.id},orderBy:{createdAt:'asc'}});
+ res.json({photos:rows.map(p=>({id:p.id,image:'data:image/jpeg;base64,'+decryptPrivate(p.image).toString('base64')}))});
+}));
+app.post('/api/drivers/gallery',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
+ const {photos}=z.object({photos:z.array(z.string().min(100).max(3500000)).min(1).max(8)}).parse(req.body);
+ const count=await prisma.driverPhoto.count({where:{userId:req.user.id}});
+ if(count+photos.length>8)return res.status(409).json({error:'Յուրաքանչյուր վարորդի համար թույլատրվում է առավելագույնը 8 լրացուցիչ լուսանկար։ Մնացել է՝ '+Math.max(0,8-count)});
+ const buffers=photos.map(value=>{const m=value.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/i);if(!m)throw new Error('Լուսանկարները պետք է լինեն JPEG։');const b=Buffer.from(m[1],'base64');if(!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր լուսանկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)});
+ await prisma.$transaction(buffers.map(image=>prisma.driverPhoto.create({data:{userId:req.user.id,image}})));
+ res.json({success:true,message:'Լուսանկարները հաջողությամբ ավելացվեցին։'});
+}));
+app.delete('/api/drivers/gallery/:photoId',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
+ const p=await prisma.driverPhoto.findFirst({where:{id:req.params.photoId,userId:req.user.id}});
+ if(!p)return res.status(404).json({error:'Լուսանկարը չի գտնվել։'});
+ await prisma.driverPhoto.delete({where:{id:p.id}});res.json({success:true});
+}));
+
 app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(async(req,res)=>{
   const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{
     id:true,name:true,email:true,phone:true,driverFirstNameLatin:true,driverLastNameLatin:true,driverPatronymicLatin:true,
     driverLicenseSeries:true,driverLicenseIssuedAt:true,driverLicenseExpiresAt:true,driverLicenseCategories:true,driverTransmission:true,
     driverDocumentsStatus:true,driverOcrText:true,driverVerificationMessage:true,dateOfBirth:true,passportDocumentType:true,passportIssueDate:true,passportExpiryDate:true,
     passportNumberEncrypted:true,passportIssuedByEncrypted:true,driverLicenseFront:true,driverLicenseBack:true,driverLicenseSelfie:true,
-    passportFront:true,passportBack:true,driverProfilePhoto:true
+    passportFront:true,passportBack:true,driverProfilePhoto:true,driverPhotos:{orderBy:{createdAt:'asc'}}
   }});
   if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
   const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
   const {passportNumberEncrypted,passportIssuedByEncrypted,...safeDriver}=driver;
   res.json({driver:{...safeDriver,passportNumber:decryptPrivate(passportNumberEncrypted)?.toString('utf8')||null,passportIssuedBy:decryptPrivate(passportIssuedByEncrypted)?.toString('utf8')||null,
     driverLicenseFront:image(driver.driverLicenseFront),driverLicenseBack:image(driver.driverLicenseBack),driverLicenseSelfie:image(driver.driverLicenseSelfie),
-    passportFront:image(driver.passportFront),passportBack:image(driver.passportBack),driverProfilePhoto:image(driver.driverProfilePhoto)}});
+    passportFront:image(driver.passportFront),passportBack:image(driver.passportBack),driverProfilePhoto:image(driver.driverProfilePhoto),gallery:(driver.driverPhotos||[]).map(p=>({id:p.id,image:image(p.image)}))}});
 }));
 
 function makeDocumentsPdf(title, pages){
