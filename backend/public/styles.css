@@ -837,3 +837,12 @@ body.authenticated footer{display:none!important}
 .driver-pending-card>.driver-order-card{margin:0;border:0;border-radius:0;box-shadow:none}
 .driver-pending-card>.driver-order-card .driver-order-top{padding-top:12px}
 @media(max-width:560px){.driver-pending-card>summary{grid-template-columns:auto 1fr;gap:5px 9px;padding:12px}.driver-pending-card-route{grid-column:1/3;white-space:normal}.driver-pending-card-price{grid-column:2;grid-row:1;justify-self:end}.driver-pending-card-meta{grid-column:1/2}.driver-pending-card-toggle{grid-column:2;grid-row:3}}
+
+.driver-side-menu-item{display:flex;width:100%;align-items:center;gap:11px;padding:13px 15px;border:1px solid rgba(201,164,91,.32);border-radius:12px;background:linear-gradient(135deg,rgba(201,164,91,.12),rgba(18,20,24,.94));color:#e8c77e;text-align:left;font:inherit;font-weight:850;cursor:pointer}
+.driver-side-menu-item.active{border-color:rgba(224,190,120,.72);background:rgba(201,164,91,.19)}
+.driver-side-menu-chevron{margin-left:auto;font-size:22px;transition:transform .2s}
+.driver-side-menu-item.active .driver-side-menu-chevron{transform:rotate(90deg)}
+.driver-balance-history-panel{padding:13px 3px 2px}
+.driver-balance-history-panel[hidden]{display:none}
+.driver-balance-history-panel h3{margin:0 0 10px;color:#e8c77e;font-size:13px}
+.driver-balance-history-panel .ledger-list{max-height:440px;overflow:auto}
