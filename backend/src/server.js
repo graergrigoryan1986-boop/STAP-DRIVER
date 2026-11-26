@@ -259,14 +259,16 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
 }));
 
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
-  const orders = await prisma.order.findMany({ where: { status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }], skippedBy: { none: { driverId: req.user.id } } }, orderBy: { createdAt: 'asc' } });
-  const categories = req.user.driverLicenseCategories || [];
-  const ordersForDriver = orders.filter(order =>
-    order.isTest ||
-    (categories.includes(order.requiredLicenseCategory) &&
-    (order.transmissionType !== 'MANUAL' || req.user.driverTransmission === 'MANUAL'))
-  );
-  res.json({ orders: ordersForDriver });
+  const orders = await prisma.order.findMany({
+    where: {
+      status: 'OPEN',
+      OR: [{ driverId: null }, { driverId: req.user.id }],
+      skippedBy: { none: { driverId: req.user.id } }
+    },
+    orderBy: { createdAt: 'asc' }
+  });
+  // Show every open real/test order to each verified driver; acceptance still validates eligibility.
+  res.json({ orders });
 }));
 
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
