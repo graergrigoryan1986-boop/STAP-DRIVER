@@ -821,3 +821,19 @@ body.authenticated footer{display:none!important}
 @media(max-width:560px){.driver-feedback-tags{grid-template-columns:1fr}}
 #dashboard.admin-light .admin-driver-profile .admin-field small{display:block;color:#8a7654;font-size:10px;line-height:1.4}
 #dashboard.admin-light .admin-driver-profile input[name="driverNegativeBalanceLimitAmd"]{border-color:#c49a54;background:#fffaf0;font-weight:800}
+
+
+/* Compact expandable pending order cards */
+.driver-pending-card{display:block;overflow:hidden;margin:9px 0;border:1px solid rgba(201,164,91,.3);border-radius:15px;background:linear-gradient(145deg,rgba(25,27,32,.98),rgba(13,15,19,.98));box-shadow:0 8px 22px rgba(0,0,0,.14)}
+.driver-pending-card>summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:13px 15px;cursor:pointer;list-style:none}
+.driver-pending-card>summary::-webkit-details-marker{display:none}
+.driver-pending-card-id{color:#d7b875;font-size:10px;font-weight:900;letter-spacing:.06em}
+.driver-pending-card-route{overflow:hidden;color:#f5f0e6;font-size:13px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.driver-pending-card-price{color:#e8c77e;font-size:15px;white-space:nowrap}
+.driver-pending-card-meta{grid-column:1/3;color:#a9a29a;font-size:10px}
+.driver-pending-card-toggle{justify-self:end;color:#d7b875;font-size:10px;font-weight:850}
+.driver-pending-card[open]>summary{border-bottom:1px solid rgba(201,164,91,.2);background:rgba(201,164,91,.06)}
+.driver-pending-card[open] .driver-pending-card-toggle{color:#f2d99d}
+.driver-pending-card>.driver-order-card{margin:0;border:0;border-radius:0;box-shadow:none}
+.driver-pending-card>.driver-order-card .driver-order-top{padding-top:12px}
+@media(max-width:560px){.driver-pending-card>summary{grid-template-columns:auto 1fr;gap:5px 9px;padding:12px}.driver-pending-card-route{grid-column:1/3;white-space:normal}.driver-pending-card-price{grid-column:2;grid-row:1;justify-self:end}.driver-pending-card-meta{grid-column:1/2}.driver-pending-card-toggle{grid-column:2;grid-row:3}}
