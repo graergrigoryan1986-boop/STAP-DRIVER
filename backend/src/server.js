@@ -178,7 +178,10 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/site-content',asyncRoute(async(_req,res)=>{const r=await prisma.siteContent.findUnique({where:{id:'main'}});res.json({content:r?.content||{}})}));
-app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const input=z.object({content:z.record(z.string(),z.string())}).parse(req.body);const content=Object.fromEntries(Object.entries(input.content).map(([k,v])=>[k,v.slice(0,12000)]));const r=await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});res.json({success:true,content:r.content,updatedAt:r.updatedAt,message:'Կայքի բովանդակությունը պահպանվեց և հրապարակվեց։'})}));
+app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const input=z.object({content:z.record(z.string(),z.string())}).parse(req.body);const existing=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(existing?.content&&typeof existing.content==='object'?existing.content:{}),...Object.fromEntries(Object.entries(input.content).map(([k,v])=>[k,v.slice(0,12000)]))};const r=await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});res.json({success:true,content:r.content,updatedAt:r.updatedAt,message:'Կայքի բովանդակությունը պահպանվեց և հրապարակվեց։'})}));
+app.get('/api/admin/wallet-settings',auth,only('ADMIN'),asyncRoute(async(_req,res)=>{const row=await prisma.siteContent.findUnique({where:{id:'main'}});const raw=row?.content?.minDriverBalanceAmd;const minimumBalanceAmd=Number.isInteger(Number(raw))&&Number(raw)>=0?Number(raw):0;res.json({minimumBalanceAmd});}));
+app.put('/api/admin/wallet-settings',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const {minimumBalanceAmd}=z.object({minimumBalanceAmd:z.number().int().min(0).max(100000000)}).parse(req.body);const row=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(row?.content&&typeof row.content==='object'?row.content:{}),minDriverBalanceAmd:String(minimumBalanceAmd)};await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});res.json({success:true,minimumBalanceAmd,message:'Վարորդի նվազագույն հաշվեկշռի սահմանաչափը պահպանվեց։'});}));
+
 app.get('/api/me', auth, (req, res) => res.json({ user: { ...publicUser(req.user), dateOfBirth: req.user.dateOfBirth } }));
 
 app.patch('/api/profile', auth, asyncRoute(async (req,res)=>{const {dateOfBirth}=z.object({dateOfBirth:z.iso.date().or(z.literal(''))}).parse(req.body);const user=await prisma.user.update({where:{id:req.user.id},data:{dateOfBirth:dateOfBirth?new Date(dateOfBirth+'T00:00:00.000Z'):null}});res.json({user:publicUser(user),message:'Ծննդյան ամսաթիվը պահպանվեց։'})}));
@@ -310,18 +313,40 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  if (!(req.user.driverLicenseCategories || []).includes(requestedOrder.requiredLicenseCategory) ||
-      (requestedOrder.transmissionType === 'MANUAL' && req.user.driverTransmission !== 'MANUAL')) {
+  if (!requestedOrder.isTest && (!(req.user.driverLicenseCategories || []).includes(requestedOrder.requiredLicenseCategory) ||
+      (requestedOrder.transmissionType === 'MANUAL' && req.user.driverTransmission !== 'MANUAL'))) {
     return res.status(403).json({ error: 'Այս պատվերի մեքենայի կարգը կամ փոխանցման տուփը ձեր իրավասության մեջ չէ։' });
   }
-  const result = await prisma.order.updateMany({
-    where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] },
-    data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date() }
-  });
-  if (!result.count) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
-  io.emit('order:accepted', { id: order.id, driverId: req.user.id, status: order.status });
-  res.json({ order });
+  const settingsRow = await prisma.siteContent.findUnique({ where: { id: 'main' } });
+  const rawMinimum = settingsRow?.content?.minDriverBalanceAmd;
+  const minimumBalanceAmd = Number.isInteger(Number(rawMinimum)) && Number(rawMinimum) >= 0 ? Number(rawMinimum) : 0;
+  const commissionAmd = requestedOrder.isTest ? 0 : Math.round(requestedOrder.fareAmd * 0.25);
+  let result;
+  try {
+    result = await prisma.$transaction(async tx => {
+      const claimed = await tx.order.updateMany({
+        where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] },
+        data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date(), commissionRate: requestedOrder.isTest ? 0 : 25, commissionAmd, driverEarningAmd: 0 }
+      });
+      if (!claimed.count) return null;
+      if (commissionAmd > 0) {
+        const debited = await tx.user.updateMany({ where: { id: req.user.id, balanceAmd: { gte: commissionAmd + minimumBalanceAmd } }, data: { balanceAmd: { decrement: commissionAmd } } });
+        if (!debited.count) throw new Error('WALLET_MINIMUM_NOT_MET');
+        await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: -commissionAmd, type: 'ORDER_COMMISSION', description: 'Պատվերի ընդունման միջնորդավճար՝ 25%', orderId: requestedOrder.id } });
+      }
+      const [order, driver] = await Promise.all([
+        tx.order.findUnique({ where: { id: requestedOrder.id } }),
+        tx.user.findUnique({ where: { id: req.user.id }, select: { balanceAmd: true } })
+      ]);
+      return { order, balanceAmd: driver.balanceAmd, commissionAmd };
+    });
+  } catch (error) {
+    if (error.message === 'WALLET_MINIMUM_NOT_MET') return res.status(409).json({ error: 'Հաշվեկշիռը բավարար չէ։ Պատվերն ընդունելուց հետո հաշվեկշիռը պետք է մնա ադմինի սահմանած նվազագույնից ոչ պակաս։' });
+    throw error;
+  }
+  if (!result) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
+  io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
+  res.json(result);
 }));
 
 app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
@@ -334,18 +359,13 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
   const result = await prisma.$transaction(async tx => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, driverId: req.user.id, status: 'IN_PROGRESS' } });
     if (!order) return null;
-    const commissionAmd = order.isTest ? 0 : Math.round(order.fareAmd * 0.25);
-    const driverEarningAmd = order.isTest ? 0 : order.fareAmd - commissionAmd;
-    await tx.order.update({ where: { id: order.id }, data: { status: 'COMPLETED', commissionRate: order.isTest ? 0 : 25, commissionAmd, driverEarningAmd, completedAt: new Date() } });
-    if(!order.isTest){
-      await tx.user.update({ where: { id: req.user.id }, data: { balanceAmd: { increment: driverEarningAmd } } });
-      await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: driverEarningAmd, type: 'ORDER_EARNING', description: 'Վարորդի եկամուտ՝ ավարտված պատվերից', orderId: order.id } });
-    }
-    return { commissionAmd, driverEarningAmd, fareAmd: order.fareAmd, isTest: order.isTest };
+    await tx.order.update({ where: { id: order.id }, data: { status: 'COMPLETED', completedAt: new Date() } });
+    const driver = await tx.user.findUnique({ where: { id: req.user.id }, select: { balanceAmd: true } });
+    return { commissionAmd: order.isTest ? 0 : order.commissionAmd, driverEarningAmd: 0, fareAmd: order.fareAmd, isTest: order.isTest, balanceAmd: driver.balanceAmd };
   });
   if (!result) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ ավարտել' });
   io.emit('order:completed', { id: req.params.id });
-  res.json({ success: true, settlement: result });
+  res.json({ success: true, settlement: result, balanceAmd: result.balanceAmd });
 }));
 
 app.patch('/api/drivers/profile', auth, only('DRIVER'), asyncRoute(async (req, res) => {
