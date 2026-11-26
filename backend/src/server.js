@@ -278,7 +278,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     driverId=driver.id;
     eligibleDrivers=[driver];
   } else if(input.dispatchMode==='CATEGORY'){
-    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{isEmpty:false},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
+    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{has:'B'},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
     if(!eligibleDrivers.length)return res.status(400).json({error:'Այս կարգով և փոխանցման տուփով ակտիվ հաստատված վարորդներ չկան։'});
   }
   let order;
@@ -307,7 +307,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
-        {dispatchMode:'CATEGORY',driverId:null,driverLicenseCategories:{isEmpty:false},...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
+        {dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories},...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ]
     },
