@@ -262,7 +262,6 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     pickupAddress:z.string().trim().min(3).max(300),
     destinationAddress:z.string().trim().min(3).max(300),
     fareAmd:z.number().int().min(1000).max(1000000),
-    requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),
     transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),
     dispatchMode:z.enum(['NETWORK','CATEGORY','DIRECT']).default('NETWORK'),
@@ -275,17 +274,17 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     if(!input.driverId)return res.status(400).json({error:'Ընտրեք կոնկրետ վարորդ։'});
     const driver=await prisma.user.findFirst({where:{id:input.driverId,...driverWhere}});
     if(!driver)return res.status(400).json({error:'Ընտրված վարորդը հաստատված կամ ակտիվ չէ։'});
-    if(!(driver.driverLicenseCategories||[]).includes(input.requiredLicenseCategory)||(input.transmissionType==='MANUAL'&&driver.driverTransmission!=='MANUAL'))return res.status(400).json({error:'Վարորդը չունի պատվերի համար անհրաժեշտ կարգը կամ փոխանցման տուփը։'});
+    if(input.transmissionType==='MANUAL'&&driver.driverTransmission!=='MANUAL')return res.status(400).json({error:'Ընտրված վարորդը չի վարում մեխանիկական փոխանցման տուփով մեքենա։'});
     driverId=driver.id;
     eligibleDrivers=[driver];
   } else if(input.dispatchMode==='CATEGORY'){
-    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{has:input.requiredLicenseCategory},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
+    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{isEmpty:false},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
     if(!eligibleDrivers.length)return res.status(400).json({error:'Այս կարգով և փոխանցման տուփով ակտիվ հաստատված վարորդներ չկան։'});
   }
   const order=await prisma.order.create({data:{
     customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,pickupAddress:input.pickupAddress,
     destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
-    requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note
+    transmissionType:input.transmissionType,note:input.note
   }});
   if(input.dispatchMode==='NETWORK')io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
   else for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',{id:order.id,isTest:order.isTest});
@@ -300,7 +299,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
-        {dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories},...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
+        {dispatchMode:'CATEGORY',driverId:null,driverLicenseCategories:{isEmpty:false},...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})},
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ]
     },
