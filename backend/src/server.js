@@ -568,12 +568,15 @@ app.delete('/api/admin/ratings/:id',auth,only('ADMIN'),asyncRoute(async(req,res)
 }));
 
 app.patch('/api/admin/drivers/:id/documents/review',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const {approved}=z.object({approved:z.boolean()}).parse(req.body);
+ const {decision}=z.object({decision:z.enum(['APPROVED','REJECTED','CANCELLED'])}).parse(req.body);
  const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
  if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
- if(approved&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack))return res.status(409).json({error:'Բոլոր փաստաթղթերը պարտադիր են։'});
- const user=await prisma.user.update({where:{id:driver.id},data:{driverDocumentsStatus:approved?'APPROVED':'REJECTED',isVerified:approved,driverVerifiedAt:approved?new Date():null,driverVerificationMessage:approved?'Փաստաթղթերը հաստատվեցին։':'Փաստաթղթերը մերժվեցին․ խնդրում ենք ուղղել և կրկին ուղարկել։'}});
- res.json({driver:publicUser(user),message:approved?'Փաստաթղթերը հաստատվեցին։':'Փաստաթղթերը մերժվեցին։ Վարորդին կպահանջվի կրկին ուղարկել։'});
+ if(decision==='APPROVED'&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack))return res.status(409).json({error:'Հաստատման համար լրացրեք բոլոր փաստաթղթերը և լուսանկարները։'});
+ const approved=decision==='APPROVED';
+ const status=approved?'APPROVED':decision;
+ const note=approved?'Փաստաթղթերը հաստատվեցին։':decision==='REJECTED'?'Փաստաթղթերը մերժվել են։ Կարող եք նորից ներբեռնել և ուղարկել ստուգման։':'Ադմինը չեղարկել է ստուգման հարցումը։ Կարող եք նորից ներբեռնել և ուղարկել ստուգման։';
+ const user=await prisma.user.update({where:{id:driver.id},data:{driverDocumentsStatus:status,isVerified:approved,driverVerifiedAt:approved?new Date():null,driverVerificationMessage:note}});
+ res.json({driver:publicUser(user),message:approved?'Փաստաթղթերը հաստատվեցին։':decision==='REJECTED'?'Փաստաթղթերը մերժվեցին։ Վարորդը կարող է կրկին ուղարկել։':'Ստուգման հարցումը չեղարկվեց։ Վարորդը կարող է կրկին ուղարկել։'});
 }));
 
 app.patch('/api/admin/users/:id/block', auth, only('ADMIN'), asyncRoute(async (req, res) => {
