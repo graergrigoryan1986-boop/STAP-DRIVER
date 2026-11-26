@@ -267,11 +267,16 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     passengerCount:z.number().int().min(1).max(8).default(1),
     transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     vehicleFuelType:z.enum(['PETROL','ELECTRIC','HYBRID']).default('PETROL'),
+    scheduleType:z.enum(['NOW','TODAY','TOMORROW','SCHEDULED']).default('NOW'),
+    scheduledAt:z.string().datetime().optional(),
     note:z.string().max(1000).optional(),
     dispatchMode:z.enum(['NETWORK','CATEGORY','DIRECT']).default('NETWORK'),
     driverId:z.string().optional().or(z.literal('')),
     isTest:z.boolean().default(false)
   }).parse(req.body);
+  if(input.scheduleType!=='NOW'&&!input.scheduledAt)return res.status(400).json({error:'Ընտրեք պատվերի ամսաթիվն ու ժամը։'});
+  const scheduledAt=input.scheduleType==='NOW'?null:new Date(input.scheduledAt);
+  if(scheduledAt&&scheduledAt.getTime()<=Date.now())return res.status(400).json({error:'Պատվերի նախատեսված ժամը պետք է լինի ապագայում։'});
   let driverId=null, eligibleDrivers=[];
   const driverWhere={role:'DRIVER',isVerified:true,isBlocked:false};
   if(input.dispatchMode==='DIRECT'){
@@ -291,7 +296,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
       customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,requiredLicenseCategory:'',pickupAddress:input.pickupAddress,
       destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
-      vehicleFuelType:input.vehicleFuelType,note:input.note
+      vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note
     }});
   } catch(error) {
     console.error('Admin order creation failed:',{code:error.code,message:error.message,meta:error.meta});
@@ -309,6 +314,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
   const orders = await prisma.order.findMany({
     where: {
       status:'OPEN',
+      AND:[{OR:[{scheduledAt:null},{scheduledAt:{lte:new Date()}}]}],
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
