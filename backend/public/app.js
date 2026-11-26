@@ -43,7 +43,7 @@ async function adminView(){const [d,walletSettings]=await Promise.all([api('/api
 }
 async function driverView(){
  const [open,mine,wallet,photo]=await Promise.all([
-  api('/api/orders/open').catch(()=>({orders:[]})),
+  api('/api/orders/open').catch(error=>({orders:[],error:error.message||'Պատվերների բեռնումը ձախողվեց'})),
   api('/api/orders/mine'),
   api('/api/drivers/wallet').catch(()=>({transactions:[]})),
   api('/api/drivers/profile-photo').catch(()=>({photo:null}))
@@ -107,7 +107,7 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
  galleryInput?.addEventListener('change',()=>{galleryForm.querySelector('.doc-file-name').textContent=galleryInput.files.length+' ընտրված լուսանկար'});
  galleryForm.onsubmit=async e=>{e.preventDefault();const files=[...galleryInput.files];if(!files.length)return message('#driverGalleryMessage','Ընտրեք լուսանկարներ։',true);try{const photos=await Promise.all(files.map(compressDriverImage));const result=await api('/api/drivers/gallery',{method:'POST',body:JSON.stringify({photos})});message('#driverGalleryMessage',result.message);galleryForm.reset();await loadDriverGallery()}catch(err){message('#driverGalleryMessage',err.message,true)}};
  await loadDriverGallery();
- renderOrders($('#openOrders'),open.orders,'open');
+ renderOrders($('#openOrders'),open.orders,'open');if(open.error)$('#openOrders').innerHTML='<p class="empty-state">Պատվերները բեռնել չհաջողվեց․ '+esc(open.error)+'</p>'; 
  const orderRoot=$('#myOrders');
  const drawOrders=(filter='ALL')=>{const filtered=filter==='ALL'?mine.orders:mine.orders.filter(o=>filter==='ACTIVE'?['ACCEPTED','IN_PROGRESS'].includes(o.status):o.status===filter);renderOrders(orderRoot,filtered,'mine');document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter))};
  drawOrders();
