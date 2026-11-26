@@ -262,6 +262,9 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     pickupAddress:z.string().trim().min(3).max(300),
     destinationAddress:z.string().trim().min(3).max(300),
     fareAmd:z.number().int().min(1000).max(1000000),
+    phonePrimary:z.string().trim().min(5).max(30),
+    phoneSecondary:z.string().trim().min(5).max(30).optional().or(z.literal('')),
+    passengerCount:z.number().int().min(1).max(8).default(1),
     transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),
     dispatchMode:z.enum(['NETWORK','CATEGORY','DIRECT']).default('NETWORK'),
@@ -285,7 +288,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   try {
     order=await prisma.order.create({data:{
       customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,requiredLicenseCategory:'',pickupAddress:input.pickupAddress,
-      destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,
+      destinationAddress:input.destinationAddress,fareAmd:input.fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,note:input.note
     }});
   } catch(error) {
