@@ -85,6 +85,7 @@ model Order {
   id                 String      @id @default(cuid())
   customerId         String
   driverId           String?
+  dispatchMode       String      @default("NETWORK")
   pickupAddress      String
   destinationAddress String
   pickupLat          Float?
