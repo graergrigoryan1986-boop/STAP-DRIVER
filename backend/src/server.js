@@ -222,6 +222,14 @@ app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   res.json({orders});
 }));
 
+app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
+  const orders=await prisma.order.findMany({orderBy:{createdAt:'desc'},include:{
+    customer:{select:{id:true,name:true,phone:true}},
+    driver:{select:{id:true,name:true,phone:true,isVerified:true}}
+  }});
+  res.json({orders});
+}));
+
 app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const input=z.object({
     pickupAddress:z.string().trim().min(3).max(300),
