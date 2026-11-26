@@ -766,3 +766,20 @@ body.authenticated footer{display:none!important}
 .admin-order-history-item .rowline{flex-wrap:wrap;gap:9px}
 @media(max-width:900px){.admin-order-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-order-subnav button:first-child{grid-column:1/-1}}
 @media(max-width:560px){#adminOrdersPanel{padding:12px}.admin-order-subnav{grid-template-columns:1fr 1fr;gap:6px;padding:6px}.admin-order-subnav button{min-height:58px;font-size:10px;padding:8px 5px;flex-wrap:wrap}.admin-order-form-pane #adminTestOrderForm{grid-template-columns:1fr}.admin-order-form-pane #adminTestOrderForm button{grid-column:auto}}
+
+
+/* Dispatch controls and six independent admin order queues */
+.admin-order-subnav{grid-template-columns:repeat(3,minmax(0,1fr))}
+.admin-order-subnav button{min-height:66px;justify-content:space-between;text-align:left}
+.admin-order-tab-count{flex:0 0 auto}
+#adminTestOrderForm [name="dispatchMode"]{grid-column:1/-1;min-height:48px;border:1px solid #c5a66e;border-radius:11px;background:#fffaf0;color:#3a2c18;font-weight:800;padding:11px 13px}
+#adminTestOrderForm [name="driverId"]{grid-column:1/-1;border:1px solid #c5a66e;border-radius:11px;background:#fff;color:#30291f;min-height:46px;padding:10px 12px}
+#adminTestOrderForm [name="requiredLicenseCategory"]{border:1px solid #d8c9ae;border-radius:10px;background:#fff;color:#30291f;min-height:46px;padding:10px 12px}
+.admin-order-history-item{border-left:4px solid #c5a66e}
+#adminOrdersOpen .admin-order-history-item{border-left-color:#d6a12b}
+#adminOrdersAccepted .admin-order-history-item{border-left-color:#3b82f6}
+#adminOrdersProgress .admin-order-history-item{border-left-color:#f59e0b}
+#adminOrdersCompleted .admin-order-history-item{border-left-color:#10b981}
+#adminOrdersCancelled .admin-order-history-item{border-left-color:#ef4444}
+@media(max-width:900px){.admin-order-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.admin-order-subnav{grid-template-columns:1fr 1fr}.admin-order-subnav button{min-height:58px;font-size:10px}}
