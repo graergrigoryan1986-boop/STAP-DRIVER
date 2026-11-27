@@ -1582,3 +1582,106 @@ body.driver-portal-mode #authPanel{margin:0 auto;width:100%;border:1px solid rgb
 body.driver-portal-mode #authPanel>h3{font-size:22px}
 body.driver-portal-mode #authPanel>p{font-size:13px}
 body.driver-portal-mode #authPanel .fineprint{font-size:11px}
+
+
+/* Driver web portal: high-contrast dark surfaces and readable controls */
+body.driver-user-mode,body.driver-portal-mode{background:#0b1112!important;color:#f3f0e8!important}
+body.driver-user-mode #appPanel,body.driver-user-mode #dashboard,
+body.driver-portal-mode #appPanel,body.driver-portal-mode #dashboard{background:#0b1112!important;color:#f3f0e8!important}
+body.driver-user-mode #dashboard *,body.driver-portal-mode #dashboard *{color:inherit}
+body.driver-user-mode #dashboard .order,
+body.driver-user-mode #dashboard .driver-order-card,
+body.driver-user-mode #dashboard .driver-compact-section,
+body.driver-user-mode #dashboard .driver-compact-panel,
+body.driver-user-mode #dashboard .driver-docs-compact,
+body.driver-user-mode #dashboard .driver-onboarding,
+body.driver-user-mode #dashboard .driver-pending-compact,
+body.driver-portal-mode #dashboard .order,
+body.driver-portal-mode #dashboard .driver-order-card,
+body.driver-portal-mode #dashboard .driver-compact-section,
+body.driver-portal-mode #dashboard .driver-compact-panel,
+body.driver-portal-mode #dashboard .driver-docs-compact,
+body.driver-portal-mode #dashboard .driver-onboarding,
+body.driver-portal-mode #dashboard .driver-pending-compact{background:#151e20!important;color:#f4f1e9!important;border:1px solid #344448!important;box-shadow:0 8px 22px rgba(0,0,0,.22)}
+body.driver-user-mode #dashboard .driver-order-card p,
+body.driver-user-mode #dashboard .driver-order-fact,
+body.driver-user-mode #dashboard .driver-order-fact strong,
+body.driver-user-mode #dashboard .driver-order-fact span,
+body.driver-user-mode #dashboard .driver-stage-hint,
+body.driver-user-mode #dashboard .muted,
+body.driver-portal-mode #dashboard .driver-order-card p,
+body.driver-portal-mode #dashboard .driver-order-fact,
+body.driver-portal-mode #dashboard .driver-order-fact strong,
+body.driver-portal-mode #dashboard .driver-order-fact span,
+body.driver-portal-mode #dashboard .driver-stage-hint,
+body.driver-portal-mode #dashboard .muted{color:#e2e8e5!important}
+body.driver-user-mode #dashboard label,
+body.driver-user-mode #dashboard .driver-order-price,
+body.driver-user-mode #dashboard .driver-order-number,
+body.driver-user-mode #dashboard .driver-order-status,
+body.driver-portal-mode #dashboard label,
+body.driver-portal-mode #dashboard .driver-order-price,
+body.driver-portal-mode #dashboard .driver-order-number,
+body.driver-portal-mode #dashboard .driver-order-status{color:#f6eddb!important;font-size:15px}
+body.driver-user-mode #dashboard input:not([type=checkbox]):not([type=radio]),
+body.driver-user-mode #dashboard select,
+body.driver-user-mode #dashboard textarea,
+body.driver-portal-mode #dashboard input:not([type=checkbox]):not([type=radio]),
+body.driver-portal-mode #dashboard select,
+body.driver-portal-mode #dashboard textarea{background:#0e1719!important;color:#fff!important;border:1px solid #52656a!important;font-size:16px!important;min-height:46px}
+body.driver-user-mode #dashboard input::placeholder,
+body.driver-user-mode #dashboard textarea::placeholder,
+body.driver-portal-mode #dashboard input::placeholder,
+body.driver-portal-mode #dashboard textarea::placeholder{color:#aebbb8!important;opacity:1}
+body.driver-user-mode #dashboard .action,
+body.driver-user-mode #dashboard button,
+body.driver-portal-mode #dashboard .action,
+body.driver-portal-mode #dashboard button{font-size:14px}
+body.driver-user-mode #dashboard .driver-order-price strong,
+body.driver-portal-mode #dashboard .driver-order-price strong{font-size:23px;color:#f1d49d!important}
+body.driver-user-mode #dashboard .driver-order-fact,
+body.driver-portal-mode #dashboard .driver-order-fact{font-size:14px;line-height:1.55}
+body.driver-user-mode #dashboard .driver-order-fact small,
+body.driver-portal-mode #dashboard .driver-order-fact small{font-size:13px;color:#c6d1cd!important}
+body.driver-user-mode #dashboard .driver-open-orders-list,
+body.driver-portal-mode #dashboard .driver-open-orders-list{gap:14px}
+body.driver-user-mode #dashboard .driver-order-actions .action,
+body.driver-portal-mode #dashboard .driver-order-actions .action{min-height:46px;padding:11px 16px}
+body.driver-user-mode #dashboard .driver-order-route,
+body.driver-portal-mode #dashboard .driver-order-route{background:#10191b!important;border-color:#34484b!important}
+body.driver-user-mode #dashboard .driver-route-point strong,
+body.driver-portal-mode #dashboard .driver-route-point strong{font-size:15px;color:#fff!important}
+body.driver-user-mode #dashboard .driver-route-point small,
+body.driver-portal-mode #dashboard .driver-route-point small{font-size:12px;color:#c4d0cc!important}
+body.driver-user-mode #dashboard .driver-orders-empty,
+body.driver-portal-mode #dashboard .driver-orders-empty{background:#141d1f!important;color:#e9eeeb!important}
+body.driver-user-mode #dashboard .driver-service-order-info,
+body.driver-portal-mode #dashboard .driver-service-order-info{padding:12px;margin:10px 0;border:1px solid #8e754b;border-radius:10px;background:#28271f;color:#f8edda!important}
+body.driver-user-mode #dashboard .driver-service-order-info strong,
+body.driver-portal-mode #dashboard .driver-service-order-info strong{font-size:16px;color:#f5d59d!important}
+body.driver-user-mode #dashboard .driver-service-order-info p,
+body.driver-portal-mode #dashboard .driver-service-order-info p{font-size:14px;color:#f0e7d6!important}
+body.driver-user-mode #dashboard .driver-bottom-dock,
+body.driver-portal-mode #dashboard .driver-bottom-dock{background:rgba(8,14,15,.98)!important}
+body.driver-user-mode #dashboard .driver-bottom-dock button,
+body.driver-portal-mode #dashboard .driver-bottom-dock button{background:#1a292b!important;color:#f5e8ce!important}
+
+/* Published service selection and admin service conditions */
+.customer-service-details{display:grid;gap:6px;padding:12px 14px;border:1px solid #b99b67;border-radius:10px;background:#f5f0e5;color:#29322f}
+.customer-service-details[hidden]{display:none}
+.customer-service-details strong{font-size:15px}
+.customer-service-details span,.customer-service-details p{font-size:13px;margin:0;line-height:1.5}
+.customer-service-details small{font-size:12px;font-weight:700;color:#49655b}
+.service-requirements{padding:10px;border-radius:8px;background:rgba(185,155,103,.12)}
+.admin-tariff-row{padding:16px;border:1px solid #c8c1b5;border-radius:12px;background:#fff;display:grid;gap:12px}
+.admin-tariff-row label{display:grid;gap:6px;font-weight:700}
+.admin-tariff-row label[hidden]{display:none!important}
+.admin-tariff-row input:not([type=checkbox]),.admin-tariff-row select,.admin-tariff-row textarea{width:100%;min-height:42px;padding:10px;border:1px solid #aeb6b2;border-radius:8px;font-size:14px}
+.admin-tariff-row textarea{resize:vertical}
+@media(min-width:720px){.admin-tariff-row{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.admin-tariff-row>[data-image-preview],.admin-tariff-row>[data-image],.admin-tariff-row>[data-remove-tariff]{grid-column:1/-1}}
+@media(max-width:520px){
+ body.driver-user-mode #dashboard .driver-order-fact,
+ body.driver-portal-mode #dashboard .driver-order-fact{font-size:14px}
+ body.driver-user-mode #dashboard .driver-order-price strong,
+ body.driver-portal-mode #dashboard .driver-order-price strong{font-size:21px}
+}
