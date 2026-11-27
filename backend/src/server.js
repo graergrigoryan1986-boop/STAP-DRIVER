@@ -1007,6 +1007,11 @@ app.patch('/api/admin/drivers/:id/profile', auth, only('ADMIN'), asyncRoute(asyn
   res.json({ user: publicUser(user), message: 'Վարորդի տվյալները թարմացվեցին ադմինի կողմից։' });
 }));
 
+app.patch('/api/drivers/capabilities',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
+ const input=z.object({capabilities:z.array(z.enum(['ACCESSIBILITY_ASSIST','WHEELCHAIR_ASSIST','ELDERLY_ASSIST','CHILD_ASSIST','LUGGAGE_ASSIST'])).max(5)}).parse(req.body);
+ const user=await prisma.user.update({where:{id:req.user.id},data:{driverServiceCapabilities:[...new Set(input.capabilities)]}});
+ res.json({user:publicUser(user),message:'Հատուկ ծառայությունների հմտությունները պահպանվեցին։'});
+}));
 app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res) => {
   const transactions = await prisma.walletTransaction.findMany({
     where: { userId: req.user.id }, orderBy: { createdAt: 'desc' }, take: 100
