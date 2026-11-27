@@ -1,55 +1,115 @@
 package am.stapdriver.app
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
-import android.graphics.Color
-import android.view.Gravity
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
+import android.graphics.Color
+import android.view.Gravity
+import android.view.ViewGroup
 
 class MainActivity : Activity() {
-    private val green = Color.rgb(57, 214, 154)
-    private val dark = Color.rgb(11, 23, 20)
+    private val platformUrl = "https://stap-driver-api.onrender.com/"
+    private lateinit var webView: WebView
+    private lateinit var progress: ProgressBar
+    private lateinit var errorPanel: LinearLayout
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val dark = Color.rgb(13, 15, 18)
+        val gold = Color.rgb(211, 177, 112)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(28, 36, 28, 36)
             setBackgroundColor(dark)
         }
-        val logo = TextView(this).apply {
-            text = "STAP DRIVER"
-            textSize = 30f
-            setTextColor(green)
+        progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            isIndeterminate = true
+            visibility = View.VISIBLE
+        }
+        webView = WebView(this).apply {
+            setBackgroundColor(dark)
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.loadsImagesAutomatically = true
+            settings.javaScriptCanOpenWindowsAutomatically = false
+            webChromeClient = WebChromeClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    progress.visibility = View.VISIBLE
+                    errorPanel.visibility = View.GONE
+                }
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    progress.visibility = View.GONE
+                }
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val uri = request?.url ?: return false
+                    return uri.scheme != "https" && uri.scheme != "http"
+                }
+                override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                    if (request?.isForMainFrame == true) {
+                        progress.visibility = View.GONE
+                        errorPanel.visibility = View.VISIBLE
+                    }
+                }
+            }
+        }
+        errorPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
+            setPadding(28, 24, 28, 24)
+            visibility = View.GONE
+            val title = TextView(this@MainActivity).apply {
+                text = "Կապը սերվերի հետ հասանելի չէ"
+                textSize = 20f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+            }
+            val detail = TextView(this@MainActivity).apply {
+                text = "Ստուգեք ինտերնետ կապը և կրկին փորձեք։"
+                textSize = 15f
+                gravity = Gravity.CENTER
+                setTextColor(Color.LTGRAY)
+                setPadding(0, 12, 0, 20)
+            }
+            val retry = Button(this@MainActivity).apply {
+                text = "ԿՐԿԻՆ ՓՈՐՁԵԼ"
+                setTextColor(dark)
+                setBackgroundColor(gold)
+                setOnClickListener { loadPlatform() }
+            }
+            addView(title)
+            addView(detail)
+            addView(retry)
         }
-        val title = TextView(this).apply {
-            text = "Քո մեքենան։ Մեր վարորդը։"
-            textSize = 21f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 12)
-        }
-        val subtitle = TextView(this).apply {
-            text = "Սթափ վարորդի ծառայություն Երևանում"
-            textSize = 16f
-            setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER
-        }
-        val order = Button(this).apply {
-            text = "Պատվիրել վարորդ"
-            setTextColor(dark)
-            setBackgroundColor(green)
-            setOnClickListener { Toast.makeText(this@MainActivity, "Պատվերի համակարգը կմիացվի հաջորդ փուլում", Toast.LENGTH_LONG).show() }
-        }
-        root.addView(logo)
-        root.addView(title)
-        root.addView(subtitle)
-        root.addView(order, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 32 })
+
+        root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 4))
+        root.addView(webView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(errorPanel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         setContentView(root)
+        loadPlatform()
+    }
+
+    private fun loadPlatform() {
+        val role = BuildConfig.APP_ROLE.lowercase()
+        webView.loadUrl("${platformUrl}?app=$role")
+    }
+
+    override fun onBackPressed() {
+        if (::webView.isInitialized && webView.canGoBack()) webView.goBack() else super.onBackPressed()
+    }
+
+    override fun onDestroy() {
+        if (::webView.isInitialized) webView.destroy()
+        super.onDestroy()
     }
 }
