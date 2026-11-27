@@ -108,6 +108,7 @@ model Order {
   fareAmd            Int
   isUrgent Boolean @default(false)
   urgentExtraChargeAmd Int @default(0)
+  demandCoefficientChargeAmd Int @default(0)
   phonePrimary       String      @default("")
   phoneSecondary     String?
   passengerCount     Int         @default(1)
