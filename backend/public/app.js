@@ -450,6 +450,7 @@ function renderOrders(root,orders,kind){
   if(kind==='mine'&&currentUser.role==='DRIVER'&&o.status==='COMPLETED')return '<details class="driver-completed-row"><summary><span class="driver-completed-id">#'+esc(String(o.id).slice(-8).toUpperCase())+'</span><span class="driver-completed-route">'+esc(o.pickupAddress)+' → '+esc(o.destinationAddress)+'</span><strong class="driver-completed-price">'+money(o.fareAmd)+'</strong><span class="driver-completed-meta">'+(o.completedAt?new Date(o.completedAt).toLocaleString('hy-AM'):when)+' · Ավարտված</span><span class="driver-completed-toggle">Տեղեկություններ ＋</span></summary>'+card+'</details>';
   return card;
  }).join('');
+ root.querySelectorAll('.driver-pending-head').forEach(head=>{head.style.cursor='pointer';head.addEventListener('click',event=>{if(event.target.closest('button'))return;head.querySelector('[data-toggle-order-details]')?.click()})});
  root.querySelectorAll('[data-toggle-order-details]').forEach(button=>button.onclick=()=>{const panel=button.closest('.driver-pending-card')?.querySelector('.driver-pending-details');if(!panel)return;panel.hidden=!panel.hidden;button.textContent=panel.hidden?'Մանրամասներ +':'Փակել մանրամասները −';button.setAttribute('aria-expanded',String(!panel.hidden))});
  root.querySelectorAll('[data-close-balance-hint]').forEach(b=>b.onclick=()=>b.closest('.driver-accept-balance-hint')?.remove());
  root.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>orderAction(b,'/api/orders/'+b.dataset.accept+'/accept'));
