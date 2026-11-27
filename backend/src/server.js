@@ -203,7 +203,13 @@ let yerevanDistrictFeaturesCache=null, yerevanDistrictFeaturesFetchedAt=0, yerev
 let yerevanNeighborhoodFeaturesCache=null, yerevanNeighborhoodFeaturesFetchedAt=0;
 const yerevanGeocodeCache=new Map();
 let lastYerevanGeocodeAt=0;
-const YEREVAN_FARE_BY_DISTRICT_COUNT=count=>count>=1?7000+(count-1)*2500:7000;
+const YEREVAN_FARE_BY_ROUTE=(routeDistricts,pickupDistrict,destinationDistrict)=>{
+ if(pickupDistrict===destinationDistrict)return {baseFareAmd:7000,intermediateDistricts:[],endpointDistrictSurchargeAmd:0,intermediateDistrictSurchargeAmd:0};
+ const intermediateDistricts=[...new Set(routeDistricts)].filter(name=>name!==pickupDistrict&&name!==destinationDistrict);
+ const endpointDistrictSurchargeAmd=5000;
+ const intermediateDistrictSurchargeAmd=intermediateDistricts.length*2500;
+ return {baseFareAmd:7000+endpointDistrictSurchargeAmd+intermediateDistrictSurchargeAmd,intermediateDistricts,endpointDistrictSurchargeAmd,intermediateDistrictSurchargeAmd};
+};
 async function fetchJsonWithTimeout(url,options={},timeoutMs=18000){
  const response=await fetch(url,{...options,signal:AbortSignal.timeout(timeoutMs)});
  if(!response.ok)throw new Error('Քարտեզային ծառայությունը չպատասխանեց։');
@@ -363,7 +369,8 @@ async function calculateYerevanRoute(pickupAddress,destinationAddress){
  const neighborhoodResult=neighborhoodSequenceForRoute(coords,neighborhoodFeatures);
  const routeNeighborhoods=neighborhoodResult.sequence;
  const districtCount=new Set(routeDistricts).size;
- return {pickup,destination,pickupDistrict,destinationDistrict,routeDistricts,routeNeighborhoods,neighborhoodCoverage:neighborhoodResult.coverage,neighborhoodAmbiguity:neighborhoodResult.ambiguity,districtCount,distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_DISTRICT_COUNT(districtCount)};
+ const fareBreakdown=YEREVAN_FARE_BY_ROUTE(routeDistricts,pickupDistrict,destinationDistrict);
+ return {pickup,destination,pickupDistrict,destinationDistrict,routeDistricts,routeNeighborhoods,neighborhoodCoverage:neighborhoodResult.coverage,neighborhoodAmbiguity:neighborhoodResult.ambiguity,districtCount,...fareBreakdown,distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration)};
 }
 
 app.get('/api/geo/neighborhoods',auth,asyncRoute(async(req,res)=>{const features=await getYerevanNeighborhoodFeatures();const names=[...new Set(features.map(neighborhoodNameFromFeature).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'hy'));res.json({neighborhoods:names});}));
