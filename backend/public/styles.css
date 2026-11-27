@@ -1685,3 +1685,13 @@ body.driver-portal-mode #dashboard .driver-bottom-dock button{background:#1a292b
  body.driver-user-mode #dashboard .driver-order-price strong,
  body.driver-portal-mode #dashboard .driver-order-price strong{font-size:21px}
 }
+
+.driver-capability-settings{margin:12px 0;padding:14px;border:1px solid #53666a;border-radius:12px;background:#142022;color:#f3eee3}
+.driver-capability-settings summary{font-size:14px;font-weight:800;color:#e7cb99;cursor:pointer}
+.driver-capability-settings p{font-size:13px;line-height:1.5;color:#d6dfdc}
+.driver-capability-settings form{display:grid;gap:10px;margin-top:12px}
+.driver-capability-settings label{display:flex;align-items:center;gap:9px;font-size:14px;color:#f4f1e9}
+.driver-capability-settings input[type=checkbox]{width:19px;height:19px;accent-color:#c6a66b}
+#driverCapabilitiesField{border:1px solid #aab2ae;border-radius:9px;padding:12px}
+#driverCapabilitiesField legend{font-weight:800}
+#driverCapabilitiesField label{display:flex;gap:8px;align-items:center;margin:7px 0;font-size:13px}
