@@ -321,11 +321,14 @@ function districtSequenceForRoute(coords,features){
  if(!total||covered/total<0.95||ambiguous/total>0.03||!sequence.length)throw new Error('Երթուղին ամբողջությամբ չի համընկնում Երևանի վարչական համայնքների քարտեզային սահմաններին։ Գինը չի հաշվարկվել։');
  return sequence.filter((name,index)=>index===0||name!==sequence[index-1]);
 }
-async function calculateYerevanRoute(pickupAddress,destinationAddress){
+async function calculateYerevanRoute(pickupAddress,destinationAddress,pickupNeighborhoodName,destinationNeighborhoodName){
  const pickup=await geocodeYerevanAddress(pickupAddress);
  const destination=await geocodeYerevanAddress(destinationAddress);
  const routeUrl='https://router.project-osrm.org/route/v1/driving/'+pickup.lon+','+pickup.lat+';'+destination.lon+','+destination.lat+'?overview=full&geometries=geojson&steps=false';
  const [routeData,districtFeatures,neighborhoodFeatures]=await Promise.all([fetchJsonWithTimeout(routeUrl),getYerevanDistrictFeatures(),getYerevanNeighborhoodFeatures()]);
+ const matchesSelectedNeighborhood=(point,name)=>{const normalized=String(name||'').trim().toLocaleLowerCase('hy-AM');const candidates=neighborhoodFeatures.filter(feature=>neighborhoodNameFromFeature(feature).toLocaleLowerCase('hy-AM')===normalized);return candidates.some(feature=>pointInDistrictGeometry(point.lon,point.lat,feature.geometry));};
+ if(pickupNeighborhoodName&&!matchesSelectedNeighborhood(pickup,pickupNeighborhoodName))throw new Error('Մեկնարկի ընտրված թաղամասը չի համապատասխանում քարտեզում նշված հասցեին։ Ստուգեք թաղամասը և փողոցը։');
+ if(destinationNeighborhoodName&&!matchesSelectedNeighborhood(destination,destinationNeighborhoodName))throw new Error('Նպատակակետի ընտրված թաղամասը չի համապատասխանում քարտեզում նշված հասցեին։ Ստուգեք թաղամասը և փողոցը։');
  const route=routeData.routes?.[0],coords=route?.geometry?.coordinates;
  if(!route||!Array.isArray(coords)||coords.length<2)throw new Error('Այս հասցեների միջև մեքենայի երթուղի չհաջողվեց կառուցել։');
  const routeDistricts=districtSequenceForRoute(coords,districtFeatures);
@@ -341,7 +344,7 @@ app.get('/api/geo/neighborhoods',auth,asyncRoute(async(req,res)=>{const features
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
  const input=z.object({pickupNeighborhood:z.string().trim().min(2).max(100),pickupAddress:z.string().trim().min(3).max(250),destinationNeighborhood:z.string().trim().min(2).max(100),destinationAddress:z.string().trim().min(3).max(250)}).parse(req.body);
- const route=await calculateYerevanRoute(input.pickupNeighborhood+', '+input.pickupAddress,input.destinationNeighborhood+', '+input.destinationAddress);
+ const route=await calculateYerevanRoute(input.pickupNeighborhood+', '+input.pickupAddress,input.destinationNeighborhood+', '+input.destinationAddress,input.pickupNeighborhood,input.destinationNeighborhood);
  res.json({routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,neighborhoodCount:route.neighborhoodCount,communityCount:route.communityCount,neighborhoodCoverage:route.neighborhoodCoverage,distanceMeters:route.distanceMeters,durationSeconds:route.duration,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon,neighborhood:route.pickup.neighborhood},destination:{lat:route.destination.lat,lon:route.destination.lon,neighborhood:route.destination.neighborhood}});
 }));
 
