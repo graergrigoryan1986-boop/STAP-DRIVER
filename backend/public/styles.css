@@ -1707,3 +1707,33 @@ body.driver-user-mode #dashboard .driver-pending-toggle>span,
 body.driver-portal-mode #dashboard .driver-pending-toggle>span{font-size:15px}
 body.driver-user-mode #dashboard .driver-pending-toggle>small,
 body.driver-portal-mode #dashboard .driver-pending-toggle>small{font-size:12px}
+
+
+/* Driver pending-order acceptance: compact glanceable cards and one-tap action */
+.driver-pending-compact .driver-open-orders-list{gap:10px}
+.driver-pending-card{display:block;overflow:hidden;border:1px solid #3d5655;border-radius:14px;background:#152123;box-shadow:0 5px 16px rgba(0,0,0,.2)}
+.driver-pending-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px}
+.driver-pending-head-main{display:grid;min-width:0;gap:5px}
+.driver-pending-head-line{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.driver-pending-card-id{font-size:11px;color:#e8d3a7}
+.driver-pending-card-price{font-size:20px;font-weight:900;color:#f2d49a;line-height:1.2}
+.driver-pending-card-route{font-size:13px;line-height:1.4;color:#f5f4ee;white-space:normal;overflow-wrap:anywhere}
+.driver-pending-card-meta{font-size:11px;color:#c4d0cb}
+.driver-pending-head-actions{display:grid;min-width:108px;gap:7px}
+.driver-pending-head-actions .driver-quick-accept{min-height:43px;padding:10px 12px;font-size:14px;white-space:nowrap}
+.driver-pending-details-toggle{min-height:36px;padding:7px 9px;border:1px solid #536c69;border-radius:9px;background:#202f30;color:#e9d8b5;font-size:11px;font-weight:800}
+.driver-pending-details{border-top:1px solid #3b514f}
+.driver-pending-details[hidden]{display:none}
+.driver-pending-details>.driver-order-card{margin:0;border:0;border-radius:0;box-shadow:none}
+.driver-pending-details .driver-order-top{display:none}
+.driver-pending-details .driver-order-actions{margin:10px 12px 14px}
+.driver-pending-details .driver-order-actions button{min-height:40px}
+.driver-pending-card.is-immediate{border-left:4px solid #e7b95f}
+.driver-pending-card.is-prebook{border-left:4px solid #6d9bcb}
+@media(max-width:430px){
+ .driver-pending-head{grid-template-columns:minmax(0,1fr) 104px;gap:7px;padding:10px}
+ .driver-pending-card-price{font-size:18px}
+ .driver-pending-head-actions{min-width:104px}
+ .driver-pending-head-actions .driver-quick-accept{font-size:13px;padding:9px 7px}
+ .driver-pending-card-route{font-size:12px}
+}
