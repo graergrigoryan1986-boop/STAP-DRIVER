@@ -606,6 +606,32 @@ app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   res.json({orders:await withCustomerOrderNumbers(orders)});
 }));
 
+app.get('/api/admin/customers',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const customers=await prisma.user.findMany({
+  where:{role:'CUSTOMER'},
+  orderBy:{createdAt:'desc'},
+  select:{
+   id:true,name:true,email:true,phone:true,rating:true,isBlocked:true,createdAt:true,
+   customerOrders:{
+    orderBy:{createdAt:'desc'},
+    include:{
+     driver:{select:{id:true,name:true,phone:true,rating:true}},
+     ratings:{orderBy:{createdAt:'desc'},include:{
+      fromUser:{select:{id:true,name:true,phone:true,role:true}},
+      toUser:{select:{id:true,name:true,phone:true,role:true}}
+     }}
+    }
+   }
+  }
+ });
+ const result=customers.map(customer=>{
+  const orders=customer.customerOrders||[];
+  const completed=orders.filter(order=>order.status==='COMPLETED');
+  return {...customer,orders,totalOrders:orders.length,completedOrders:completed.length,cancelledOrders:orders.filter(order=>order.status==='CANCELLED').length,totalSpentAmd:completed.reduce((sum,order)=>sum+order.fareAmd,0)};
+ });
+ res.json({customers:result,total:result.length});
+}));
+ 
 app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const orders=await prisma.order.findMany({orderBy:{createdAt:'desc'},include:{
     customer:{select:{id:true,name:true,phone:true}},
