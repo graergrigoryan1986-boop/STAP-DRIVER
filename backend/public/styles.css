@@ -1276,3 +1276,57 @@ body.authenticated footer{display:none!important}
 .route-note-field textarea:focus,.admin-form-field.route-note-field textarea:focus{outline:none;border-color:var(--gold2);box-shadow:0 0 0 3px rgba(200,166,107,.1)}
 .route-note-field textarea::placeholder,.admin-form-field.route-note-field textarea::placeholder{color:#827f78}
 .route-point-note{display:block;margin-top:5px;color:var(--gold2);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+
+
+/* STAP DRIVER — refined pending-order cards matching the approved preview */
+.driver-pending-bookings{
+  border:1px solid rgba(201,164,91,.58)!important;
+  border-radius:22px!important;
+  padding:clamp(15px,2.2vw,24px)!important;
+  background:radial-gradient(ellipse at 100% 0,rgba(201,164,91,.13),transparent 44%),linear-gradient(145deg,#191b20 0%,#101216 100%)!important;
+}
+.driver-pending-heading{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:18px!important}
+.driver-pending-heading h3{font-size:clamp(17px,2vw,21px)!important;letter-spacing:.01em;color:#f2d9a6!important}
+.driver-pending-heading p{font-size:12px!important;color:#bdb6aa!important;line-height:1.55}
+.driver-pending-count{display:inline-flex;align-items:center;justify-content:center;min-width:46px!important;height:42px!important;padding:0 12px;border-radius:12px!important;background:linear-gradient(145deg,#f0d9a6,#b58a43)!important;color:#21190d!important;font-size:13px!important;font-weight:950!important}
+.driver-pending-card{border:1px solid rgba(201,164,91,.35);border-radius:18px;background:linear-gradient(145deg,#252830,#15171c 72%);overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.22);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.driver-pending-card:hover{transform:translateY(-1px);border-color:rgba(235,204,145,.72)}
+.driver-pending-card[open]{border-color:rgba(235,204,145,.82);box-shadow:0 14px 32px rgba(0,0,0,.3),0 0 0 1px rgba(201,164,91,.12)}
+.driver-pending-card>summary{grid-template-columns:minmax(0,1fr) auto;gap:9px 14px;padding:17px 18px 15px 21px;min-height:120px}
+.driver-pending-card>summary:before{width:4px;background:linear-gradient(180deg,#f0d9a6,#a77b35)}
+.driver-pending-card-id{font-size:10px;letter-spacing:.13em;color:#e8ce98}
+.driver-prebook-badge,.driver-immediate-badge{font-size:9px;letter-spacing:.07em;padding:6px 10px;border-radius:7px}
+.driver-prebook-badge{background:rgba(96,165,250,.13);border-color:rgba(125,175,235,.35);color:#c9defb}
+.driver-immediate-badge{background:rgba(34,197,94,.12);border-color:rgba(74,222,128,.34);color:#a9edbf}
+.driver-pending-card-price{font-size:clamp(21px,2.5vw,27px);color:#f2d9a6;letter-spacing:-.025em}
+.driver-pending-card-route{font-size:14px;line-height:1.55;font-weight:850;color:#f6f3ed}
+.driver-pending-card-meta{font-size:11px;color:#c7c0b5}
+.driver-pending-card-toggle{font-size:10px;color:#e8ce98;letter-spacing:.035em;padding-top:10px}
+.driver-pending-card[open]>summary{background:linear-gradient(90deg,rgba(201,164,91,.13),rgba(201,164,91,.025));border-bottom-color:rgba(201,164,91,.3)}
+.driver-pending-card>.driver-order-card{padding:clamp(15px,2vw,22px)!important;background:linear-gradient(145deg,#1d2026,#121419)!important}
+.driver-pending-card .driver-order-price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:0 0 14px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.driver-pending-card .driver-order-price strong{font-size:clamp(25px,3vw,32px);color:#f0d39a}
+.driver-pending-card .driver-order-price>span:not(.test-order-badge){font-size:11px;color:#bcb4a7}
+.driver-pending-card .driver-order-route{padding:14px;border:1px solid rgba(201,164,91,.17);border-radius:13px;background:rgba(255,255,255,.018)}
+.driver-pending-card .driver-order-facts{gap:9px}
+.driver-pending-card .driver-order-fact{padding:10px 12px;border:1px solid rgba(255,255,255,.055);border-radius:10px;background:rgba(255,255,255,.025)}
+.driver-pending-card .driver-order-fact>span{color:#aaa397;font-size:10px}
+.driver-pending-card .driver-order-fact>strong{color:#f1eee8;font-size:12px;overflow-wrap:anywhere}
+.driver-pending-card .driver-order-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.55fr);gap:10px;margin-top:16px}
+.driver-pending-card .driver-accept-btn{min-height:49px;border:1px solid #f0d9a6!important;border-radius:12px!important;background:linear-gradient(145deg,#f0d9a6,#b68a43)!important;color:#21190e!important;font-size:13px!important;font-weight:950!important;box-shadow:0 7px 18px rgba(201,164,91,.16)}
+.driver-pending-card .driver-skip-btn{min-height:49px;border:1px solid rgba(255,255,255,.13)!important;border-radius:12px!important;background:#30343b!important;color:#e7e4de!important;font-size:12px!important}
+.driver-pending-card .driver-contact-locked{margin:10px 0;border-color:rgba(224,190,120,.38);background:rgba(201,164,91,.075)}
+.driver-pending-card .driver-contact-locked strong{font-size:11px}
+.driver-pending-card .driver-contact-locked span{font-size:11px;line-height:1.6}
+.driver-pending-card .driver-order-route-point strong,.driver-pending-card .driver-route-point strong{overflow-wrap:anywhere}
+@media(max-width:600px){
+ .driver-pending-bookings{padding:12px!important;border-radius:17px!important}
+ .driver-pending-heading{align-items:flex-start}
+ .driver-pending-heading p{max-width:260px}
+ .driver-pending-card>summary{min-height:112px;padding:14px 12px 13px 16px;gap:7px 8px}
+ .driver-pending-card-route{font-size:12px}
+ .driver-pending-card-price{font-size:19px}
+ .driver-pending-card-meta{font-size:10px}
+ .driver-pending-card .driver-order-actions{grid-template-columns:1fr}
+ .driver-pending-card .driver-accept-btn,.driver-pending-card .driver-skip-btn{min-height:46px}
+}
