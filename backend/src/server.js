@@ -207,7 +207,7 @@ const YEREVAN_FARE_BY_ROUTE=(routeDistricts,pickupDistrict,destinationDistrict)=
  if(pickupDistrict===destinationDistrict)return {baseFareAmd:7000,intermediateDistricts:[],endpointDistrictSurchargeAmd:0,intermediateDistrictSurchargeAmd:0};
  const intermediateDistricts=[...new Set(routeDistricts)].filter(name=>name!==pickupDistrict&&name!==destinationDistrict);
  const endpointDistrictSurchargeAmd=5000;
- const intermediateDistrictSurchargeAmd=intermediateDistricts.length*2500;
+ const intermediateDistrictSurchargeAmd=intermediateDistricts.length*3000;
  return {baseFareAmd:7000+endpointDistrictSurchargeAmd+intermediateDistrictSurchargeAmd,intermediateDistricts,endpointDistrictSurchargeAmd,intermediateDistrictSurchargeAmd};
 };
 async function fetchJsonWithTimeout(url,options={},timeoutMs=18000){
