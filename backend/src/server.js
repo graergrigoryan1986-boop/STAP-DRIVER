@@ -1296,34 +1296,34 @@ function makeDocumentsPdf(title, pages){
       }
     }
     const imgId=add(Buffer.concat([
-      Buffer.from(\`<< /Type /XObject /Subtype /Image /Width \${iw} /Height \${ih} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length \${img.length} >>\\nstream\\n\`,'binary'),
-      img,Buffer.from('\\nendstream','binary')
+      Buffer.from('<< /Type /XObject /Subtype /Image /Width '+iw+' /Height '+ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>\nstream\n','binary'),
+      img,Buffer.from('\nendstream','binary')
     ]));
     const scale=Math.min(520/iw,700/ih),dw=Math.round(iw*scale),dh=Math.round(ih*scale);
     const x=Math.round((595-dw)/2),y=Math.round(430-dh/2);
-    const label=String(p.label).replace(/[()\\\\]/g,'');
-    const contentText=\`BT /F1 14 Tf 40 810 Td (\${label}) Tj ET\\nq \${dw} 0 0 \${dh} \${x} \${y} cm /Im0 Do Q\`;
+    const label=String(p.label).replace(/[()\\]/g,'');
+    const contentText='BT /F1 14 Tf 40 810 Td ('+label+') Tj ET\nq '+dw+' 0 0 '+dh+' '+x+' '+y+' cm /Im0 Do Q';
     const content=Buffer.from(contentText,'binary');
     const contentId=add(Buffer.concat([
-      Buffer.from(\`<< /Length \${content.length} >>\\nstream\\n\`,'binary'),
-      content,Buffer.from('\\nendstream','binary')
+      Buffer.from('<< /Length '+content.length+' >>\nstream\n','binary'),
+      content,Buffer.from('\nendstream','binary')
     ]));
     const pageId=add('');pageIds.push(pageId);
-    objs[pageId-1]=Buffer.from(\`<< /Type /Page /Parent \${pagesId} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 \${fontId} 0 R >> /XObject << /Im0 \${imgId} 0 R >> >> /Contents \${contentId} 0 R >>\`);
+    objs[pageId-1]=Buffer.from('<< /Type /Page /Parent '+pagesId+' 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 '+fontId+' 0 R >> /XObject << /Im0 '+imgId+' 0 R >> >> /Contents '+contentId+' 0 R >>');
   }
-  objs[catalog-1]=Buffer.from(\`<< /Type /Catalog /Pages \${pagesId} 0 R >>\`);
-  objs[pagesId-1]=Buffer.from(\`<< /Type /Pages /Kids [\${pageIds.map(id=>id+' 0 R').join(' ')}] /Count \${pageIds.length} >>\`);
-  let out=Buffer.from('%PDF-1.4\\n%âãÏÓ\\n','binary'),offsets=[0];
+  objs[catalog-1]=Buffer.from('<< /Type /Catalog /Pages '+pagesId+' 0 R >>');
+  objs[pagesId-1]=Buffer.from('<< /Type /Pages /Kids ['+pageIds.map(id=>id+' 0 R').join(' ')+'] /Count '+pageIds.length+' >>');
+  let out=Buffer.from('%PDF-1.4\n%âãÏÓ\n','binary'),offsets=[0];
   objs.forEach((o,i)=>{
     offsets.push(out.length);
-    out=Buffer.concat([out,Buffer.from(\`\${i+1} 0 obj\\n\`,'binary'),o,Buffer.from('\\nendobj\\n','binary')]);
+    out=Buffer.concat([out,Buffer.from((i+1)+' 0 obj\n','binary'),o,Buffer.from('\nendobj\n','binary')]);
   });
   const xref=out.length;
-  out=Buffer.concat([out,Buffer.from(\`xref\\n0 \${objs.length+1}\\n0000000000 65535 f \\n\`,'binary')]);
+  out=Buffer.concat([out,Buffer.from('xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n','binary')]);
   for(let i=1;i<offsets.length;i++){
-    out=Buffer.concat([out,Buffer.from(String(offsets[i]).padStart(10,'0')+' 00000 n \\n','binary')]);
+    out=Buffer.concat([out,Buffer.from(String(offsets[i]).padStart(10,'0')+' 00000 n \n','binary')]);
   }
-  out=Buffer.concat([out,Buffer.from(\`trailer\\n<< /Size \${objs.length+1} /Root \${catalog} 0 R >>\\nstartxref\\n\${xref}\\n%%EOF\`,'binary')]);
+  out=Buffer.concat([out,Buffer.from('trailer\n<< /Size '+(objs.length+1)+' /Root '+catalog+' 0 R >>\nstartxref\n'+xref+'\n%%EOF','binary')]);
   return out;
 }
 
