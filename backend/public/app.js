@@ -13,7 +13,8 @@ function connectRealtime(){
    try{if(currentUser.role==='ADMIN')await adminView();else if(currentUser.role==='DRIVER')await driverView();else await customerView();connectRealtime()}catch(error){console.warn('Live refresh failed',error)}
   },450);
  };
- ['order:new','order:cancelled','order:accepted','order:fare-updated','order:completed','notification:new','rating:updated','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
+ realtimeSocket.on('driver:balance-updated',data=>{if(currentUser?.role==='DRIVER'&&data?.driverId===currentUser.id&&Number.isFinite(Number(data.balanceAmd))){currentUser.balanceAmd=Number(data.balanceAmd);const amount=$('#driverBalanceAmount');if(amount)amount.textContent=money(currentUser.balanceAmd);}});
+  ['order:new','order:cancelled','order:accepted','order:fare-updated','order:completed','notification:new','rating:updated','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
  realtimeSocket.on('connect_error',error=>console.warn('STAP live connection:',error.message));
 }
 
