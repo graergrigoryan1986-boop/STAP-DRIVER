@@ -816,26 +816,44 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   const minimumBalanceAmd = Number.isInteger(Number(rawMinimum)) && Number(rawMinimum) >= 0 ? Number(rawMinimum) : 0;
   const personalNegativeLimitAmd = Number.isInteger(req.user.driverNegativeBalanceLimitAmd) ? req.user.driverNegativeBalanceLimitAmd : 0;
   const minimumAllowedBalanceAmd = personalNegativeLimitAmd > 0 ? -personalNegativeLimitAmd : minimumBalanceAmd;
-  const commissionBaseAmd=Math.max(0,requestedOrder.fareAmd-(requestedOrder.demandCoefficientChargeAmd||0));
-  const commissionAmd = requestedOrder.isTest ? 0 : Math.round(commissionBaseAmd * 0.25);
   let result;
   try {
     result = await prisma.$transaction(async tx => {
+      const acceptedAt = new Date();
+      // Armenia local day (UTC+4): count only earlier completed surcharge orders.
+      const yerevanNow = new Date(acceptedAt.getTime() + 4 * 60 * 60 * 1000);
+      const dayStart = new Date(Date.UTC(yerevanNow.getUTCFullYear(), yerevanNow.getUTCMonth(), yerevanNow.getUTCDate()) - 4 * 60 * 60 * 1000);
+      const nextDayStart = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const previousCompletedSurchargeOrders = requestedOrder.isTest || !(requestedOrder.urgentExtraChargeAmd > 0)
+        ? 0
+        : await tx.order.count({ where: {
+            driverId: req.user.id, isTest: false, status: 'COMPLETED',
+            urgentExtraChargeAmd: { gt: 0 }, completedAt: { gte: dayStart, lt: nextDayStart }
+          } });
+      const urgentSurchargeAmd = Math.max(0, requestedOrder.urgentExtraChargeAmd || 0);
+      const commissionBaseAmd = Math.max(0, requestedOrder.fareAmd - urgentSurchargeAmd);
+      const baseCommissionAmd = requestedOrder.isTest ? 0 : Math.round(commissionBaseAmd * 0.25);
+      const surchargeCommissionAmd = requestedOrder.isTest || previousCompletedSurchargeOrders < 1
+        ? 0 : Math.round(urgentSurchargeAmd * 0.01);
+      const commissionAmd = baseCommissionAmd + surchargeCommissionAmd;
       const claimed = await tx.order.updateMany({
         where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] },
-        data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date(), commissionRate: requestedOrder.isTest ? 0 : 25, commissionAmd, driverEarningAmd: requestedOrder.isTest ? 0 : (requestedOrder.urgentExtraChargeAmd||0) }
+        data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt, commissionRate: requestedOrder.isTest ? 0 : 25, commissionAmd, commissionSurchargeAmd: surchargeCommissionAmd, driverEarningAmd: requestedOrder.isTest ? 0 : urgentSurchargeAmd }
       });
       if (!claimed.count) return null;
       if (commissionAmd > 0) {
         const debited = await tx.user.updateMany({ where: { id: req.user.id, balanceAmd: { gte: commissionAmd + minimumAllowedBalanceAmd } }, data: { balanceAmd: { decrement: commissionAmd } } });
         if (!debited.count) throw new Error('WALLET_MINIMUM_NOT_MET');
-        await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: -commissionAmd, type: 'ORDER_COMMISSION', description: 'Պատվերի ընդունման միջնորդավճար՝ 25%', orderId: requestedOrder.id } });
+        const description = surchargeCommissionAmd > 0
+          ? 'Պատվերի միջնորդավճար՝ հիմնական արժեքի 25% + հավելավճարի 1%'
+          : 'Պատվերի միջնորդավճար՝ հիմնական արժեքի 25%';
+        await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: -commissionAmd, type: 'ORDER_COMMISSION', description, orderId: requestedOrder.id } });
       }
       const [order, driver] = await Promise.all([
         tx.order.findUnique({ where: { id: requestedOrder.id } }),
         tx.user.findUnique({ where: { id: req.user.id }, select: { balanceAmd: true } })
       ]);
-      return { order, balanceAmd: driver.balanceAmd, commissionAmd };
+      return { order, balanceAmd: driver.balanceAmd, commissionAmd, baseCommissionAmd, surchargeCommissionAmd, previousCompletedSurchargeOrders };
     });
   } catch (error) {
     if (error.message === 'WALLET_MINIMUM_NOT_MET') return res.status(409).json({ error: 'Հաշվեկշիռը բավարար չէ։ Պատվերի միջնորդավճարը կգանձվի՝ հաշվի առնելով ձեր անհատական բացասական լիմիտը։' });
@@ -1016,8 +1034,8 @@ app.patch('/api/drivers/capabilities',auth,only('DRIVER'),asyncRoute(async(req,r
 async function attachWalletOrderDetails(transactions){
  const orderIds=[...new Set(transactions.map(item=>item.orderId).filter(Boolean))];
  if(!orderIds.length)return transactions;
- const orders=await prisma.order.findMany({where:{id:{in:orderIds}},select:{id:true,fareAmd:true,isUrgent:true,urgentExtraChargeAmd:true,demandCoefficientChargeAmd:true,commissionAmd:true,commissionRate:true}});
- const byId=new Map(orders.map(order=>{const storedCoefficient=order.demandCoefficientChargeAmd||0;const legacyCoefficient=!storedCoefficient&&order.isUrgent&&(order.urgentExtraChargeAmd||0)>2500;const actualFareAmd=storedCoefficient?Math.max(0,order.fareAmd-storedCoefficient):legacyCoefficient?Math.min(order.fareAmd,Math.round((order.commissionAmd||0)/0.25)+2500):order.fareAmd;return [order.id,{id:order.id,actualFareAmd,commissionAmd:order.commissionAmd||0,commissionRate:order.commissionRate||0}]}));
+ const orders=await prisma.order.findMany({where:{id:{in:orderIds}},select:{id:true,fareAmd:true,isUrgent:true,urgentExtraChargeAmd:true,demandCoefficientChargeAmd:true,commissionAmd:true,commissionSurchargeAmd:true,commissionRate:true}});
+ const byId=new Map(orders.map(order=>{const storedCoefficient=order.demandCoefficientChargeAmd||0;const legacyCoefficient=!storedCoefficient&&order.isUrgent&&(order.urgentExtraChargeAmd||0)>2500;const actualFareAmd=storedCoefficient?Math.max(0,order.fareAmd-storedCoefficient):legacyCoefficient?Math.min(order.fareAmd,Math.round((order.commissionAmd||0)/0.25)+2500):order.fareAmd;return [order.id,{id:order.id,actualFareAmd,commissionAmd:order.commissionAmd||0,commissionSurchargeAmd:order.commissionSurchargeAmd||0,commissionBaseAmd:Math.max(0,(order.commissionAmd||0)-(order.commissionSurchargeAmd||0)),commissionRate:order.commissionRate||0}]}));
  return transactions.map(item=>({...item,orderDetails:item.orderId?byId.get(item.orderId)||null:null}));
 }
 app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res) => {
