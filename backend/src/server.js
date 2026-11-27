@@ -203,13 +203,65 @@ let yerevanDistrictFeaturesCache=null, yerevanDistrictFeaturesFetchedAt=0, yerev
 let yerevanNeighborhoodFeaturesCache=null, yerevanNeighborhoodFeaturesFetchedAt=0;
 const yerevanGeocodeCache=new Map();
 let lastYerevanGeocodeAt=0;
-const YEREVAN_FARE_BY_ROUTE=(routeDistricts,pickupDistrict,destinationDistrict)=>{
- if(pickupDistrict===destinationDistrict)return {baseFareAmd:7000,intermediateDistricts:[],endpointDistrictSurchargeAmd:0,intermediateDistrictSurchargeAmd:0};
- const intermediateDistricts=[...new Set(routeDistricts)].filter(name=>name!==pickupDistrict&&name!==destinationDistrict);
- const endpointDistrictSurchargeAmd=5000;
+let yerevanDistrictAdjacencyCache=null;
+function districtRings(feature){
+ const g=feature?.geometry;if(!g)return [];
+ if(g.type==='Polygon')return g.coordinates||[];
+ if(g.type==='MultiPolygon')return (g.coordinates||[]).flat();
+ return [];
+}
+function sharedDistrictBoundary(a,b){
+ const tolerance=0.00008,minShared=0.00008;
+ const ringsA=districtRings(a),ringsB=districtRings(b);
+ for(const ra of ringsA)for(let i=0;i<ra.length-1;i++){
+  const p=ra[i],q=ra[i+1],dx=q[0]-p[0],dy=q[1]-p[1],len=Math.hypot(dx,dy);
+  if(len<minShared)continue;
+  for(const rb of ringsB)for(let j=0;j<rb.length-1;j++){
+   const r=rb[j],t=rb[j+1],ex=t[0]-r[0],ey=t[1]-r[1],elen=Math.hypot(ex,ey);
+   if(elen<minShared||Math.abs(dx*ey-dy*ex)/len>tolerance)continue;
+   if(Math.abs(dx*(r[1]-p[1])-dy*(r[0]-p[0]))/len>tolerance)continue;
+   const ux=dx/len,uy=dy/len,pr=(r[0]-p[0])*ux+(r[1]-p[1])*uy,pt=(t[0]-p[0])*ux+(t[1]-p[1])*uy;
+   const overlap=Math.min(len,Math.max(pr,pt))-Math.max(0,Math.min(pr,pt));
+   if(overlap>=minShared)return true;
+  }
+ }
+ return false;
+}
+function getYerevanDistrictAdjacency(features){
+ if(yerevanDistrictAdjacencyCache)return yerevanDistrictAdjacencyCache;
+ const graph=new Map(features.map(f=>[districtNameFromFeature(f),[]]));
+ for(let i=0;i<features.length;i++)for(let j=i+1;j<features.length;j++){
+  const a=districtNameFromFeature(features[i]),b=districtNameFromFeature(features[j]);
+  if(a&&b&&sharedDistrictBoundary(features[i],features[j])){graph.get(a).push(b);graph.get(b).push(a);}
+ }
+ yerevanDistrictAdjacencyCache=graph;return graph;
+}
+function getShortestDistrictSequence(start,end,features){
+ if(start===end)return [start];
+ const graph=getYerevanDistrictAdjacency(features),queue=[[start]],visited=new Set([start]);
+ while(queue.length){
+  const path=queue.shift(),last=path[path.length-1];
+  for(const next of graph.get(last)||[]){
+   if(visited.has(next))continue;
+   const candidate=[...path,next];if(next===end)return candidate;
+   visited.add(next);queue.push(candidate);
+  }
+ }
+ throw new Error('Ընտրված վարչական շրջանների միջև քարտեզային հարևանությունը հնարավոր չեղավ հաստատել։ Սակագինը չի հաշվարկվել։');
+}
+function YEREVAN_FARE_BY_DISTRICTS(pickupDistrict,destinationDistrict,features){
+ const routeDistricts=getShortestDistrictSequence(pickupDistrict,destinationDistrict,features);
+ const intermediateDistricts=routeDistricts.slice(1,-1);
+ const endpointDistrictSurchargeAmd=pickupDistrict===destinationDistrict?0:5000;
  const intermediateDistrictSurchargeAmd=intermediateDistricts.length*3000;
- return {baseFareAmd:7000+endpointDistrictSurchargeAmd+intermediateDistrictSurchargeAmd,intermediateDistricts,endpointDistrictSurchargeAmd,intermediateDistrictSurchargeAmd};
-};
+ return {baseFareAmd:7000+endpointDistrictSurchargeAmd+intermediateDistrictSurchargeAmd,routeDistricts,intermediateDistricts,districtCount:routeDistricts.length,endpointDistrictSurchargeAmd,intermediateDistrictSurchargeAmd};
+}
+async function calculateYerevanDistrictFare(pickupDistrict,destinationDistrict){
+ const features=await getYerevanDistrictFeatures();
+ const names=new Set(features.map(districtNameFromFeature));
+ if(!names.has(pickupDistrict)||!names.has(destinationDistrict))throw new Error('Ընտրեք Երևանի քարտեզում առկա երկու վարչական շրջանները։');
+ return {pickupDistrict,destinationDistrict,...YEREVAN_FARE_BY_DISTRICTS(pickupDistrict,destinationDistrict,features)};
+}
 async function fetchJsonWithTimeout(url,options={},timeoutMs=18000){
  const response=await fetch(url,{...options,signal:AbortSignal.timeout(timeoutMs)});
  if(!response.ok)throw new Error('Քարտեզային ծառայությունը չպատասխանեց։');
@@ -412,37 +464,36 @@ app.get('/api/geo/streets',auth,asyncRoute(async(req,res)=>{
 
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
- const input=z.object({pickupAddress:z.string().trim().min(3).max(250),destinationAddress:z.string().trim().min(3).max(250),isUrgent:z.boolean().default(false),extraChargeAmd:z.number().int().min(0).max(1000000).default(0)}).parse(req.body);
+ const input=z.object({pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),isUrgent:z.boolean().default(false),extraChargeAmd:z.number().int().min(0).max(1000000).default(0)}).parse(req.body);
  try {
-  const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
+  const fare=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
   const demand=await getUrgentDemandCoefficient(input.isUrgent);
-  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(fare.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
-  const quotedFareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
-  res.json({routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,districtCount:route.districtCount,neighborhoodCount:route.routeNeighborhoods.length,neighborhoodCoverage:route.neighborhoodCoverage,pickupDistrict:route.pickupDistrict,destinationDistrict:route.destinationDistrict,distanceMeters:route.distanceMeters,durationSeconds:route.durationSeconds,baseFareAmd:route.baseFareAmd,demandCoefficientPercent:demand.demandCoefficientPercent,pendingUrgentOrders:demand.pendingUrgentOrders||0,demandExtraChargeAmd,urgentExtraChargeAmd,quotedFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon},destination:{lat:route.destination.lat,lon:route.destination.lon}});
+  const quotedFareAmd=fare.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
+  res.json({...fare,demandCoefficientPercent:demand.demandCoefficientPercent,pendingUrgentOrders:demand.pendingUrgentOrders||0,demandExtraChargeAmd,urgentExtraChargeAmd,quotedFareAmd});
  } catch(error) {
-  console.warn('Route fare quote could not be calculated:',error.message);
-  res.status(422).json({error:error.message||'Հասցեների երթուղին հնարավոր չեղավ հաշվարկել։'});
+  console.warn('District fare quote could not be calculated:',error.message);
+  res.status(422).json({error:error.message||'Վարչական շրջանների սակագինը հնարավոր չեղավ հաշվարկել։'});
  }
 }));
 
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const input = z.object({
-    pickupAddress:z.string().trim().min(3).max(250),destinationAddress:z.string().trim().min(3).max(250),
-    fareAmd:z.number().int().min(1000).max(1000000).optional(),extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
+    pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),
+    extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),isTest:z.boolean().default(false)
   }).parse(req.body);
-  const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
-  const pickupAddress=input.pickupAddress,destinationAddress=input.destinationAddress;
-  const demandEligibleUrgent=isUrgent&&input.scheduleType==='NOW';
-  const demand=await getUrgentDemandCoefficient(demandEligibleUrgent);
-  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,demandEligibleUrgent,demand.demandCoefficientPercent);
-  const urgentExtraChargeAmd=isUrgent?2500+demandExtraChargeAmd:0;
+  const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
+  const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
+  const demand=await getUrgentDemandCoefficient(input.isUrgent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
+  const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
-  res.status(201).json({order,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,districtCount:route.districtCount,neighborhoodCount:route.routeNeighborhoods.length,distanceMeters:route.distanceMeters,message:'Երթուղին ստուգվեց Երևանի վարչական շրջանների և թաղամասերի GIS սահմաններով։'});
+  res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Գինը հաշվարկվել է միայն Երևանի վարչական շրջանների քարտեզով։'});
 }));
 
 app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
@@ -490,8 +541,8 @@ app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (
 
 app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const input=z.object({
-    pickupAddress:z.string().trim().min(3).max(250),
-    destinationAddress:z.string().trim().min(3).max(250),
+    pickupDistrict:z.string().trim().min(2).max(80),
+    destinationDistrict:z.string().trim().min(2).max(80),
     fareAmd:z.number().int().min(1000).max(1000000).optional(),extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     phonePrimary:z.string().trim().min(5).max(30),
     phoneSecondary:z.string().trim().min(5).max(30).optional().or(z.literal('')),
@@ -509,8 +560,8 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const scheduledAt=input.scheduleType==='NOW'?null:new Date(input.scheduledAt);
    const isUrgent=input.scheduleType==='NOW'?input.isUrgent:(scheduledAt.getTime()>Date.now()+60*60*1000&&input.isUrgent);
   if(scheduledAt&&scheduledAt.getTime()<=Date.now())return res.status(400).json({error:'Պատվերի նախատեսված ժամը պետք է լինի ապագայում։'});
-  const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
-  const pickupAddress=input.pickupAddress,destinationAddress=input.destinationAddress;
+  const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
+  const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
   const demand=await getUrgentDemandCoefficient(isUrgent);
   const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=isUrgent?2500+demandExtraChargeAmd:0;
@@ -532,7 +583,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   try {
     order=await prisma.order.create({data:{
       customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
-      destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeDistanceMeters:route.distanceMeters,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
+      destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
       vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note
     }});
