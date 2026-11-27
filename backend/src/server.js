@@ -202,7 +202,7 @@ let yerevanDistrictFeaturesCache=null, yerevanDistrictFeaturesFetchedAt=0;
 let yerevanNeighborhoodFeaturesCache=null, yerevanNeighborhoodFeaturesFetchedAt=0;
 const yerevanGeocodeCache=new Map();
 let lastYerevanGeocodeAt=0;
-const YEREVAN_FARE_BY_DISTRICT_COUNT=count=>count<=1?7000:10000+(count-2)*2500;
+const YEREVAN_FARE_BY_NEIGHBORHOOD_COUNT=count=>count<=1?7000:10000+(count-2)*2500;
 async function fetchJsonWithTimeout(url,options={},timeoutMs=18000){
  const response=await fetch(url,{...options,signal:AbortSignal.timeout(timeoutMs)});
  if(!response.ok)throw new Error('Քարտեզային ծառայությունը չպատասխանեց։');
@@ -329,7 +329,7 @@ async function calculateYerevanRoute(pickupAddress,destinationAddress){
  const neighborhoodResult=neighborhoodSequenceForRoute(coords,neighborhoodFeatures);
  const routeNeighborhoods=neighborhoodResult.sequence;
  const neighborhoodCount=new Set(routeNeighborhoods).size;
- return {pickup,destination,routeDistricts,routeNeighborhoods,neighborhoodCount,neighborhoodCoverage:Number(neighborhoodResult.coverage.toFixed(4)),distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_DISTRICT_COUNT(neighborhoodCount)};
+ return {pickup,destination,routeDistricts,routeNeighborhoods,neighborhoodCount,neighborhoodCoverage:Number(neighborhoodResult.coverage.toFixed(4)),distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_NEIGHBORHOOD_COUNT(neighborhoodCount)};
 }
 
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
