@@ -203,7 +203,7 @@ app.get('/api/site-content',asyncRoute(async(_req,res)=>{const r=await prisma.si
 app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const input=z.object({content:z.record(z.string(),z.string())}).parse(req.body);const existing=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(existing?.content&&typeof existing.content==='object'?existing.content:{}),...Object.fromEntries(Object.entries(input.content).map(([k,v])=>[k,v.slice(0,12000)]))};const r=await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});io.emit('site-content:updated',{updatedAt:r.updatedAt});res.json({success:true,content:r.content,updatedAt:r.updatedAt,message:'Կայքի բովանդակությունը պահպանվեց և հրապարակվեց։'})}));
 app.get('/api/tariffs',asyncRoute(async(_req,res)=>{const row=await prisma.siteContent.findUnique({where:{id:'main'}});const tariffs=Array.isArray(row?.content?.tariffs)?row.content.tariffs:[];res.json({tariffs:tariffs.filter(item=>item&&item.active!==false)});}));
 app.put('/api/admin/tariffs',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const input=z.object({tariffs:z.array(z.object({id:z.string().trim().min(1).max(80),title:z.string().trim().min(2).max(120),description:z.string().trim().max(2000),priceAmd:z.number().int().min(0).max(100000000),image:z.string().max(5_000_000).optional().default(''),active:z.boolean().default(true)})).max(100)}).parse(req.body);
+ const input=z.object({tariffs:z.array(z.object({id:z.string().trim().min(1).max(80),title:z.string().trim().min(2).max(120),description:z.string().trim().max(2000),requirements:z.string().trim().max(2000).optional().default(''),extraInfo:z.string().trim().max(1500).optional().default(''),dispatchMode:z.enum(['NETWORK','CATEGORY']).optional().default('NETWORK'),requiredLicenseCategory:z.string().trim().max(5).optional().default(''),priceAmd:z.number().int().min(0).max(100000000),image:z.string().max(5_000_000).optional().default(''),active:z.boolean().default(true)}).refine(item=>item.dispatchMode!=='CATEGORY'||Boolean(item.requiredLicenseCategory),{message:'Ընտրեք պարտադիր վարորդական կարգը։'})).max(100)}).parse(req.body);
  const row=await prisma.siteContent.findUnique({where:{id:'main'}});
  const content={...(row?.content&&typeof row.content==='object'?row.content:{}),tariffs:input.tariffs};
  await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});
@@ -716,7 +716,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
-        ...(categories.length?[{dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories}}]:[]),
+        ...(categories.length?[{dispatchMode:'CATEGORY',driverId:null,OR:[{requiredLicenseCategory:{in:categories}},{requiredLicenseCategory:''}]}]:[]),
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ],
       ...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})
