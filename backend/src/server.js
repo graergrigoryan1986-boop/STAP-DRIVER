@@ -537,7 +537,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,totalExtraAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+totalExtraAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   const event={id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
   if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else io.to('drivers').emit('order:new',event);
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Պատվերը հրապարակվեց՝ ընտրված ծառայության և համապատասխան վարորդների պայմաններով։'});
@@ -569,7 +569,7 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
   if(!customer)customer=await prisma.user.create({data:{name:input.name,email,phone:input.phone,passwordHash:await bcrypt.hash(randomBytes(32).toString('hex'),12),role:'CUSTOMER'}});
  }
  const order=await prisma.order.create({data:{
-  customerId:customer.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,phonePrimary:input.phone,
+  customerId:customer.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,phonePrimary:input.phone,
   pickupAddress:route.pickupDistrict+' վարչական շրջան',destinationAddress:route.destinationDistrict+' վարչական շրջան',
   routeDistricts:route.routeDistricts,routeNeighborhoods:[],fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,
   transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
@@ -684,7 +684,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   let order;
   try {
     order=await prisma.order.create({data:{
-      customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
+      customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
       destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
       vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
@@ -815,7 +815,7 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   const minimumBalanceAmd = Number.isInteger(Number(rawMinimum)) && Number(rawMinimum) >= 0 ? Number(rawMinimum) : 0;
   const personalNegativeLimitAmd = Number.isInteger(req.user.driverNegativeBalanceLimitAmd) ? req.user.driverNegativeBalanceLimitAmd : 0;
   const minimumAllowedBalanceAmd = personalNegativeLimitAmd > 0 ? -personalNegativeLimitAmd : minimumBalanceAmd;
-  const commissionBaseAmd=Math.max(0,requestedOrder.fareAmd-(requestedOrder.urgentExtraChargeAmd||0));
+  const commissionBaseAmd=Math.max(0,requestedOrder.fareAmd-(requestedOrder.demandCoefficientChargeAmd||0));
   const commissionAmd = requestedOrder.isTest ? 0 : Math.round(commissionBaseAmd * 0.25);
   let result;
   try {
@@ -1012,18 +1012,25 @@ app.patch('/api/drivers/capabilities',auth,only('DRIVER'),asyncRoute(async(req,r
  const user=await prisma.user.update({where:{id:req.user.id},data:{driverServiceCapabilities:[...new Set(input.capabilities)]}});
  res.json({user:publicUser(user),message:'Հատուկ ծառայությունների հմտությունները պահպանվեցին։'});
 }));
+async function attachWalletOrderDetails(transactions){
+ const orderIds=[...new Set(transactions.map(item=>item.orderId).filter(Boolean))];
+ if(!orderIds.length)return transactions;
+ const orders=await prisma.order.findMany({where:{id:{in:orderIds}},select:{id:true,fareAmd:true,demandCoefficientChargeAmd:true,commissionAmd:true,commissionRate:true}});
+ const byId=new Map(orders.map(order=>[order.id,{id:order.id,actualFareAmd:Math.max(0,order.fareAmd-(order.demandCoefficientChargeAmd||0)),commissionAmd:order.commissionAmd||0,commissionRate:order.commissionRate||0}]));
+ return transactions.map(item=>({...item,orderDetails:item.orderId?byId.get(item.orderId)||null:null}));
+}
 app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res) => {
   const transactions = await prisma.walletTransaction.findMany({
     where: { userId: req.user.id }, orderBy: { createdAt: 'desc' }, take: 100
   });
-  res.json({ transactions });
+  res.json({ transactions: await attachWalletOrderDetails(transactions) });
 }));
 
 app.get('/api/admin/drivers/:id/transactions', auth, only('ADMIN'), asyncRoute(async (req, res) => {
   const transactions = await prisma.walletTransaction.findMany({
     where: { userId: req.params.id }, orderBy: { createdAt: 'desc' }
   });
-  res.json({ transactions });
+  res.json({ transactions: await attachWalletOrderDetails(transactions) });
 }));
 
 app.post('/api/drivers/location', auth, only('DRIVER'), asyncRoute(async (req, res) => {
