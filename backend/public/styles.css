@@ -1434,3 +1434,21 @@ body.authenticated footer{display:none!important}
 @media(prefers-reduced-motion:reduce){
  #dashboard *,#appPanel *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+
+/* Phone-based guest booking and admin tariff catalogue */
+.guest-booking-card{margin-top:24px;padding:18px 20px;border:1px solid rgba(200,166,107,.38);border-radius:14px;background:linear-gradient(145deg,rgba(200,166,107,.09),rgba(17,19,23,.96))}
+.guest-booking-card>summary{cursor:pointer;color:var(--gold2);font-weight:800;letter-spacing:.04em}
+.guest-booking-card[open]>summary{margin-bottom:16px}
+.guest-booking-card .urgent-order-toggle{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px;border:1px solid rgba(200,166,107,.5);border-radius:10px;background:rgba(200,166,107,.08);color:var(--gold2);font-weight:800}
+.guest-booking-card .urgent-order-toggle input{width:20px;height:20px;accent-color:var(--gold)}
+.guest-booking-card .urgent-order-toggle small{width:100%;padding-left:30px;color:var(--muted);font-weight:500}
+.admin-tariff-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.admin-tariff-row>label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:13px}
+.admin-tariff-row>label:nth-of-type(3){grid-column:1/-1}
+.admin-tariff-row input:not([type=checkbox]),.admin-tariff-row textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--white)}
+.admin-tariff-row [data-image-preview]{border-radius:8px;border:1px solid var(--line)}
+.admin-tariff-row .inline-check{flex-direction:row;align-items:center}
+.driver-pending-card[open]{border-color:rgba(200,166,107,.5);box-shadow:0 8px 28px rgba(0,0,0,.2)}
+.driver-pending-card[open]>.driver-order-card{margin-top:12px}
+@media(max-width:640px){.admin-tariff-row{grid-template-columns:1fr}.admin-tariff-row>label:nth-of-type(3){grid-column:auto}}
