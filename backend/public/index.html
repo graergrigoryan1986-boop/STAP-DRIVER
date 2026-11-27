@@ -27,6 +27,7 @@
 <p class="fineprint">Մուտքագրեք անունն ու հեռախոսահամարը։ Պատվերը կհայտնվի ադմինի և վարորդների մոտ։ Նույն համարով հետագա պատվերներն ու գնահատականները կպահպանվեն միասին։</p>
 <form id="guestOrderForm" class="form-grid">
 <label class="field full">Անուն Ազգանուն<input name="name" required minlength="2" maxlength="100" placeholder="Ձեր անունը"></label>
+<label class="field full">Ծառայության ընտրություն<select name="serviceId" id="guestServiceSelect"><option value="">Սովորական սթափ վարորդ</option></select></label><div id="guestServiceDetails" class="customer-service-details full" hidden></div>
 <label class="field full">Հեռախոսահամար<input name="phone" type="tel" required minlength="7" maxlength="30" placeholder="+374 ..."></label>
 <label class="field">Մեկնարկի վարչական շրջան<select name="pickupDistrict" required><option value="">Ընտրեք շրջանը</option></select></label>
 <label class="field">Նպատակակետի վարչական շրջան<select name="destinationDistrict" required><option value="">Ընտրեք շրջանը</option></select></label>
