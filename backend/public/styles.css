@@ -1452,3 +1452,42 @@ body.authenticated footer{display:none!important}
 .driver-pending-card[open]{border-color:rgba(200,166,107,.5);box-shadow:0 8px 28px rgba(0,0,0,.2)}
 .driver-pending-card[open]>.driver-order-card{margin-top:12px}
 @media(max-width:640px){.admin-tariff-row{grid-template-columns:1fr}.admin-tariff-row>label:nth-of-type(3){grid-column:auto}}
+
+/* Mediterranean Maltese-market inspired order desk */
+.driver-open-orders-feature{position:relative;margin:26px 0 30px;padding:24px;border:1px solid rgba(197,160,93,.48);border-radius:20px;background:radial-gradient(circle at 100% 0,rgba(38,92,88,.32),transparent 38%),linear-gradient(135deg,#f1e7d2 0%,#e4d7bd 38%,#f8f2e7 100%);color:#20302e;box-shadow:0 18px 50px rgba(0,0,0,.18)}
+.driver-open-orders-feature .driver-pending-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;border-bottom:1px solid rgba(81,77,61,.2);padding-bottom:16px;margin-bottom:16px}
+.driver-open-orders-feature .driver-pending-heading h3{color:#174a46;font-family:Georgia,serif;letter-spacing:.06em;font-size:20px}
+.driver-open-orders-feature .driver-pending-heading p{color:#5d6258}
+.driver-open-order-tools{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.driver-open-orders-feature .driver-pending-count{background:#174a46;color:#fff;border:1px solid #c4a15d;min-width:38px}
+.driver-open-orders-feature .action{background:#174a46;color:#fff;border-color:#c4a15d}
+.driver-open-orders-feature .driver-pending-card{border:1px solid #c4a15d;border-radius:14px;background:#fffaf0;color:#263331;overflow:hidden;box-shadow:0 7px 20px rgba(33,43,39,.09)}
+.driver-open-orders-feature .driver-pending-card>summary{display:grid;grid-template-columns:auto auto auto;gap:8px 14px;padding:16px;color:#263331}
+.driver-open-orders-feature .driver-pending-card-price{color:#174a46;font-size:21px}
+.driver-open-orders-feature .driver-pending-card-route{grid-column:1/-1;color:#354c49;font-weight:700}
+.driver-open-orders-feature .driver-pending-card-meta{color:#68716a}
+.driver-open-orders-feature .driver-pending-card-toggle{grid-column:1/-1;color:#956e2e;font-weight:800}
+.driver-open-orders-feature .driver-order-card{margin:0;padding:18px;background:#f8f3e8;border:0;border-top:1px solid #d9c69d;color:#253331}
+.driver-open-orders-feature .driver-order-fact strong,.driver-open-orders-feature .driver-order-price strong{color:#174a46}
+.driver-open-orders-feature .driver-order-actions .action{background:#174a46;color:#fff}
+.driver-open-orders-feature .driver-contact-locked{background:#eee4d0;color:#5c5547}
+.driver-open-orders-feature .urgent-order-badge{background:#f7e6c8;color:#744514;border:1px solid #d8b36c}
+.driver-open-orders-feature .driver-orders-empty{color:#40514b;background:rgba(255,255,255,.6);border:1px dashed #b99a5d;border-radius:12px;padding:22px}
+.admin-order-archive-tools{margin:18px 0 24px;padding:22px;border:1px solid #b79b68;border-radius:18px;background:linear-gradient(135deg,#123e3b,#1b514c 52%,#d6c39e 180%);color:#f8f1e5;box-shadow:0 12px 32px rgba(10,35,32,.16)}
+.archive-kicker{font-size:10px;letter-spacing:.2em;color:#e2c58c;font-weight:900}
+.admin-order-archive-tools h4{margin:5px 0;color:#fff3d8;font:700 22px Georgia,serif}
+.admin-order-archive-tools p{margin:0 0 14px;color:#d9d7c9}
+.admin-order-archive-form{display:grid;grid-template-columns:minmax(180px,1fr) minmax(190px,.8fr) auto;align-items:end;gap:12px}
+.admin-order-archive-form label{display:grid;gap:6px;color:#f2dfb8;font-size:12px;font-weight:700}
+.admin-order-archive-form input,.admin-order-archive-form select{width:100%;min-height:44px;padding:10px 12px;border:1px solid rgba(225,198,143,.55);border-radius:9px;background:#f9f5eb;color:#253b37}
+.admin-order-archive-form button{min-height:44px;background:#d0ad6d;color:#183c37;border-color:#f2d89f;font-weight:900}
+.admin-order-archive-results{display:grid;gap:10px;margin-top:18px}
+.archive-result-heading{display:flex;justify-content:space-between;gap:10px;color:#fff0ce}
+.archive-order-card{padding:14px 16px;border:1px solid rgba(226,201,152,.5);border-radius:12px;background:#f8f2e5;color:#243b36}
+.archive-order-card p{margin:10px 0 0;color:#58635c;font-size:13px}
+.archive-order-card-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.archive-order-card-top>b{margin-left:auto;color:#174a46;font-size:18px}
+.archive-status{padding:4px 9px;border-radius:30px;font-size:11px;font-weight:900}
+.archive-status.completed{background:#d8eadc;color:#245d39}.archive-status.cancelled{background:#f4d9d4;color:#8a332b}
+.archive-loading,.archive-error{padding:12px;color:#fff0ce}
+@media(max-width:700px){.admin-order-archive-form{grid-template-columns:1fr}.driver-open-orders-feature .driver-pending-heading{align-items:flex-start;flex-direction:column}.driver-open-order-tools{width:100%;justify-content:flex-start}.driver-open-orders-feature .driver-pending-card>summary{grid-template-columns:1fr}}
