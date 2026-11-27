@@ -170,7 +170,7 @@ function bindFareCalculator(form){
  if(!form)return;
  const pickup=form.querySelector('[name="pickupAddress"]'),destination=form.querySelector('[name="destinationAddress"]'),extra=form.querySelector('[name="extraChargeAmd"]'),fare=form.querySelector('[name="fareAmd"]'),summary=form.querySelector('[data-fare-breakdown]'),preview=form.querySelector('[data-route-preview]');
  if(!pickup||!destination||!extra||!fare)return;
- let timer=null,requestNo=0,lastQuote=null;
+ let timer=null,requestNo=0,lastQuote=null,lastQuoteKey='';
  const updateTotal=()=>{
   if(!lastQuote)return;
   const surcharge=Math.max(0,Math.round(Number(extra.value)||0)),total=lastQuote.baseFareAmd+surcharge;
@@ -180,11 +180,11 @@ function bindFareCalculator(form){
  const refresh=async()=>{
   const from=pickup.value.trim(),to=destination.value.trim();
   if(from.length<3||to.length<3){lastQuote=null;fare.value='';if(preview)preview.textContent='Նշեք երկու հասցեները․ համակարգը քարտեզով կհաշվի երթուղին և գինը։';if(summary)summary.textContent='';return false}
-  const id=++requestNo;if(preview)preview.textContent='Քարտեզի վրա հաշվարկվում է երթուղին…';fare.value='';
+  const quoteKey=from+' → '+to;if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}const id=++requestNo;if(preview)preview.textContent='Քարտեզի վրա հաշվարկվում է երթուղին…';fare.value='';
   try{
    const quote=await api('/api/routes/quote',{method:'POST',body:JSON.stringify({pickupAddress:from,destinationAddress:to})});
    if(id!==requestNo)return false;
-   lastQuote=quote;updateTotal();
+   lastQuote=quote;lastQuoteKey=quoteKey;updateTotal();
    const km=(quote.distanceMeters/1000).toFixed(1).replace('.',',');
    const minutes=Math.max(1,Math.round(quote.durationSeconds/60));
    if(preview)preview.textContent='🗺️ Երթուղի՝ '+quote.routeDistricts.join(' → ')+' · '+km+' կմ · մոտ '+minutes+' րոպե · '+quote.districtCount+' վարչական շրջան'+(quote.pickup?.neighborhood?' · Մեկնարկի թաղամաս՝ '+quote.pickup.neighborhood:'')+(quote.destination?.neighborhood?' · Նպատակակետի թաղամաս՝ '+quote.destination.neighborhood:'');
@@ -197,8 +197,8 @@ function bindFareCalculator(form){
    return false;
   }
  };
- const schedule=()=>{clearTimeout(timer);form.dataset.routeQuoteReady='false';timer=setTimeout(refresh,1000)};
- [pickup,destination].forEach(el=>{el.addEventListener('input',schedule);el.addEventListener('blur',refresh)});
+ const schedule=()=>{clearTimeout(timer);form.dataset.routeQuoteReady='false';lastQuote=null;lastQuoteKey='';fare.value='';if(summary)summary.textContent='';timer=setTimeout(refresh,1000)};
+ [pickup,destination].forEach(el=>el.addEventListener('input',schedule));
  extra.addEventListener('input',updateTotal);extra.addEventListener('change',updateTotal);
  form._refreshRouteQuote=async()=>{clearTimeout(timer);if(lastQuote&&form.dataset.routeQuoteReady==='true')return true;return refresh()};
  if(pickup.value&&destination.value)refresh();
