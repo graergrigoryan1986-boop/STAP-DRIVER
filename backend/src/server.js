@@ -342,6 +342,24 @@ async function calculateYerevanRoute(pickupAddress,destinationAddress){
 
 app.get('/api/geo/neighborhoods',auth,asyncRoute(async(req,res)=>{const features=await getYerevanNeighborhoodFeatures();const names=[...new Set(features.map(neighborhoodNameFromFeature).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'hy'));res.json({neighborhoods:names});}));
 
+app.get('/api/geo/streets',auth,asyncRoute(async(req,res)=>{
+ const district=String(req.query.district||'').trim(),q=String(req.query.q||'').trim();
+ const allowed=['Աջափնյակ','Ավան','Արաբկիր','Դավթաշեն','Էրեբունի','Քանաքեռ-Զեյթուն','Կենտրոն','Մալաթիա-Սեբաստիա','Նոր Նորք','Նորք-Մարաշ','Նուբարաշեն','Շենգավիթ'];
+ if(!allowed.includes(district))return res.status(400).json({error:'Ընտրեք Երևանի վարչական շրջանը։'});
+ if(q.length<2)return res.json({streets:[]});
+ const features=await getYerevanDistrictFeatures();
+ const url=new URL('https://nominatim.openstreetmap.org/search');
+ url.searchParams.set('q',q+', '+district+', Երևան, Հայաստան');
+ url.searchParams.set('format','jsonv2');url.searchParams.set('limit','15');url.searchParams.set('addressdetails','1');url.searchParams.set('countrycodes','am');
+ url.searchParams.set('viewbox','44.30,40.35,44.75,40.00');url.searchParams.set('bounded','1');url.searchParams.set('accept-language','hy,en');
+ const results=await fetchJsonWithTimeout(url.toString(),{headers:{'User-Agent':'STAP-DRIVER/1.0','Accept-Language':'hy,en'}});
+ const streets=[...new Set((Array.isArray(results)?results:[]).filter(item=>{
+  const lat=Number(item.lat),lon=Number(item.lon);
+  return Number.isFinite(lat)&&Number.isFinite(lon)&&districtForPoint({lat,lon},features)===district;
+ }).map(item=>item.address?.road||item.address?.pedestrian||item.address?.residential||item.name).filter(Boolean))].slice(0,8);
+ res.json({streets});
+}));
+
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
  const input=z.object({pickupAddress:z.string().trim().min(3).max(250),destinationAddress:z.string().trim().min(3).max(250)}).parse(req.body);
