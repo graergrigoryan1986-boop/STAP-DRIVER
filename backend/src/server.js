@@ -104,8 +104,7 @@ function transliterateArmenian(value) {
   return Array.from(String(value||'').toUpperCase()).map(ch=>map[ch]||ch).join('');
 }
 function labelledDate(raw, labels) {
-  const lines=String(raw||'').split(/\r?
-/).map(x=>x.trim()).filter(Boolean);
+  const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   const datePattern=/(\d{4}[./-]\d{2}[./-]\d{2}|\d{2}[./-]\d{2}[./-]\d{4})/;
   for(let i=0;i<lines.length;i++){
     if(!labels.some(label=>label.test(lines[i])))continue;
