@@ -971,3 +971,27 @@ body.authenticated footer{display:none!important}
  .driver-sidebar .driver-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:480px){.driver-sidebar .driver-overview{grid-template-columns:1fr 1fr}.driver-main>.dash-section{padding:13px}}
+
+
+/* 90-day rating trend and mandatory low-score reasons */
+.rating-trend-card{grid-column:1/-1;display:grid;gap:8px;padding:13px 14px;border:1px solid rgba(201,164,91,.38);border-radius:13px;background:linear-gradient(145deg,rgba(201,164,91,.10),rgba(17,19,23,.92));color:#ead8b4}
+.rating-trend-card>strong{font-size:10px;letter-spacing:.08em;color:#d9b875}
+.rating-trend-numbers{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.rating-trend-numbers b{font-size:22px;color:#f2d493}
+.rating-trend-numbers span,.rating-trend-card small{font-size:10px;color:#b9ad98}
+.rating-trend-bars{height:58px;display:flex;align-items:flex-end;gap:4px;padding:5px 0 2px;border-bottom:1px solid rgba(201,164,91,.25)}
+.rating-trend-bars span{flex:1;min-width:3px;border-radius:4px 4px 1px 1px;background:linear-gradient(180deg,#e8c77e,#98733b);opacity:.9}
+.rating-trend-summary{display:grid;gap:4px;margin:9px 0 12px;padding:10px 12px;border:1px solid rgba(201,164,91,.28);border-radius:10px;background:rgba(201,164,91,.08);color:#e9d5ad}
+.rating-trend-summary strong{font-size:13px;color:#e8c77e}
+.rating-trend-summary span,.rating-user-phone{font-size:11px;color:#b7a98f}
+.rating-admin-row{align-items:flex-start}
+.rating-admin-row>div{min-width:0;overflow-wrap:anywhere}
+.rating-admin-row small{display:block;line-height:1.55}
+.rating-reason-block{display:grid;gap:8px;padding:11px;border:1px solid rgba(235,175,87,.48);border-radius:10px;background:rgba(185,116,35,.10)}
+.rating-reason-block[hidden]{display:none}
+.rating-reason-block>strong{font-size:12px;color:#f0c77f;line-height:1.5}
+.rating-reason-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.rating-reason-options label{display:flex;align-items:flex-start;gap:7px;padding:8px;border:1px solid rgba(201,164,91,.24);border-radius:8px;background:rgba(255,255,255,.035);color:#eee2cb;font-size:11px;line-height:1.4}
+.rating-reason-options input{flex:none;margin-top:2px;accent-color:#d2ad68}
+.rating-submitted-note{margin-top:12px;padding:10px 12px;border:1px solid rgba(60,180,120,.35);border-radius:9px;background:rgba(40,130,80,.10);color:#9de0b8;font-weight:800;font-size:12px}
+@media(max-width:560px){.rating-reason-options{grid-template-columns:1fr}.rating-trend-card{padding:11px}}
