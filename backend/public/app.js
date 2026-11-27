@@ -49,7 +49,7 @@ function enhanceAdminBookingForm(form){
   ['neon-passenger-group','02 · ՈՒՂԵՎՈՐԻ ՏՎՅԱԼՆԵՐ',['[name="phonePrimary"]','[name="phoneSecondary"]','[name="passengerCount"]']],
   ['neon-vehicle-group','03 · ՄԵՔԵՆԱՅԻ ՊԱՀԱՆՋՆԵՐ',['[name="transmissionType"]','[name="vehicleFuelType"]']],
   ['neon-dispatch-group','04 · ՊԱՏՎԵՐԻ ԿԱՌԱՎԱՐՈՒՄ',['[name="scheduleType"]','[name="scheduledAtLocal"]','[name="dispatchMode"]','[name="driverId"]','[name="note"]','[name="isTest"]']],
-  ['neon-price-group','05 · ԳԻՆ ԵՎ ՀԱՍՏԱՏՈՒՄ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]','.urgent-order-toggle']
+  ['neon-price-group','05 · ԳԻՆ ԵՎ ՀԱՍՏԱՏՈՒՄ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]','.urgent-order-toggle']]
  ];
  const used=new Set([heading].filter(Boolean));
  for(const [className,title,selectors] of groups){
