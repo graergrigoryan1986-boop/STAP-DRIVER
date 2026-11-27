@@ -88,6 +88,10 @@ model Order {
   customerId         String
   driverId           String?
   dispatchMode       String      @default("NETWORK")
+  serviceId          String?
+  serviceTitle       String?
+  serviceRequirements String?
+  servicePriceAmd    Int         @default(0)
   pickupAddress      String
   destinationAddress String
   pickupLat          Float?
