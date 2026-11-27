@@ -57,8 +57,7 @@ const guestEmailForPhone = phone => 'guest+' + createHash('sha256').update(norma
 const LICENSE_CATEGORIES = ['AM','A1','A','B1','B','C1','C','D1','D','BE','C1E','CE','D1E','DE'];
 function extractLicenseCategories(raw) {
   const text = String(raw || '').toUpperCase().replace(/[|]/g, 'I');
-  const lines = text.split(/\r?
-/).map(line => line.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   const heading = lines.findIndex(line => /CATEGOR|CAT[ÉE]GOR|КАТЕГОР|ԿԱՐԳԵՐ|ԿԱՐԳԵՐԸ/.test(line));
   const source = heading >= 0 ? lines.slice(heading, heading + 18).join(' ') : text;
   const found = new Set();
