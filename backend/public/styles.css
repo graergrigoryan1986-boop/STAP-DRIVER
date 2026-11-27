@@ -945,3 +945,8 @@ body.authenticated footer{display:none!important}
 #orderForm .route-preview{color:#e7d5ae;background:rgba(198,163,94,.10)}
 #adminTestOrderForm .route-preview{color:#6b542d;background:#f7f0e2}
 #orderForm [name="pickupAddress"],#orderForm [name="destinationAddress"],#adminTestOrderForm [name="pickupAddress"],#adminTestOrderForm [name="destinationAddress"]{width:100%}
+
+
+/* Driver dashboard priority and next scheduled order */
+.driver-next-order-card{border:2px solid rgba(232,199,126,.9)!important;box-shadow:0 0 0 2px rgba(201,164,91,.12),0 14px 34px rgba(0,0,0,.28)!important}
+.driver-next-order-label{margin:-3px 0 14px;padding:10px 12px;border:1px solid rgba(232,199,126,.42);border-radius:9px;background:rgba(201,164,91,.12);color:#f0d69b;font-size:.78rem;font-weight:800;letter-spacing:.045em}
