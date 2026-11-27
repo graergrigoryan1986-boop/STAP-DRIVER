@@ -255,7 +255,9 @@ function bindFareCalculator(form){
  if(!form)return;
  form.classList.add('booking-form');
  if(!form.querySelector('.booking-form-heading'))form.insertAdjacentHTML('afterbegin','<div class="booking-form-heading"><span class="booking-kicker">STAP DRIVER · ԱՄՐԱԳՐՈՒՄ</span><h3>Կազմակերպեք ձեր ուղևորությունը</h3><p>Ընտրեք միայն մեկնարկային և վերջնակետային վարչական շրջանները։ Փողոցը և շենքի համարը սակագնի վրա չեն ազդում։</p></div>');
- const pickup=form.querySelector('[name="pickupAddress"]'),destination=form.querySelector('[name="destinationAddress"]'),extra=form.querySelector('[name="extraChargeAmd"]'),fare=form.querySelector('[name="fareAmd"]'),summary=form.querySelector('[data-fare-breakdown]'),preview=form.querySelector('[data-route-preview]');
+ const pickup=form.querySelector('[name="pickupAddress"]'),destination=form.querySelector('[name="destinationAddress"]'),extra=form.querySelector('[name="extraChargeAmd"]'),fare=form.querySelector('[name="fareAmd"]'),summary=form.querySelector('[data-fare-breakdown]'),preview=form.querySelector('[data-route-preview]'),serviceSelect=form.querySelector('[name="serviceId"]'),serviceDetails=form.querySelector('#customerServiceDetails');
+ const selectedService=()=>{const option=serviceSelect?.selectedOptions?.[0];return option?.value?{id:option.value,title:option.textContent.split(' · ')[0],priceAmd:Number(option.dataset.price||0),dispatchMode:option.dataset.dispatch||'NETWORK',requirements:option.dataset.requirement||''}:null};
+ const updateServiceDetails=()=>{const service=selectedService();if(!serviceDetails)return;serviceDetails.hidden=!service;serviceDetails.innerHTML=service?'<strong>'+esc(service.title)+'</strong><span>Ծառայության արժեք՝ '+money(service.priceAmd)+'</span><p>'+esc(service.requirements||'Հատուկ պայմաններ նշված չեն։')+'</p><small>'+(service.dispatchMode==='CATEGORY'?'Պատվերը կուղարկվի միայն համապատասխան վարորդական կարգ ունեցող վարորդներին։':'Պատվերը կհրապարակվի վարորդների ընդհանուր ցանցում։')+'</small>':''};
  const options='<option value="">Ընտրեք վարչական շրջանը</option>'+YEREVAN_DISTRICTS.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');
  const districtFields=[];
  [[pickup,'Մեկնարկի վարչական շրջան','pickupDistrict'],[destination,'Նպատակակետի վարչական շրջան','destinationDistrict']].forEach(([field,label,name])=>{
@@ -277,15 +279,15 @@ function bindFareCalculator(form){
  if(preview&&form.id!=='adminTestOrderForm')preview.insertAdjacentElement('afterend',fareGuide);
  if(!pickup||!destination||!extra||!fare)return;
  let timer=null,requestNo=0,lastQuote=null,lastQuoteKey='';
- const updateTotal=()=>{if(!lastQuote)return;const surcharge=Math.max(0,Math.round(Number(extra.value)||0))+(urgent?.checked?2500:0)+(urgent?.checked?Number(lastQuote.demandExtraChargeAmd||0):0),total=lastQuote.baseFareAmd+surcharge;fare.value=String(total);if(summary)summary.textContent='Մեկնարկ՝ '+lastQuote.pickupDistrict+' · Ավարտ՝ '+lastQuote.destinationDistrict+' · Միջանկյալ՝ '+(lastQuote.intermediateDistricts.length?lastQuote.intermediateDistricts.join(', '):'չկա')+' · Հավելավճար՝ '+money(surcharge)+(urgent?.checked&&lastQuote.demandCoefficientPercent?' · Պահանջարկի գործակից՝ +'+String(lastQuote.demandCoefficientPercent).replace('.',',')+'%':'')+' · Վերջնական արժեք՝ '+money(total)};
+ const updateTotal=()=>{if(!lastQuote)return;const service=selectedService(),surcharge=Math.max(0,Math.round(Number(extra.value)||0))+(service?.priceAmd||0)+(urgent?.checked?2500:0)+(urgent?.checked?Number(lastQuote.demandExtraChargeAmd||0):0),total=lastQuote.baseFareAmd+surcharge;fare.value=String(total);if(summary)summary.textContent='Մեկնարկ՝ '+lastQuote.pickupDistrict+' · Ավարտ՝ '+lastQuote.destinationDistrict+' · Միջանկյալ՝ '+(lastQuote.intermediateDistricts.length?lastQuote.intermediateDistricts.join(', '):'չկա')+' · Հավելավճար՝ '+money(surcharge)+(urgent?.checked&&lastQuote.demandCoefficientPercent?' · Պահանջարկի գործակից՝ +'+String(lastQuote.demandCoefficientPercent).replace('.',',')+'%':'')+' · Վերջնական արժեք՝ '+money(total)};
  const refresh=async()=>{
   const from=districtFields.find(x=>x.field===pickup)?.select.value||'',to=districtFields.find(x=>x.field===destination)?.select.value||'';
   if(!from||!to){lastQuote=null;fare.value='';if(preview)preview.textContent='Ընտրեք մեկնարկային և վերջնակետային վարչական շրջանները։';if(summary)summary.textContent='';return false}
   const scheduleField=form.querySelector('[name="scheduleType"]'),isUrgent=Boolean(urgent?.checked&&(!scheduleField||scheduleField.value==='NOW')),extraChargeAmd=Math.max(0,Math.round(Number(extra.value)||0));
-  const quoteKey=from+' → '+to+'|urgent:'+isUrgent+'|extra:'+extraChargeAmd;if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
+  const service=selectedService(),quoteExtra=extraChargeAmd+(service?.priceAmd||0),quoteKey=from+' → '+to+'|urgent:'+isUrgent+'|extra:'+quoteExtra+'|service:'+(service?.id||'');if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
   const id=++requestNo;if(preview)preview.textContent='Քարտեզի 12 վարչական շրջաններով որոշվում է միջանկյալ շրջանների քանակը…';fare.value='';
   try{
-   const quote=await api('/api/routes/quote',{method:'POST',body:JSON.stringify({pickupDistrict:from,destinationDistrict:to,isUrgent,extraChargeAmd})});
+   const quote=await api('/api/routes/quote',{method:'POST',body:JSON.stringify({pickupDistrict:from,destinationDistrict:to,isUrgent,extraChargeAmd:quoteExtra})});
    if(id!==requestNo)return false;lastQuote=quote;lastQuoteKey=quoteKey;updateTotal();
    if(preview)preview.innerHTML='<strong>🗺️ Վարչական շրջանների սակագին</strong><span>Մեկնարկ՝ <b>'+esc(quote.pickupDistrict)+'</b></span><span>Ավարտ՝ <b>'+esc(quote.destinationDistrict)+'</b></span><span>Քարտեզային հաջորդականություն՝ <b>'+esc(quote.routeDistricts.join(' → '))+'</b></span><span>Միջանկյալ շրջաններ՝ <b>'+quote.intermediateDistricts.length+'</b></span><strong>Հիմնական արժեք՝ '+money(quote.baseFareAmd)+'</strong>';
    form.dataset.routeQuoteReady='true';return true;
@@ -293,6 +295,7 @@ function bindFareCalculator(form){
  };
  const schedule=()=>{clearTimeout(timer);form.dataset.routeQuoteReady='false';lastQuote=null;lastQuoteKey='';fare.value='';if(summary)summary.textContent='';timer=setTimeout(refresh,250)};
  districtFields.forEach(x=>x.select.addEventListener('change',schedule));
+ serviceSelect?.addEventListener('change',()=>{updateServiceDetails();schedule()});updateServiceDetails();
  form.querySelector('[name="scheduleType"]')?.addEventListener('change',schedule);
  urgent?.addEventListener('change',schedule);extra.addEventListener('input',schedule);extra.addEventListener('change',schedule);
  form._refreshRouteQuote=async()=>{clearTimeout(timer);if(lastQuote&&form.dataset.routeQuoteReady==='true')return true;return refresh()};
@@ -332,7 +335,8 @@ function enhanceAdminBookingForm(form){
 }
 
 async function customerView(){
- const mine=await api('/api/orders/mine');
+ const [mine,serviceData]=await Promise.all([api('/api/orders/mine'),api('/api/tariffs')]);
+ const publishedServices=serviceData.tariffs||[];
  $('#dashboard').innerHTML=`
   <nav class="customer-quick-grid" aria-label="Հաճախորդի բաժիններ">
    <button type="button" data-customer-panel="new">＋<span>Նոր պատվեր</span></button>
@@ -342,6 +346,8 @@ async function customerView(){
   <section class="customer-panel" data-customer-content="new" hidden>
    <div class="customer-panel-head"><h3>Նոր պատվեր</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
    <form id="orderForm">
+    <label class="fare-field service-select-field"><span>Ընտրեք ծառայությունը</span><select name="serviceId" required><option value="">Ընտրեք ծառայությունը</option>${publishedServices.map(item=>'<option value="'+esc(item.id)+'" data-price="'+Number(item.priceAmd||0)+'" data-dispatch="'+esc(item.dispatchMode||'NETWORK')+'" data-requirement="'+esc(item.requirements||item.description||'')+'">'+esc(item.title)+' · '+money(item.priceAmd||0)+'</option>').join('')}</select></label>
+    <div id="customerServiceDetails" class="customer-service-details" hidden></div>
     <label>Վերցնելու հասցե<input name="pickupAddress" required minlength="3" placeholder="Փողոց, շենքի համար կամ օբյեկտ"></label>
     <label class="route-note-field">Մեկնարկի վայրի լրացուցիչ նշում<textarea name="pickupNote" rows="2" maxlength="500" placeholder="Ըստ ցանկության"></textarea></label>
     <label>Նպատակակետի հասցե<input name="destinationAddress" required minlength="3" placeholder="Փողոց, շենքի համար կամ օբյեկտ"></label>
@@ -389,6 +395,7 @@ async function customerView(){
    await api('/api/orders',{method:'POST',body:JSON.stringify({
     pickupDistrict:e.currentTarget._getDistrict(e.currentTarget.querySelector('[name="pickupAddress"]')),
     destinationDistrict:e.currentTarget._getDistrict(e.currentTarget.querySelector('[name="destinationAddress"]')),
+    serviceId:f.get('serviceId')||undefined,
     fareAmd:Number(f.get('fareAmd')),extraChargeAmd:Number(f.get('extraChargeAmd')||0),
     isUrgent:f.get('isUrgent')==='on',requiredLicenseCategory:f.get('requiredLicenseCategory'),
     transmissionType:f.get('transmissionType'),note:f.get('note')||undefined,
