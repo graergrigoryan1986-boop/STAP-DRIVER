@@ -820,15 +820,15 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   try {
     result = await prisma.$transaction(async tx => {
       const acceptedAt = new Date();
-      // Armenia local day (UTC+4): count only earlier completed surcharge orders.
+      // Armenia local day (UTC+4): count earlier accepted surcharge orders, excluding cancelled ones.
       const yerevanNow = new Date(acceptedAt.getTime() + 4 * 60 * 60 * 1000);
       const dayStart = new Date(Date.UTC(yerevanNow.getUTCFullYear(), yerevanNow.getUTCMonth(), yerevanNow.getUTCDate()) - 4 * 60 * 60 * 1000);
       const nextDayStart = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
       const previousCompletedSurchargeOrders = requestedOrder.isTest || !(requestedOrder.urgentExtraChargeAmd > 0)
         ? 0
         : await tx.order.count({ where: {
-            driverId: req.user.id, isTest: false, status: 'COMPLETED',
-            urgentExtraChargeAmd: { gt: 0 }, completedAt: { gte: dayStart, lt: nextDayStart }
+            driverId: req.user.id, isTest: false, status: { in: ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'] },
+            urgentExtraChargeAmd: { gt: 0 }, acceptedAt: { gte: dayStart, lt: nextDayStart }
           } });
       const urgentSurchargeAmd = Math.max(0, requestedOrder.urgentExtraChargeAmd || 0);
       const commissionBaseAmd = Math.max(0, requestedOrder.fareAmd - urgentSurchargeAmd);
