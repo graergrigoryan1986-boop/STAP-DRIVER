@@ -52,6 +52,8 @@ const publicUser = user => ({
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
   driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, driverExperienceMonths: user.driverExperienceMonths, dateOfBirth: user.dateOfBirth, createdAt: user.createdAt
 });
+const normalizePhone = value => String(value || '').replace(/[^0-9+]/g, '').replace(/^00/, '+');
+const guestEmailForPhone = phone => 'guest+' + createHash('sha256').update(normalizePhone(phone)).digest('hex').slice(0,32) + '@guest.stap.invalid';
 const LICENSE_CATEGORIES = ['AM','A1','A','B1','B','C1','C','D1','D','BE','C1E','CE','D1E','DE'];
 function extractLicenseCategories(raw) {
   const text = String(raw || '').toUpperCase().replace(/[|]/g, 'I');
@@ -159,14 +161,25 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
   const exists = await prisma.user.findUnique({ where: { email: input.email } });
   if (exists) return res.status(409).json({ error: 'Այս էլ․ փոստն արդեն գրանցված է' });
   const passwordHash = await bcrypt.hash(input.password, 12);
-  const user = await prisma.user.create({ data: {
-    name: input.name, email: input.email, phone: input.phone, passwordHash,
-    role: input.role, driverLicense: input.driverLicense || null,
-    driverFirstNameLatin: input.driverFirstNameLatin || null, driverLastNameLatin: input.driverLastNameLatin || null,
-    driverPatronymicLatin: input.driverPatronymicLatin || null, driverLicenseSeries: input.driverLicenseSeries || null,
-    driverLicenseExpiresAt: input.driverLicenseExpiresAt ? new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z') : null,
-    driverLicenseIssuedAt: input.driverLicenseIssuedAt ? new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z') : null
-  }});
+  const normalizedPhone=normalizePhone(input.phone);
+  const customers=await prisma.user.findMany({where:{role:'CUSTOMER'},select:{id:true,email:true,phone:true}});
+  const phoneCustomer=customers.find(person=>normalizePhone(person.phone)===normalizedPhone);
+  let user;
+  if(phoneCustomer&&phoneCustomer.email.endsWith('@guest.stap.invalid')&&input.role==='CUSTOMER'){
+    user=await prisma.user.update({where:{id:phoneCustomer.id},data:{
+      name:input.name,email:input.email,phone:input.phone,passwordHash
+    }});
+  }else{
+    if(phoneCustomer&&input.role==='CUSTOMER')return res.status(409).json({error:'Այս հեռախոսահամարն արդեն կապված է գրանցված հաճախորդի հաշվին։ Մուտք գործեք այդ հաշվով։'});
+    user=await prisma.user.create({data:{
+      name:input.name,email:input.email,phone:input.phone,passwordHash,role:input.role,
+      driverLicense:input.driverLicense||null,driverFirstNameLatin:input.driverFirstNameLatin||null,
+      driverLastNameLatin:input.driverLastNameLatin||null,driverPatronymicLatin:input.driverPatronymicLatin||null,
+      driverLicenseSeries:input.driverLicenseSeries||null,
+      driverLicenseExpiresAt:input.driverLicenseExpiresAt?new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z'):null,
+      driverLicenseIssuedAt:input.driverLicenseIssuedAt?new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z'):null
+    }});
+  }
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
 }));
 
@@ -180,6 +193,15 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
 
 app.get('/api/site-content',asyncRoute(async(_req,res)=>{const r=await prisma.siteContent.findUnique({where:{id:'main'}});res.json({content:r?.content||{}})}));
 app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const input=z.object({content:z.record(z.string(),z.string())}).parse(req.body);const existing=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(existing?.content&&typeof existing.content==='object'?existing.content:{}),...Object.fromEntries(Object.entries(input.content).map(([k,v])=>[k,v.slice(0,12000)]))};const r=await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});io.emit('site-content:updated',{updatedAt:r.updatedAt});res.json({success:true,content:r.content,updatedAt:r.updatedAt,message:'Կայքի բովանդակությունը պահպանվեց և հրապարակվեց։'})}));
+app.get('/api/tariffs',asyncRoute(async(_req,res)=>{const row=await prisma.siteContent.findUnique({where:{id:'main'}});const tariffs=Array.isArray(row?.content?.tariffs)?row.content.tariffs:[];res.json({tariffs:tariffs.filter(item=>item&&item.active!==false)});}));
+app.put('/api/admin/tariffs',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const input=z.object({tariffs:z.array(z.object({id:z.string().trim().min(1).max(80),title:z.string().trim().min(2).max(120),description:z.string().trim().max(2000),priceAmd:z.number().int().min(0).max(100000000),image:z.string().max(5_000_000).optional().default(''),active:z.boolean().default(true)})).max(100)}).parse(req.body);
+ const row=await prisma.siteContent.findUnique({where:{id:'main'}});
+ const content={...(row?.content&&typeof row.content==='object'?row.content:{}),tariffs:input.tariffs};
+ await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});
+ io.emit('site-content:updated',{kind:'tariffs',updatedAt:new Date()});
+ res.json({success:true,tariffs:input.tariffs,message:'Սակագների ցանկը պահպանվեց։'});
+}));
 app.get('/api/admin/wallet-settings',auth,only('ADMIN'),asyncRoute(async(_req,res)=>{const row=await prisma.siteContent.findUnique({where:{id:'main'}});const raw=row?.content?.minDriverBalanceAmd;const minimumBalanceAmd=Number.isInteger(Number(raw))&&Number(raw)>=0?Number(raw):0;res.json({minimumBalanceAmd});}));
 app.put('/api/admin/wallet-settings',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const {minimumBalanceAmd}=z.object({minimumBalanceAmd:z.number().int().min(0).max(100000000)}).parse(req.body);const row=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(row?.content&&typeof row.content==='object'?row.content:{}),minDriverBalanceAmd:String(minimumBalanceAmd)};await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});res.json({success:true,minimumBalanceAmd,message:'Վարորդի նվազագույն հաշվեկշռի սահմանաչափը պահպանվեց։'});}));
 
@@ -494,6 +516,43 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Գինը հաշվարկվել է միայն Երևանի վարչական շրջանների քարտեզով։'});
+}));
+
+app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHeaders:'draft-8',legacyHeaders:false}),asyncRoute(async(req,res)=>{
+ const input=z.object({
+  name:z.string().trim().min(2).max(100),phone:z.string().trim().min(7).max(30),
+  pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),
+  extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
+  requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),
+  transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
+  note:z.string().max(1000).optional(),pickupNote:z.string().trim().max(500).optional().or(z.literal('')),
+  destinationNote:z.string().trim().max(500).optional().or(z.literal(''))
+ }).parse(req.body);
+ const phone=normalizePhone(input.phone);
+ if(phone.replace(/\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք ճիշտ հեռախոսահամար։'});
+ const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
+ const demand=await getUrgentDemandCoefficient(input.isUrgent);
+ const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
+ const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
+ const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
+ const customers=await prisma.user.findMany({where:{role:'CUSTOMER'},select:{id:true,email:true,phone:true}});
+ let customer=customers.find(person=>normalizePhone(person.phone)===phone);
+ if(!customer){
+  const email=guestEmailForPhone(phone);
+  customer=await prisma.user.findUnique({where:{email}});
+  if(!customer)customer=await prisma.user.create({data:{name:input.name,email,phone:input.phone,passwordHash:await bcrypt.hash(randomBytes(32).toString('hex'),12),role:'CUSTOMER'}});
+ }
+ const order=await prisma.order.create({data:{
+  customerId:customer.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,phonePrimary:input.phone,
+  pickupAddress:route.pickupDistrict+' վարչական շրջան',destinationAddress:route.destinationDistrict+' վարչական շրջան',
+  routeDistricts:route.routeDistricts,routeNeighborhoods:[],fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,
+  transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
+ }});
+ io.to('drivers').emit('order:new',{id:order.id,isTest:false,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,isUrgent:order.isUrgent,createdAt:order.createdAt});
+ const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
+ const title='Նոր պատվեր՝ առանց գրանցման',notificationMessage='Հաճախորդ՝ '+input.name+' · '+input.phone+' · '+order.pickupAddress+' → '+order.destinationAddress;
+ if(admins.length){await prisma.notification.createMany({data:admins.map(admin=>({userId:admin.id,title,message:notificationMessage,type:'NEW_GUEST_ORDER'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title,message:notificationMessage,type:'NEW_GUEST_ORDER',orderId:order.id,createdAt:new Date()});}
+ res.status(201).json({success:true,order:{id:order.id,fareAmd:order.fareAmd},routeDistricts:route.routeDistricts,demandCoefficientPercent:demand.demandCoefficientPercent,message:'Պատվերն ուղարկվեց վարորդներին և ադմինին։ Հեռախոսահամարի պատվերներն ու գնահատականները պահվում են մեկ հաճախորդային պատմության մեջ։'});
 }));
 
 app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
