@@ -707,11 +707,24 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
     if(!eligibleDrivers.length)return res.status(400).json({error:'Այս կարգով և փոխանցման տուփով ակտիվ հաստատված վարորդներ չկան։'});
   }
+  const customerPhone=normalizePhone(input.phonePrimary);
+  if(customerPhone.replace(/\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք պատվիրատուի ճիշտ հեռախոսահամարը։'});
+  // Resolve the customer by the phone entered by the administrator.
+  let customer=(await prisma.user.findMany({where:{role:'CUSTOMER'},select:{id:true,phone:true}}))
+    .find(user=>normalizePhone(user.phone)===customerPhone);
+  if(!customer){
+    const email=guestEmailForPhone(customerPhone);
+    customer=await prisma.user.findUnique({where:{email}});
+    if(!customer)customer=await prisma.user.create({data:{
+      name:'Պատվիրատու '+customerPhone,email,phone:customerPhone,
+      passwordHash:await bcrypt.hash(randomBytes(32).toString('hex'),12),role:'CUSTOMER'
+    }});
+  }
   let order;
   try {
     order=await prisma.order.create({data:{
-      customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
-      destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
+      customerId:customer.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
+      destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:customerPhone,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
       vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
     }});
