@@ -875,7 +875,7 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   try {
     result = await prisma.$transaction(async tx => {
       // Serialize this driver's accept operations so simultaneous taps cannot bypass the daily tier.
-      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', req.user.id);
+      await tx.$queryRawUnsafe('SELECT "id" FROM "User" WHERE "id" = $1 FOR UPDATE', req.user.id);
       const acceptedAt = new Date();
       // Armenia local day (UTC+4): count earlier accepted surcharge orders, excluding cancelled ones.
       const yerevanNow = new Date(acceptedAt.getTime() + 4 * 60 * 60 * 1000);
@@ -914,6 +914,7 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
     });
   } catch (error) {
     if (error.message === 'WALLET_MINIMUM_NOT_MET') return res.status(409).json({ error: 'Հաշվեկշիռը բավարար չէ։ Պատվերի միջնորդավճարը կգանձվի՝ հաշվի առնելով ձեր անհատական բացասական լիմիտը։' });
+    console.error('[ORDER_ACCEPT_FAILED]', { orderId: req.params.id, driverId: req.user.id, code: error.code || null, message: error.message, meta: error.meta || null });
     throw error;
   }
   if (!result) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
