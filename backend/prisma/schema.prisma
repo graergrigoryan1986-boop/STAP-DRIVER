@@ -95,6 +95,7 @@ model Order {
   destinationLat     Float?
   destinationLng     Float?
   routeDistricts     String[]    @default([])
+  routeNeighborhoods String[]    @default([])
   routeDistanceMeters Int?
   status             OrderStatus @default(OPEN)
   isTest             Boolean     @default(false)
