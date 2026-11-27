@@ -151,6 +151,7 @@ model Rating {
   toUserId   String
   score      Int
   comment    String?
+  reasonTags String[] @default([])
   createdAt  DateTime @default(now())
 
   order    Order @relation(fields: [orderId], references: [id])
