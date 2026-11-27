@@ -1565,3 +1565,20 @@ body.authenticated footer{display:none!important}
  .driver-bottom-dock{bottom:14px}
  .driver-active-area{padding-bottom:100px}
 }
+
+/* Driver app opens directly on the minimal authentication screen */
+body.driver-portal-mode .topbar,
+body.driver-portal-mode .hero,
+body.driver-portal-mode #services,
+body.driver-portal-mode #accounts,
+body.driver-portal-mode #how,
+body.driver-portal-mode .contact-band,
+body.driver-portal-mode .footer,
+body.driver-portal-mode .booking-intro,
+body.driver-portal-mode .guest-booking-card{display:none!important}
+body.driver-portal-mode .booking-section{min-height:100vh;padding:28px 0 36px}
+body.driver-portal-mode .booking-layout{display:block;max-width:520px}
+body.driver-portal-mode #authPanel{margin:0 auto;width:100%;border:1px solid rgba(200,166,107,.5);background:#111719}
+body.driver-portal-mode #authPanel>h3{font-size:22px}
+body.driver-portal-mode #authPanel>p{font-size:13px}
+body.driver-portal-mode #authPanel .fineprint{font-size:11px}
