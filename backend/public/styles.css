@@ -1737,3 +1737,13 @@ body.driver-portal-mode #dashboard .driver-pending-toggle>small{font-size:12px}
  .driver-pending-head-actions .driver-quick-accept{font-size:13px;padding:9px 7px}
  .driver-pending-card-route{font-size:12px}
 }
+
+
+/* Compact driver wallet breakdown and four-item bottom navigation */
+.wallet-order-breakdown{display:grid;gap:3px;margin-top:7px;padding:8px 9px;border-left:3px solid #c9a45b;border-radius:7px;background:rgba(201,164,91,.09);font-size:11px;color:#d7d3c8}
+.wallet-order-breakdown span{display:flex;justify-content:space-between;gap:10px}
+.wallet-order-breakdown b{color:#f1d69c;white-space:nowrap}
+.driver-bottom-dock{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:7px}
+.driver-bottom-dock button{min-width:0;padding:8px 4px;font-size:10px}
+.driver-bottom-dock button span{font-size:10px}
+.driver-bottom-dock button b{font-size:12px;overflow:hidden;text-overflow:ellipsis}
