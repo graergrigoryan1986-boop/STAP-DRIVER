@@ -364,6 +364,15 @@ function districtForPoint(point,features){
  if(!name)throw new Error('Հասցեի վարչական շրջանի անունը քարտեզում բացակայում է։');
  return name;
 }
+async function getUrgentDemandCoefficient(isUrgent){
+ if(!isUrgent)return {pendingUrgentOrders:0,demandCoefficientPercent:0};
+ const pendingUrgentOrders=await prisma.order.count({where:{isUrgent:true,status:'OPEN',scheduleType:'NOW',scheduledAt:null,isTest:false}});
+ const totalIncludingCurrent=pendingUrgentOrders+1;
+ return {pendingUrgentOrders,totalIncludingCurrent,demandCoefficientPercent:totalIncludingCurrent>=3?5:totalIncludingCurrent>=2?2.5:0};
+}
+function calculateUrgentDemandCharge(baseFareAmd,extraChargeAmd,isUrgent,percent){
+ return isUrgent&&percent?Math.round((baseFareAmd+extraChargeAmd+2500)*percent/100):0;
+}
 async function calculateYerevanRoute(pickupAddress,destinationAddress){
  const [pickup,destination,districtFeatures]=await Promise.all([geocodeYerevanAddress(pickupAddress),geocodeYerevanAddress(destinationAddress),getYerevanDistrictFeatures()]);
  const pickupDistrict=districtForPoint(pickup,districtFeatures),destinationDistrict=districtForPoint(destination,districtFeatures);
@@ -403,10 +412,14 @@ app.get('/api/geo/streets',auth,asyncRoute(async(req,res)=>{
 
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
- const input=z.object({pickupAddress:z.string().trim().min(3).max(250),destinationAddress:z.string().trim().min(3).max(250)}).parse(req.body);
+ const input=z.object({pickupAddress:z.string().trim().min(3).max(250),destinationAddress:z.string().trim().min(3).max(250),isUrgent:z.boolean().default(false),extraChargeAmd:z.number().int().min(0).max(1000000).default(0)}).parse(req.body);
  try {
   const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
-  res.json({routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,districtCount:route.districtCount,neighborhoodCount:route.routeNeighborhoods.length,neighborhoodCoverage:route.neighborhoodCoverage,pickupDistrict:route.pickupDistrict,destinationDistrict:route.destinationDistrict,distanceMeters:route.distanceMeters,durationSeconds:route.durationSeconds,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon},destination:{lat:route.destination.lat,lon:route.destination.lon}});
+  const demand=await getUrgentDemandCoefficient(input.isUrgent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
+  const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
+  const quotedFareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
+  res.json({routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,districtCount:route.districtCount,neighborhoodCount:route.routeNeighborhoods.length,neighborhoodCoverage:route.neighborhoodCoverage,pickupDistrict:route.pickupDistrict,destinationDistrict:route.destinationDistrict,distanceMeters:route.distanceMeters,durationSeconds:route.durationSeconds,baseFareAmd:route.baseFareAmd,demandCoefficientPercent:demand.demandCoefficientPercent,pendingUrgentOrders:demand.pendingUrgentOrders||0,demandExtraChargeAmd,urgentExtraChargeAmd,quotedFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon},destination:{lat:route.destination.lat,lon:route.destination.lon}});
  } catch(error) {
   console.warn('Route fare quote could not be calculated:',error.message);
   res.status(422).json({error:error.message||'Հասցեների երթուղին հնարավոր չեղավ հաշվարկել։'});
@@ -422,9 +435,11 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   }).parse(req.body);
   const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
   const pickupAddress=input.pickupAddress,destinationAddress=input.destinationAddress;
-  const urgentExtraChargeAmd=isUrgent?2500:0;
+  const demand=await getUrgentDemandCoefficient(isUrgent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,isUrgent,demand.demandCoefficientPercent);
+  const urgentExtraChargeAmd=isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
   res.status(201).json({order,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,districtCount:route.districtCount,neighborhoodCount:route.routeNeighborhoods.length,distanceMeters:route.distanceMeters,message:'Երթուղին ստուգվեց Երևանի վարչական շրջանների և թաղամասերի GIS սահմաններով։'});
 }));
@@ -495,7 +510,9 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   if(scheduledAt&&scheduledAt.getTime()<=Date.now())return res.status(400).json({error:'Պատվերի նախատեսված ժամը պետք է լինի ապագայում։'});
   const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
   const pickupAddress=input.pickupAddress,destinationAddress=input.destinationAddress;
-  const urgentExtraChargeAmd=input.isUrgent?2500:0;
+  const demand=await getUrgentDemandCoefficient(isUrgent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,isUrgent,demand.demandCoefficientPercent);
+  const urgentExtraChargeAmd=isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
   let driverId=null, eligibleDrivers=[];
   const driverWhere={role:'DRIVER',isVerified:true,isBlocked:false};
