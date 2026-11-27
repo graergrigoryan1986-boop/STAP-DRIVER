@@ -217,19 +217,26 @@ async function fetchJsonWithTimeout(url,options={},timeoutMs=18000){
  if(data.error)throw new Error(data.error.message||'Քարտեզային տվյալների սխալ։');
  return data;
 }
+const YEREVAN_DISTRICT_NAMES=['Աջափնյակ','Ավան','Արաբկիր','Դավթաշեն','Էրեբունի','Կենտրոն','Մալաթիա-Սեբաստիա','Նոր Նորք','Նորք-Մարաշ','Նուբարաշեն','Շենգավիթ','Քանաքեռ-Զեյթուն'];
+const YEREVAN_REFERENCE_MAP_URL='https://oksanaharutyunyan.wordpress.com/2019/10/15/%D5%A5%D6%80%D6%87%D5%A1%D5%B6%D5%AB-%D5%BE%D5%A1%D6%80%D5%B9%D5%A1%D5%AF%D5%A1%D5%B6-%D5%B7%D6%80%D5%BB%D5%A1%D5%B6%D5%B6%D5%A5%D6%80%D5%A8/';
+function isCompleteYerevanDistrictMap(features){
+ if(!Array.isArray(features)||features.length!==12)return false;
+ const names=features.map(feature=>String(feature?.properties?.settlement_name||'').trim());
+ return features.every(feature=>feature?.geometry)&&new Set(names).size===12&&YEREVAN_DISTRICT_NAMES.every(name=>names.includes(name));
+}
 async function getYerevanDistrictFeatures(){
  if(yerevanDistrictFeaturesCache)return yerevanDistrictFeaturesCache;
  if(yerevanDistrictFeaturesLoadPromise)return yerevanDistrictFeaturesLoadPromise;
  yerevanDistrictFeaturesLoadPromise=(async()=>{
   const saved=await prisma.siteContent.findUnique({where:{id:'yerevan-district-map'}});
   const savedFeatures=saved?.content?.features;
-  if(Array.isArray(savedFeatures)&&savedFeatures.length===12&&savedFeatures.every(feature=>feature?.geometry&&feature?.properties?.settlement_name)){
+  if(isCompleteYerevanDistrictMap(savedFeatures)){
    yerevanDistrictFeaturesCache=savedFeatures;
    return yerevanDistrictFeaturesCache;
   }
   const data=await fetchJsonWithTimeout(YEREVAN_DISTRICT_GIS_URL);
-  if(!Array.isArray(data.features)||data.features.length!==12||!data.features.every(feature=>feature?.geometry&&feature?.properties?.settlement_name))throw new Error('Երևանի 12 վարչական շրջանների քարտեզային սահմանները հասանելի չեն կամ ամբողջական չեն։');
-  const mapContent={source:'Yerevan City GIS',sourceUrl:YEREVAN_DISTRICT_GIS_URL,importedAt:new Date().toISOString(),districtCount:12,features:data.features};
+  if(!isCompleteYerevanDistrictMap(data.features))throw new Error('Երևանի 12 վարչական շրջանների քարտեզային սահմանները հասանելի չեն կամ ամբողջական չեն։ Գինը չի հաշվարկվել։');
+  const mapContent={source:'Yerevan City GIS',sourceUrl:YEREVAN_DISTRICT_GIS_URL,referenceMapUrl:YEREVAN_REFERENCE_MAP_URL,referenceMapTitle:'Երևանի վարչական շրջանները (2019-10-15)',importedAt:new Date().toISOString(),districtCount:12,districtNames:YEREVAN_DISTRICT_NAMES,features:data.features};
   await prisma.siteContent.upsert({where:{id:'yerevan-district-map'},create:{id:'yerevan-district-map',content:mapContent},update:{content:mapContent}});
   yerevanDistrictFeaturesCache=data.features;
   yerevanDistrictFeaturesFetchedAt=Date.now();
