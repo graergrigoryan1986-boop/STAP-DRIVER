@@ -988,6 +988,10 @@ app.get('/api/admin/drivers/:id/ratings',auth,only('ADMIN'),asyncRoute(async(req
  const ratings=await prisma.rating.findMany({where:{toUserId:driver.id},orderBy:{createdAt:'desc'},include:{fromUser:{select:{name:true,phone:true,role:true}},order:{select:{id:true,createdAt:true}}}});
  res.json({ratings});
 }));
+app.get('/api/ratings/me/received',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
+ const ratings=await prisma.rating.findMany({where:{toUserId:req.user.id},orderBy:{createdAt:'desc'},select:{id:true,score:true,createdAt:true}});
+ res.json({ratings});
+}));
 app.get('/api/ratings/me/trend',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
  const since=new Date(Date.now()-90*86400000);
  const ratings=await prisma.rating.findMany({where:{toUserId:req.user.id,createdAt:{gte:since}},select:{score:true,createdAt:true},orderBy:{createdAt:'asc'}});
