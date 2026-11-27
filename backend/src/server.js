@@ -480,10 +480,10 @@ app.post('/api/orders/:id/rate-driver',auth,only('CUSTOMER'),asyncRoute(async(re
   const aggregate=await tx.rating.aggregate({where:{toUserId:order.driverId},_avg:{score:true}});
   const rating=aggregate._avg.score===null?5:Number(aggregate._avg.score.toFixed(2));
   await tx.user.update({where:{id:order.driverId},data:{rating}});
-  return {rating};
+  return {rating,driverId:order.driverId};
  });
  if(result.error)return res.status(409).json({error:result.error});
- io.emit('rating:updated',{userId:req.user.id,driverId:result.rating});
+ io.emit('rating:updated',{driverId:result.driverId,rating:result.rating});
  res.json({success:true,rating:result.rating,message:'Վարորդի գնահատականը պահպանվեց։ Շնորհակալություն։'});
 }));
 
