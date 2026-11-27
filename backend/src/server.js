@@ -221,15 +221,24 @@ async function geocodeYerevanAddress(rawAddress){
  if(address.length<3)throw new Error('Մուտքագրեք ամբողջական հասցեն։');
  const cacheKey=address.toLocaleLowerCase('hy-AM');
  if(yerevanGeocodeCache.has(cacheKey))return yerevanGeocodeCache.get(cacheKey);
- const wait=Math.max(0,1100-(Date.now()-lastYerevanGeocodeAt));
- if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
- lastYerevanGeocodeAt=Date.now();
- const url=new URL('https://nominatim.openstreetmap.org/search');
- url.searchParams.set('q',address+', Երևան, Հայաստան');
- url.searchParams.set('format','jsonv2');url.searchParams.set('limit','1');url.searchParams.set('addressdetails','1');url.searchParams.set('countrycodes','am');
- url.searchParams.set('viewbox','44.30,40.35,44.75,40.00');url.searchParams.set('bounded','1');url.searchParams.set('accept-language','hy,en');
- const results=await fetchJsonWithTimeout(url.toString(),{headers:{'User-Agent':'STAP-DRIVER/1.0','Accept-Language':'hy,en'}});
- if(!Array.isArray(results)||!results.length)throw new Error('Հասցեն քարտեզի վրա չգտնվեց։ Փորձեք նշել փողոցը, շենքի համարը կամ մոտակա հայտնի օբյեկտը։');
+ const searches=[
+  {query:address+', Երևան, Հայաստան',bounded:'1',language:'hy,en'},
+  {query:address+', Yerevan, Armenia',bounded:'0',language:'en,hy'},
+  {query:address+', Հայաստան',bounded:'0',language:'hy,en'}
+ ];
+ let results=[];
+ for(const search of searches){
+  const wait=Math.max(0,1100-(Date.now()-lastYerevanGeocodeAt));
+  if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+  lastYerevanGeocodeAt=Date.now();
+  const url=new URL('https://nominatim.openstreetmap.org/search');
+  url.searchParams.set('q',search.query);
+  url.searchParams.set('format','jsonv2');url.searchParams.set('limit','1');url.searchParams.set('addressdetails','1');url.searchParams.set('countrycodes','am');
+  url.searchParams.set('viewbox','44.30,40.35,44.75,40.00');url.searchParams.set('bounded',search.bounded);url.searchParams.set('accept-language',search.language);
+  results=await fetchJsonWithTimeout(url.toString(),{headers:{'User-Agent':'STAP-DRIVER/1.0','Accept-Language':search.language}});
+  if(Array.isArray(results)&&results.length)break;
+ }
+ if(!Array.isArray(results)||!results.length)throw new Error('Հասցեն քարտեզի վրա չգտնվեց։ Գրեք փողոցի անունը և շենքի համարը, օրինակ՝ «Աբովյան փողոց 12, Երևան», կամ նշեք մոտակա հայտնի օբյեկտը։');
  const addr=results[0].address||{};
  const point={lat:Number(results[0].lat),lon:Number(results[0].lon),displayName:results[0].display_name,neighborhood:addr.neighbourhood||addr.suburb||addr.quarter||addr.city_district||null};
  if(!Number.isFinite(point.lat)||!Number.isFinite(point.lon)||point.lat<40||point.lat>40.35||point.lon<44.3||point.lon>44.75)throw new Error('Նշված հասցեն Երևանի սահմաններից դուրս է։');
