@@ -1021,3 +1021,76 @@ body.authenticated footer{display:none!important}
 .urgent-order-toggle{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid rgba(255,176,72,.45);border-radius:12px;background:rgba(255,176,72,.08);font-weight:800;color:#f5b85f}
 .urgent-order-toggle input{accent-color:#e99a35;width:18px;height:18px}
 .urgent-order-badge{display:inline-flex;align-items:center;gap:6px;margin:8px 0;padding:8px 11px;border-radius:9px;background:rgba(255,176,72,.12);border:1px solid rgba(255,176,72,.42);color:#f5b85f;font-size:12px;font-weight:800}
+
+
+/* Verified driver mark: the check itself communicates completed verification. */
+.verified-check{
+ display:inline-flex;align-items:center;justify-content:center;
+ width:23px;height:23px;min-width:23px;margin-left:8px;
+ border-radius:50%;background:#168b4b;color:#fff;
+ font:900 16px/1 Arial,sans-serif;vertical-align:middle;
+ box-shadow:0 2px 7px rgba(22,139,75,.24);
+}
+.customer-driver-verification strong{display:flex;align-items:center;gap:4px}
+
+/* Clear, spacious booking form shared by customer and admin. */
+.booking-form{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:16px!important;padding:clamp(18px,3vw,30px)!important;
+ border:1px solid rgba(190,155,91,.3)!important;border-radius:22px!important;
+ background:linear-gradient(145deg,#fff 0%,#fbf8f1 100%)!important;
+ box-shadow:0 16px 42px rgba(31,43,58,.08)!important;
+}
+.booking-form .booking-form-heading,
+.booking-form [data-fare-breakdown],
+.booking-form [data-route-preview],
+.booking-form .fare-guide,
+.booking-form button[type="submit"]{grid-column:1/-1}
+.booking-form-heading{padding:4px 2px 12px;border-bottom:1px solid rgba(190,155,91,.24)}
+.booking-kicker{display:inline-block;color:#98713d;font-size:10px;font-weight:850;letter-spacing:.17em}
+.booking-form-heading h3{margin:7px 0 6px;color:#172b45;font-size:clamp(20px,2.5vw,27px);line-height:1.2}
+.booking-form-heading p{margin:0;max-width:760px;color:#667080;font-size:13px;line-height:1.65}
+.booking-form>label{
+ display:flex;flex-direction:column;gap:9px;min-width:0;
+ padding:14px 15px;border:1px solid #e8e2d6;border-radius:15px;
+ background:#fff;color:#26364a;font-size:13px;font-weight:750;
+ box-shadow:0 3px 12px rgba(25,39,57,.035);
+}
+.booking-form>label>span{color:#526174;font-size:11px;font-weight:850;letter-spacing:.035em}
+.booking-form>label input:not([type=checkbox]),
+.booking-form>label select{
+ width:100%;min-width:0;min-height:44px;padding:10px 12px;
+ border:1px solid #dce2e9;border-radius:10px;background:#fbfcfd;
+ color:#172b45;font-size:14px;outline:none;
+}
+.booking-form>label input:focus,
+.booking-form>label select:focus{border-color:#bd9b62;box-shadow:0 0 0 3px rgba(189,155,98,.13)}
+.booking-form>label:has([name="pickupAddress"]),
+.booking-form>label:has([name="destinationAddress"]){border-top:3px solid #c4a36d}
+.booking-form .fare-breakdown{
+ margin:0;padding:14px 16px;border-radius:13px;
+ background:#172b45;color:#fff;font-size:14px;font-weight:800;line-height:1.6;
+}
+.booking-form .route-preview{
+ display:flex;flex-direction:column;gap:7px;margin:0;padding:17px;
+ border:1px solid #d9e4ed;border-radius:15px;background:#f2f7fa;
+ color:#30465c;font-size:13px;line-height:1.6;
+}
+.booking-form .route-preview strong{color:#172b45;font-size:14px}
+.booking-form .route-community-count{color:#167344;font-size:15px;font-weight:750}
+.booking-form .route-community-count b{font-size:20px}
+.booking-form .route-community-sequence{color:#172b45;font-weight:800}
+.booking-form .fare-guide{grid-column:1/-1;margin:0;border:1px solid #e6dcc9;border-radius:14px;background:#fff}
+.booking-form .fare-guide summary{padding:13px 15px;color:#8b6837;font-size:12px;font-weight:850}
+.booking-form .fare-guide>p,.booking-form .fare-guide>small{display:block;padding:0 15px;color:#687487;font-size:12px;line-height:1.55}
+.booking-form .fare-guide-grid{display:grid;grid-template-columns:1fr auto;gap:8px 16px;padding:10px 15px;color:#526174;font-size:13px}
+.booking-form .fare-guide-grid strong{color:#172b45}
+.booking-form button[type="submit"]{
+ min-height:52px;border-radius:13px;font-weight:850;letter-spacing:.035em;
+ box-shadow:0 8px 18px rgba(23,43,69,.14);
+}
+.booking-form .urgent-order-toggle{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #f1d5a8;border-radius:14px;background:#fff8ed;color:#8a5315;font-weight:850}
+@media(max-width:680px){
+ .booking-form{grid-template-columns:minmax(0,1fr);gap:12px!important;padding:14px!important}
+ .booking-form .booking-form-heading,.booking-form [data-fare-breakdown],.booking-form [data-route-preview],.booking-form .fare-guide,.booking-form button[type="submit"],.booking-form .urgent-order-toggle{grid-column:1}
+}
