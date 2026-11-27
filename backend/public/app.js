@@ -174,7 +174,7 @@ ${u.driverDocumentsStatus==='REJECTED'?'<p class="secure-note">Կարող եք �
 
 }
 const YEREVAN_DISTRICTS=['Աջափնյակ','Ավան','Արաբկիր','Դավթաշեն','Էրեբունի','Քանաքեռ-Զեյթուն','Կենտրոն','Մալաթիա-Սեբաստիա','Նոր Նորք','Նորք-Մարաշ','Նուբարաշեն','Շենգավիթ'];
-function districtField(name,label){return '<label class="fare-field"><span>'+label+'</span><select name="'+name+'" required><option value="">Ընտրեք համայնքը</option>'+YEREVAN_DISTRICTS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></label>'}
+function districtField(name,label){return '<label class="fare-field"><span>'+label+'</span><input name="'+name+'" required placeholder="Փողոց և շենքի համար"></label>'}
 function bindFareCalculator(form){
  if(!form)return;
  form.classList.add('booking-form');
@@ -236,7 +236,7 @@ function renderOrders(root,orders,kind){
   const when=o.createdAt?new Date(o.createdAt).toLocaleString('hy-AM'):'—';
   const contact='<div class="driver-order-fact"><span>👤 Ուղևոր</span><strong>'+esc(o.customer?.name||'Ադմինի պատվեր')+'</strong></div>';
   const driverVerificationInfo=kind==='mine'&&currentUser.role==='CUSTOMER'&&o.driver?'<div class="driver-order-fact customer-driver-verification"><span>🚘 Վարորդ</span><strong>'+esc(o.driver.name||'Վարորդ')+(o.driver.isVerified?verifiedCheckMark():'')+'</strong></div>':'';<div class="driver-order-fact"><span>📞 Հեռախոս 1</span><strong>'+esc(o.phonePrimary||o.customer?.phone||'—')+'</strong></div>'+(o.phoneSecondary?'<div class="driver-order-fact"><span>📞 Հեռախոս 2</span><strong>'+esc(o.phoneSecondary)+'</strong></div>':'')+'<div class="driver-order-fact"><span>👥 Ուղևորներ</span><strong>'+(o.passengerCount||1)+'</strong></div>';
-  const routeDistrictInfo=(o.routeDistricts?.length?'<div class="driver-order-fact driver-order-note"><span>🗺️ Սակագնի հաշվարկ՝ վարչական համայնքների քարտեզով</span><strong>'+esc(o.routeDistricts.join(' → '))+'</strong><small>Երթուղին անցնում է '+new Set(o.routeDistricts).size+' տարբեր վարչական համայնքով</small></div>':'')+(o.routeDistanceMeters?'<div class="driver-order-fact"><span>Հեռավորություն</span><strong>'+(o.routeDistanceMeters/1000).toFixed(1)+' կմ</strong></div>':'');
+  const routeDistrictInfo=(o.routeDistricts?.length?'<div class="driver-order-fact driver-order-note"><span>🗺️ Սակագնի հաշվարկ՝ վարչական շրջանների քարտեզով</span><strong>'+esc(o.routeDistricts.join(' → '))+'</strong><small>Երթուղին անցնում է '+new Set(o.routeDistricts).size+' տարբեր վարչական շրջանով</small></div>':'')+(o.routeDistanceMeters?'<div class="driver-order-fact"><span>Հեռավորություն</span><strong>'+(o.routeDistanceMeters/1000).toFixed(1)+' կմ</strong></div>':'');
   const details=urgentInfo+routeDistrictInfo+'<div class="driver-order-route"><div class="driver-route-point pickup"><span>🟢</span><div><small>ՄԵԿՆԱՐԿԻ ՎԱՅՐ</small><strong>'+esc(o.pickupAddress)+'</strong></div></div><div class="driver-route-line"></div><div class="driver-route-point destination"><span>🏁</span><div><small>ՆՊԱՏԱԿԱԿԵՏ</small><strong>'+esc(o.destinationAddress)+'</strong></div></div></div>' +(o.intermediateCommunities?.length?'<div class="driver-order-fact driver-order-note"><span>📍 Միջանկյալ համայնքներ</span><strong>'+esc(o.intermediateCommunities.join(' · '))+'</strong></div>':'');
   const urgentInfo=o.isUrgent?'<div class="urgent-order-badge">⚡ ՇՏԱՊ ՊԱՏՎԵՐ · 2 500 ֏ հավելավճարը վարորդին է</div>':'';
   const inspection=o.vehicleInspectionPassed?'<div class="driver-inspection-confirmed">✓ Մեքենան ստուգված է և համապատասխանում է ծառայության պահանջներին</div>':'';
