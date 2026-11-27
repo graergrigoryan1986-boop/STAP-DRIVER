@@ -278,7 +278,8 @@ function districtSequenceForRoute(coords,features){
  return sequence.filter((name,index)=>index===0||name!==sequence[index-1]);
 }
 async function calculateYerevanRoute(pickupAddress,destinationAddress){
- const [pickup,destination]=await Promise.all([geocodeYerevanAddress(pickupAddress),geocodeYerevanAddress(destinationAddress)]);
+ const pickup=await geocodeYerevanAddress(pickupAddress);
+ const destination=await geocodeYerevanAddress(destinationAddress);
  const routeUrl='https://router.project-osrm.org/route/v1/driving/'+pickup.lon+','+pickup.lat+';'+destination.lon+','+destination.lat+'?overview=full&geometries=geojson&steps=false';
  const [routeData,features]=await Promise.all([fetchJsonWithTimeout(routeUrl),getYerevanDistrictFeatures()]);
  const route=routeData.routes?.[0],coords=route?.geometry?.coordinates;
