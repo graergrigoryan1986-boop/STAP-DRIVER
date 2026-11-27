@@ -939,3 +939,9 @@ body.authenticated footer{display:none!important}
 .driver-active-order #driverActiveOrder:empty{display:none}
 .driver-active-order #driverActiveOrder .driver-order-card{border-color:rgba(218,185,117,.6)}
 .driver-active-order #driverActiveOrder .driver-order-card .driver-order-price strong{font-size:25px}
+
+/* Automatic map-based Yerevan route quote */
+.route-preview{margin:8px 0 14px;padding:12px 14px;border:1px solid rgba(190,153,83,.42);border-left:3px solid #c7a45f;border-radius:10px;background:rgba(198,163,94,.09);color:#6b542d;font-size:13px;font-weight:700;line-height:1.55}
+#orderForm .route-preview{color:#e7d5ae;background:rgba(198,163,94,.10)}
+#adminTestOrderForm .route-preview{color:#6b542d;background:#f7f0e2}
+#orderForm [name="pickupAddress"],#orderForm [name="destinationAddress"],#adminTestOrderForm [name="pickupAddress"],#adminTestOrderForm [name="destinationAddress"]{width:100%}
