@@ -483,7 +483,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
     pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),
     extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
-    note:z.string().max(1000).optional(),isTest:z.boolean().default(false)
+    note:z.string().max(1000).optional(),pickupNote:z.string().trim().max(500).optional().or(z.literal('')),destinationNote:z.string().trim().max(500).optional().or(z.literal('')),isTest:z.boolean().default(false)
   }).parse(req.body);
   const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
   const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
@@ -491,7 +491,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Գինը հաշվարկվել է միայն Երևանի վարչական շրջանների քարտեզով։'});
 }));
@@ -552,6 +552,8 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     scheduleType:z.enum(['NOW','TODAY','TOMORROW','SCHEDULED']).default('NOW'),
     scheduledAt:z.string().datetime().optional(),
     note:z.string().max(1000).optional(),
+    pickupNote:z.string().trim().max(500).optional().or(z.literal('')),
+    destinationNote:z.string().trim().max(500).optional().or(z.literal('')),
     dispatchMode:z.enum(['NETWORK','CATEGORY','DIRECT']).default('NETWORK'),
     driverId:z.string().optional().or(z.literal('')),
     isTest:z.boolean().default(false)
@@ -586,7 +588,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
       customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
       destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
-      vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note
+      vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
     }});
   } catch(error) {
     console.error('Admin order creation failed:',{code:error.code,message:error.message,meta:error.meta});
@@ -608,7 +610,7 @@ function maskDriverOrderContacts(order,now=new Date()){
  const isOpen=order.status==='OPEN'||order.status==='SKIPPED';
  const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt);
  if(!contactHidden)return order;
- return {...order,phonePrimary:null,phoneSecondary:null,note:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:revealAt?.toISOString()||null};
+ return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:null,destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:revealAt?.toISOString()||null};
 }
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const categories=req.user.driverLicenseCategories||[];
