@@ -562,8 +562,9 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   if(scheduledAt&&scheduledAt.getTime()<=Date.now())return res.status(400).json({error:'Պատվերի նախատեսված ժամը պետք է լինի ապագայում։'});
   const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
   const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
-  const demand=await getUrgentDemandCoefficient(isUrgent);
-  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,isUrgent,demand.demandCoefficientPercent);
+  const demandEligibleUrgent=isUrgent&&input.scheduleType==='NOW';
+  const demand=await getUrgentDemandCoefficient(demandEligibleUrgent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,demandEligibleUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
   let driverId=null, eligibleDrivers=[];
