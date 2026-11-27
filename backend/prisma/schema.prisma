@@ -119,6 +119,7 @@ model Order {
   scheduledAt DateTime?
   commissionRate     Int         @default(25)
   commissionAmd      Int         @default(0)
+  commissionSurchargeAmd Int @default(0)
   driverEarningAmd   Int         @default(0)
   note               String?
   pickupNote         String?
