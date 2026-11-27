@@ -1491,3 +1491,19 @@ body.authenticated footer{display:none!important}
 .archive-status.completed{background:#d8eadc;color:#245d39}.archive-status.cancelled{background:#f4d9d4;color:#8a332b}
 .archive-loading,.archive-error{padding:12px;color:#fff0ce}
 @media(max-width:700px){.admin-order-archive-form{grid-template-columns:1fr}.driver-open-orders-feature .driver-pending-heading{align-items:flex-start;flex-direction:column}.driver-open-order-tools{width:100%;justify-content:flex-start}.driver-open-orders-feature .driver-pending-card>summary{grid-template-columns:1fr}}
+
+/* Malta-inspired admin published-order cards */
+#adminOrdersOpen .admin-order-history-item,#adminOrdersAccepted .admin-order-history-item,#adminOrdersProgress .admin-order-history-item,#adminOrdersCompleted .admin-order-history-item,#adminOrdersCancelled .admin-order-history-item{
+ position:relative;overflow:hidden;padding:20px 22px;margin:12px 0;border:1px solid #c5a66e;border-radius:16px;
+ background:linear-gradient(125deg,#fffaf0 0%,#f0e5cf 62%,#e5d5b5 100%);color:#203b37;
+ box-shadow:0 9px 25px rgba(18,52,47,.1)
+}
+#adminOrdersOpen .admin-order-history-item:before,#adminOrdersAccepted .admin-order-history-item:before,#adminOrdersProgress .admin-order-history-item:before,#adminOrdersCompleted .admin-order-history-item:before,#adminOrdersCancelled .admin-order-history-item:before{
+ content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(#d7b775,#174e48)
+}
+.admin-order-history-item .rowline{padding-left:7px;align-items:center}
+.admin-order-history-item .rowline>strong{font:700 22px Georgia,serif;color:#164943}
+.admin-order-history-item .rowline .muted{color:#52635c;font-weight:800}
+.admin-order-history-item p{padding-left:7px;color:#46564f;line-height:1.9}
+.admin-order-history-item .action{background:#174a46;color:#fff;border-color:#c6a66a}
+.admin-order-history-item .admin-cancel-order-btn{background:#8b3c31;border-color:#d7a08a}
