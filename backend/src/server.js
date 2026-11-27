@@ -365,8 +365,13 @@ app.get('/api/geo/streets',auth,asyncRoute(async(req,res)=>{
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
  const input=z.object({pickupAddress:z.string().trim().min(3).max(250),destinationAddress:z.string().trim().min(3).max(250)}).parse(req.body);
- const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
- res.json({routeDistricts:route.routeDistricts,districtCount:route.districtCount,pickupDistrict:route.pickupDistrict,destinationDistrict:route.destinationDistrict,distanceMeters:route.distanceMeters,durationSeconds:route.durationSeconds,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon},destination:{lat:route.destination.lat,lon:route.destination.lon}});
+ try {
+  const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
+  res.json({routeDistricts:route.routeDistricts,districtCount:route.districtCount,pickupDistrict:route.pickupDistrict,destinationDistrict:route.destinationDistrict,distanceMeters:route.distanceMeters,durationSeconds:route.durationSeconds,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon},destination:{lat:route.destination.lat,lon:route.destination.lon}});
+ } catch(error) {
+  console.warn('Route fare quote could not be calculated:',error.message);
+  res.status(422).json({error:error.message||'Հասցեների երթուղին հնարավոր չեղավ հաշվարկել։'});
+ }
 }));
 
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
