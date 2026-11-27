@@ -1,4 +1,4 @@
-name: Build STAP customer and driver APKs
+name: Build STAP customer, driver and admin APKs
 
 on:
   workflow_dispatch:
@@ -23,8 +23,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Build customer and driver APKs
-        run: gradle --no-daemon assembleCustomerDebug assembleDriverDebug
+      - name: Build customer, driver and admin APKs
+        run: gradle --no-daemon assembleCustomerDebug assembleDriverDebug assembleAdminDebug
       - name: Upload customer APK
         uses: actions/upload-artifact@v4
         with:
@@ -36,4 +36,10 @@ jobs:
         with:
           name: stap-driver-apk
           path: app/build/outputs/apk/driver/debug/app-driver-debug.apk
+          if-no-files-found: error
+      - name: Upload admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: stap-admin-apk
+          path: app/build/outputs/apk/admin/debug/app-admin-debug.apk
           if-no-files-found: error
