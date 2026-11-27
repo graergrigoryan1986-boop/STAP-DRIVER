@@ -184,9 +184,17 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
 }));
 
 app.post('/api/auth/login', asyncRoute(async (req, res) => {
-  const input = z.object({ email: z.email().transform(v => v.toLowerCase()), password: z.string().min(1).max(128) }).parse(req.body);
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
-  if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) return res.status(401).json({ error: 'Էլ․ փոստը կամ գաղտնաբառը սխալ է' });
+  const input = z.object({ email: z.string().trim().min(3).max(254), password: z.string().min(1).max(128) }).parse(req.body);
+  const identity = input.email.trim();
+  let user = null;
+  if (identity.includes('@')) {
+    user = await prisma.user.findUnique({ where: { email: identity.toLowerCase() } });
+  } else {
+    const normalized = normalizePhone(identity);
+    const candidates = await prisma.user.findMany({ where: { phone: { not: null } } });
+    user = candidates.find(candidate => normalizePhone(candidate.phone) === normalized) || null;
+  }
+  if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) return res.status(401).json({ error: 'Հեռախոսահամարը կամ էլ․ փոստը կամ գաղտնաբառը սխալ է' });
   if (user.isBlocked) return res.status(403).json({ error: 'Հաշիվն արգելափակված է' });
   res.json({ token: signToken(user), user: publicUser(user) });
 }));
