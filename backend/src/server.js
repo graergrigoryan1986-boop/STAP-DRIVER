@@ -82,8 +82,7 @@ function mrzDate(value, kind) {
   return date.getUTCMonth()===month-1&&date.getUTCDate()===day?date:null;
 }
 function parseMrzIdentity(raw) {
-  const lines=String(raw||'').toUpperCase().split(/\r?
-/).map(line=>line.replace(/[^A-Z0-9<]/g,'')).filter(line=>line.length>=28);
+  const lines=String(raw||'').toUpperCase().split(/\r?\n/).map(line=>line.replace(/[^A-Z0-9<]/g,'')).filter(line=>line.length>=28);
   for(let i=0;i<lines.length;i++){
     const first=lines[i];
     if(!/^[PIAC][<A-Z]/.test(first))continue;
@@ -875,7 +874,7 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   try {
     result = await prisma.$transaction(async tx => {
       // Serialize this driver's accept operations so simultaneous taps cannot bypass the daily tier.
-      await tx.$queryRawUnsafe('SELECT "id" FROM "User" WHERE "id" = $1 FOR UPDATE', req.user.id);
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${req.user.id} FOR UPDATE`;
       const acceptedAt = new Date();
       // Armenia local day (UTC+4): count earlier accepted surcharge orders, excluding cancelled ones.
       const yerevanNow = new Date(acceptedAt.getTime() + 4 * 60 * 60 * 1000);
