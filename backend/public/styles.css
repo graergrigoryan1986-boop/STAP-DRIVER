@@ -995,3 +995,14 @@ body.authenticated footer{display:none!important}
 .rating-reason-options input{flex:none;margin-top:2px;accent-color:#d2ad68}
 .rating-submitted-note{margin-top:12px;padding:10px 12px;border:1px solid rgba(60,180,120,.35);border-radius:9px;background:rgba(40,130,80,.10);color:#9de0b8;font-weight:800;font-size:12px}
 @media(max-width:560px){.rating-reason-options{grid-template-columns:1fr}.rating-trend-card{padding:11px}}
+
+.driver-rating-card{cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.driver-rating-card:hover,.driver-rating-card.active{border-color:rgba(218,181,110,.75);box-shadow:0 0 0 1px rgba(218,181,110,.16),0 10px 28px rgba(0,0,0,.18)}
+.driver-rating-card:focus-visible{outline:2px solid #d9b875;outline-offset:3px}
+.driver-rating-history-panel{margin:8px 0 12px;padding:12px;border:1px solid rgba(201,164,91,.3);border-radius:12px;background:rgba(15,17,21,.85)}
+.driver-rating-history-panel h3{margin:0 0 8px;color:#e8c77e;font-size:13px}
+.driver-rating-history-panel .ledger-row{padding:8px 2px}
+.driver-verification-blocker{margin:0 0 14px;padding:16px 18px;border:1px solid rgba(218,151,73,.58);border-left:4px solid #d59b50;border-radius:12px;background:linear-gradient(120deg,rgba(140,83,26,.2),rgba(25,22,18,.92));color:#f2dfc1}
+.driver-verification-blocker strong{display:block;margin-bottom:7px;color:#f3c77f;font-size:13px;letter-spacing:.04em}
+.driver-verification-blocker p{margin:0 0 6px;font-size:13px;line-height:1.6}
+.driver-verification-blocker small{color:#c6b79d;font-size:11px;line-height:1.5}
