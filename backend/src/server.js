@@ -993,11 +993,12 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
     const updatedCustomerRating = customerRating._avg.score === null ? 5 : Number(customerRating._avg.score.toFixed(2));
     await tx.user.update({ where: { id: order.customerId }, data: { rating: updatedCustomerRating } });
     const driver = await tx.user.findUnique({ where: { id: req.user.id }, select: { balanceAmd: true } });
-    return { commissionAmd: order.isTest ? 0 : order.commissionAmd, driverEarningAmd: 0, fareAmd: order.fareAmd, isTest: order.isTest, balanceAmd: driver.balanceAmd, customerRating: updatedCustomerRating };
+    return { commissionAmd: order.isTest ? 0 : order.commissionAmd, driverEarningAmd: 0, fareAmd: order.fareAmd, isTest: order.isTest, balanceAmd: driver.balanceAmd, customerRating: updatedCustomerRating, customerId: order.customerId };
   });
   if (!result) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ ավարտել' });
   io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
   io.emit('order:completed', { id: req.params.id });
+  io.emit('rating:updated', { ratedUserId: result.customerId, fromUserId: req.user.id, updatedAt: new Date().toISOString() });
   res.json({ success: true, settlement: result, balanceAmd: result.balanceAmd, message: 'Պատվերն ավարտվեց, պատվիրատուի գնահատականը պահպանվեց։' });
 }));
 
