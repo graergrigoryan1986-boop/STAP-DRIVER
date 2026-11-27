@@ -1094,3 +1094,70 @@ body.authenticated footer{display:none!important}
  .booking-form{grid-template-columns:minmax(0,1fr);gap:12px!important;padding:14px!important}
  .booking-form .booking-form-heading,.booking-form [data-fare-breakdown],.booking-form [data-route-preview],.booking-form .fare-guide,.booking-form button[type="submit"],.booking-form .urgent-order-toggle{grid-column:1}
 }
+
+
+/* STAP DRIVER · NEON DARK dispatch booking workspace */
+#adminCreateOrderPanel.admin-order-form-pane{
+ --neon-cyan:#42e8ff;--neon-violet:#9b7bff;--neon-green:#5af0b2;--neon-amber:#ffbf69;
+ margin-top:12px;padding:clamp(16px,2.5vw,28px);
+ color:#edf5ff;background:radial-gradient(ellipse at 8% 0%,rgba(66,232,255,.12),transparent 34%),radial-gradient(ellipse at 95% 12%,rgba(155,123,255,.14),transparent 32%),linear-gradient(145deg,#0b1020,#11182b 58%,#0b1220);
+ border:1px solid rgba(111,145,205,.28);border-radius:22px;
+ box-shadow:0 22px 55px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.04);
+}
+#adminCreateOrderPanel .admin-panel-heading{margin-bottom:18px}
+#adminCreateOrderPanel .admin-panel-heading h3{color:#f4f8ff;font-size:clamp(21px,2.4vw,29px);letter-spacing:-.035em}
+#adminCreateOrderPanel .admin-panel-heading p{color:#9eacc7;line-height:1.65}
+#adminCreateOrderPanel .neon-dispatch-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+#adminCreateOrderPanel .booking-form-heading{grid-column:1/-1;padding:16px 18px;border:1px solid rgba(66,232,255,.22);border-radius:16px;background:linear-gradient(110deg,rgba(66,232,255,.09),rgba(155,123,255,.08))}
+#adminCreateOrderPanel .booking-form-heading .booking-kicker{color:var(--neon-cyan);font-size:10px;font-weight:900;letter-spacing:.18em}
+#adminCreateOrderPanel .booking-form-heading h3{margin:6px 0;color:#f4f8ff;font-size:20px}
+#adminCreateOrderPanel .booking-form-heading p{margin:0;color:#9eacc7;font-size:12px;line-height:1.6}
+#adminCreateOrderPanel .neon-form-group{min-width:0;padding:15px;border:1px solid rgba(130,157,205,.2);border-radius:16px;background:linear-gradient(150deg,rgba(27,38,62,.92),rgba(17,25,43,.94));box-shadow:inset 0 1px rgba(255,255,255,.035)}
+#adminCreateOrderPanel .neon-form-group h4{margin:0 0 13px;color:var(--neon-cyan);font-size:10px;font-weight:900;letter-spacing:.14em}
+#adminCreateOrderPanel .neon-route-group,#adminCreateOrderPanel .neon-price-group{grid-column:1/-1}
+#adminCreateOrderPanel .neon-form-group .admin-form-field,
+#adminCreateOrderPanel .neon-form-group .fare-field,
+#adminCreateOrderPanel .neon-form-group .neon-input-label{display:grid;gap:7px;min-width:0;margin:0;color:#aebbd3;font-size:11px;font-weight:800}
+#adminCreateOrderPanel .neon-route-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+#adminCreateOrderPanel .neon-route-group h4{grid-column:1/-1}
+#adminCreateOrderPanel .neon-route-group .district-street-picker{grid-row:auto}
+#adminCreateOrderPanel .neon-route-group .district-street-picker select,
+#adminCreateOrderPanel .neon-form-group input,
+#adminCreateOrderPanel .neon-form-group select{
+ width:100%;min-width:0;min-height:45px;padding:10px 12px;border:1px solid rgba(132,158,202,.28);border-radius:10px;
+ color:#f2f7ff;background:#0c1425;outline:none;box-shadow:inset 0 1px 3px rgba(0,0,0,.2)
+}
+#adminCreateOrderPanel .neon-form-group input::placeholder{color:#71819f}
+#adminCreateOrderPanel .neon-form-group input:focus,
+#adminCreateOrderPanel .neon-form-group select:focus{border-color:var(--neon-cyan);box-shadow:0 0 0 3px rgba(66,232,255,.12)}
+#adminCreateOrderPanel .district-street-picker{display:grid;gap:5px;min-width:0}
+#adminCreateOrderPanel .district-street-picker small{color:#7f91b1;font-size:10px;line-height:1.4}
+#adminCreateOrderPanel .neon-passenger-group,
+#adminCreateOrderPanel .neon-vehicle-group,
+#adminCreateOrderPanel .neon-dispatch-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+#adminCreateOrderPanel .neon-passenger-group h4,
+#adminCreateOrderPanel .neon-vehicle-group h4,
+#adminCreateOrderPanel .neon-dispatch-group h4{grid-column:1/-1}
+#adminCreateOrderPanel .neon-dispatch-group [name="dispatchMode"],
+#adminCreateOrderPanel .neon-dispatch-group [name="driverId"],
+#adminCreateOrderPanel .neon-dispatch-group [name="note"]{grid-column:1/-1}
+#adminCreateOrderPanel .neon-price-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+#adminCreateOrderPanel .neon-price-group h4,
+#adminCreateOrderPanel .neon-price-group [data-fare-breakdown],
+#adminCreateOrderPanel .neon-price-group [data-route-preview],
+#adminCreateOrderPanel .neon-price-group .urgent-order-toggle{grid-column:1/-1}
+#adminCreateOrderPanel .neon-price-group [name="fareAmd"]{border-color:rgba(90,240,178,.55);color:var(--neon-green);font-size:19px;font-weight:900}
+#adminCreateOrderPanel .neon-price-group [data-fare-breakdown]{margin:0;color:var(--neon-green);font-size:12px;font-weight:800;line-height:1.6}
+#adminCreateOrderPanel .neon-price-group [data-route-preview]{margin:0;padding:12px;border:1px solid rgba(66,232,255,.18);border-radius:11px;background:rgba(66,232,255,.055);color:#a9bad5;font-size:11px;line-height:1.65}
+#adminCreateOrderPanel .neon-price-group [data-route-preview] strong{color:var(--neon-cyan)}
+#adminCreateOrderPanel .neon-price-group .urgent-order-toggle{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid rgba(255,191,105,.4);border-radius:11px;background:rgba(255,191,105,.08);color:var(--neon-amber);font-size:12px}
+#adminCreateOrderPanel .neon-price-group .urgent-order-toggle input{width:18px;min-height:18px;accent-color:var(--neon-amber)}
+#adminCreateOrderPanel .neon-create-order{grid-column:1/-1;min-height:56px;border:1px solid rgba(66,232,255,.7);border-radius:13px;background:linear-gradient(105deg,#176c83,#5141a5 55%,#7038a6);color:#fff;font-weight:950;letter-spacing:.06em;box-shadow:0 9px 28px rgba(66,232,255,.16),inset 0 1px rgba(255,255,255,.18)}
+#adminCreateOrderPanel .neon-create-order:hover{filter:brightness(1.12);transform:translateY(-1px)}
+#adminCreateOrderPanel #adminTestOrders{margin-top:18px}
+@media(max-width:760px){
+ #adminCreateOrderPanel .neon-dispatch-form{grid-template-columns:minmax(0,1fr)}
+ #adminCreateOrderPanel .neon-form-group,#adminCreateOrderPanel .booking-form-heading,#adminCreateOrderPanel .neon-create-order{grid-column:1}
+ #adminCreateOrderPanel .neon-route-group,#adminCreateOrderPanel .neon-price-group{grid-template-columns:minmax(0,1fr)}
+ #adminCreateOrderPanel .neon-route-group h4,#adminCreateOrderPanel .neon-price-group h4{grid-column:1}
+}
