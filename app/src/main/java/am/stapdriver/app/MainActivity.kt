@@ -34,7 +34,7 @@ class MainActivity : Activity() {
         }
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = true
-            visibility = View.VISIBLE
+            setVisibility(View.VISIBLE)
         }
         webView = WebView(this).apply {
             setBackgroundColor(dark)
@@ -45,11 +45,11 @@ class MainActivity : Activity() {
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                    progress.visibility = View.VISIBLE
-                    errorPanel.visibility = View.GONE
+                    progress.setVisibility(View.VISIBLE)
+                    errorPanel.setVisibility(View.GONE)
                 }
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    progress.visibility = View.GONE
+                    progress.setVisibility(View.GONE)
                 }
                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                     val uri = request?.url ?: return false
@@ -57,8 +57,8 @@ class MainActivity : Activity() {
                 }
                 override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: android.webkit.WebResourceError?) {
                     if (request?.isForMainFrame == true) {
-                        progress.visibility = View.GONE
-                        errorPanel.visibility = View.VISIBLE
+                        progress.setVisibility(View.GONE)
+                        errorPanel.setVisibility(View.VISIBLE)
                     }
                 }
             }
@@ -67,7 +67,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(28, 24, 28, 24)
-            visibility = View.GONE
+            setVisibility(View.GONE)
             val title = TextView(this@MainActivity).apply {
                 text = "Կապը սերվերի հետ հասանելի չէ"
                 textSize = 20f
