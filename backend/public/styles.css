@@ -1270,3 +1270,9 @@ body.authenticated footer{display:none!important}
  .driver-pending-card-price{font-size:19px}
  .driver-pending-card-meta{font-size:10px}
 }
+
+/* Optional notes attached to each route endpoint. */
+.route-note-field textarea,.admin-form-field.route-note-field textarea{width:100%;min-height:68px;resize:vertical;background:#101216;border:1px solid rgba(200,166,107,.28);border-radius:10px;color:var(--white);padding:11px 13px;font:inherit;font-size:13px;line-height:1.5;transition:border-color .2s,box-shadow .2s}
+.route-note-field textarea:focus,.admin-form-field.route-note-field textarea:focus{outline:none;border-color:var(--gold2);box-shadow:0 0 0 3px rgba(200,166,107,.1)}
+.route-note-field textarea::placeholder,.admin-form-field.route-note-field textarea::placeholder{color:#827f78}
+.route-point-note{display:block;margin-top:5px;color:var(--gold2);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
