@@ -197,7 +197,9 @@ app.patch('/api/customer/profile', auth, only('CUSTOMER'), asyncRoute(async (req
 
 
 const YEREVAN_DISTRICT_GIS_URL='https://gis.yerevan.am/server/rest/services/Hosted/Yerevan_Districts/FeatureServer/0/query?where=1%3D1&outFields=settlement_name%2Ccommunity_code&returnGeometry=true&outSR=4326&f=geojson';
+const YEREVAN_NEIGHBORHOOD_GIS_URL='https://gis.yerevan.am/server/rest/services/Yerevan_Named_Areas_Live/FeatureServer/138/query?where=1%3D1&outFields=toponym_name&returnGeometry=true&outSR=4326&f=geojson';
 let yerevanDistrictFeaturesCache=null, yerevanDistrictFeaturesFetchedAt=0;
+let yerevanNeighborhoodFeaturesCache=null, yerevanNeighborhoodFeaturesFetchedAt=0;
 const yerevanGeocodeCache=new Map();
 let lastYerevanGeocodeAt=0;
 const YEREVAN_FARE_BY_DISTRICT_COUNT=count=>count<=1?7000:10000+(count-2)*2500;
@@ -215,6 +217,35 @@ async function getYerevanDistrictFeatures(){
  yerevanDistrictFeaturesCache=data.features;
  yerevanDistrictFeaturesFetchedAt=Date.now();
  return yerevanDistrictFeaturesCache;
+}
+async function getYerevanNeighborhoodFeatures(){
+ if(yerevanNeighborhoodFeaturesCache&&Date.now()-yerevanNeighborhoodFeaturesFetchedAt<6*60*60*1000)return yerevanNeighborhoodFeaturesCache;
+ const data=await fetchJsonWithTimeout(YEREVAN_NEIGHBORHOOD_GIS_URL,{},25000);
+ const features=(data.features||[]).filter(feature=>feature.geometry&&String(feature.properties?.toponym_name||'').trim());
+ if(features.length<10)throw new Error('Երևանի թաղամասերի պաշտոնական GIS սահմանները ամբողջական չեն։ Գինը չի հաշվարկվել։');
+ yerevanNeighborhoodFeaturesCache=features;
+ yerevanNeighborhoodFeaturesFetchedAt=Date.now();
+ return features;
+}
+function neighborhoodNameFromFeature(feature){return String(feature.properties?.toponym_name||'').trim().replace(/\\s+/g,' ')}
+function neighborhoodSequenceForRoute(coords,features){
+ const sequence=[];let total=0,covered=0,ambiguous=0;
+ const pushPoint=(lon,lat)=>{
+  total++;
+  const matches=features.filter(feature=>pointInDistrictGeometry(lon,lat,feature.geometry)&&neighborhoodNameFromFeature(feature));
+  if(matches.length!==1){if(matches.length>1)ambiguous++;return}
+  covered++;
+  const name=neighborhoodNameFromFeature(matches[0]);
+  if(name&&sequence[sequence.length-1]!==name)sequence.push(name);
+ };
+ for(let i=0;i<coords.length-1;i++){
+  const a=coords[i],b=coords[i+1],distance=haversineMeters(a,b),steps=Math.max(1,Math.ceil(distance/25));
+  for(let step=0;step<steps;step++){const t=step/steps;pushPoint(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t)}
+ }
+ const last=coords[coords.length-1];if(last)pushPoint(last[0],last[1]);
+ const coverage=total?covered/total:0,ambiguity=total?ambiguous/total:0;
+ if(coverage<0.95||ambiguity>0.03||!sequence.length)throw new Error('Երթուղու թաղամասային սահմանները քարտեզում բավարար ճշտությամբ չեն համընկնում։ Գինը չի հաշվարկվել՝ սխալ սակագնից խուսափելու համար։');
+ return {sequence:sequence.filter((name,index)=>index===0||name!==sequence[index-1]),coverage,ambiguity};
 }
 async function geocodeYerevanAddress(rawAddress){
  const address=String(rawAddress||'').trim();
@@ -291,20 +322,21 @@ async function calculateYerevanRoute(pickupAddress,destinationAddress){
  const pickup=await geocodeYerevanAddress(pickupAddress);
  const destination=await geocodeYerevanAddress(destinationAddress);
  const routeUrl='https://router.project-osrm.org/route/v1/driving/'+pickup.lon+','+pickup.lat+';'+destination.lon+','+destination.lat+'?overview=full&geometries=geojson&steps=false';
- const [routeData,features]=await Promise.all([fetchJsonWithTimeout(routeUrl),getYerevanDistrictFeatures()]);
+ const [routeData,districtFeatures,neighborhoodFeatures]=await Promise.all([fetchJsonWithTimeout(routeUrl),getYerevanDistrictFeatures(),getYerevanNeighborhoodFeatures()]);
  const route=routeData.routes?.[0],coords=route?.geometry?.coordinates;
  if(!route||!Array.isArray(coords)||coords.length<2)throw new Error('Այս հասցեների միջև մեքենայի երթուղի չհաջողվեց կառուցել։');
- const routeDistricts=districtSequenceForRoute(coords,features);
- if(!routeDistricts.length)throw new Error('Երթուղու վարչական շրջանները հնարավոր չեղավ որոշել։ Փորձեք ավելի հստակ հասցեներ։');
- const districtCount=new Set(routeDistricts).size;
- return {pickup,destination,routeDistricts,districtCount,distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_DISTRICT_COUNT(districtCount)};
+ const routeDistricts=districtSequenceForRoute(coords,districtFeatures);
+ const neighborhoodResult=neighborhoodSequenceForRoute(coords,neighborhoodFeatures);
+ const routeNeighborhoods=neighborhoodResult.sequence;
+ const neighborhoodCount=new Set(routeNeighborhoods).size;
+ return {pickup,destination,routeDistricts,routeNeighborhoods,neighborhoodCount,neighborhoodCoverage:Number(neighborhoodResult.coverage.toFixed(4)),distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_DISTRICT_COUNT(neighborhoodCount)};
 }
 
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
  const input=z.object({pickupAddress:z.string().trim().min(3).max(300),destinationAddress:z.string().trim().min(3).max(300)}).parse(req.body);
  const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
- res.json({routeDistricts:route.routeDistricts,districtCount:route.districtCount,distanceMeters:route.distanceMeters,durationSeconds:route.duration,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon,neighborhood:route.pickup.neighborhood},destination:{lat:route.destination.lat,lon:route.destination.lon,neighborhood:route.destination.neighborhood}});
+ res.json({routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,neighborhoodCount:route.neighborhoodCount,neighborhoodCoverage:route.neighborhoodCoverage,distanceMeters:route.distanceMeters,durationSeconds:route.duration,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon,neighborhood:route.pickup.neighborhood},destination:{lat:route.destination.lat,lon:route.destination.lon,neighborhood:route.destination.neighborhood}});
 }));
 
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
@@ -316,7 +348,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   }).parse(req.body);
   const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
   const fareAmd=route.baseFareAmd+input.extraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,pickupAddress:input.pickupAddress,destinationAddress:input.destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{customerId:req.user.id,pickupAddress:input.pickupAddress,destinationAddress:input.destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
   res.status(201).json({order,routeDistricts:route.routeDistricts,distanceMeters:route.distanceMeters,message:'Ուղեվարձը հաշվարկվեց քարտեզային երթուղով։'});
 }));
@@ -403,7 +435,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   try {
     order=await prisma.order.create({data:{
       customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,requiredLicenseCategory:'',pickupAddress:input.pickupAddress,
-      destinationAddress:input.destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeDistanceMeters:route.distanceMeters,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
+      destinationAddress:input.destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
       vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note
     }});
