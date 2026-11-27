@@ -624,10 +624,24 @@ app.get('/api/admin/customers',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
    }
   }
  });
- const result=customers.map(customer=>{
+ const grouped=new Map();
+ for(const customer of customers){
   const orders=customer.customerOrders||[];
-  const completed=orders.filter(order=>order.status==='COMPLETED');
-  return {...customer,orders,totalOrders:orders.length,completedOrders:completed.length,cancelledOrders:orders.filter(order=>order.status==='CANCELLED').length,totalSpentAmd:completed.reduce((sum,order)=>sum+order.fareAmd,0)};
+  const key=normalizePhone(customer.phone)||('account:'+customer.id);
+  const existing=grouped.get(key);
+  if(existing){
+   existing.orders.push(...orders);
+   if(existing.email?.endsWith('@guest.stap.invalid')&&!customer.email?.endsWith('@guest.stap.invalid')){
+    existing.id=customer.id;existing.name=customer.name;existing.email=customer.email;existing.phone=customer.phone;existing.rating=customer.rating;existing.isBlocked=customer.isBlocked;existing.createdAt=customer.createdAt;
+   }
+  }else{
+   grouped.set(key,{id:customer.id,name:customer.name,email:customer.email,phone:customer.phone,rating:customer.rating,isBlocked:customer.isBlocked,createdAt:customer.createdAt,orders:[...orders]});
+  }
+ }
+ const result=[...grouped.values()].map(customer=>{
+  customer.orders.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const completed=customer.orders.filter(order=>order.status==='COMPLETED');
+  return {...customer,totalOrders:customer.orders.length,completedOrders:completed.length,cancelledOrders:customer.orders.filter(order=>order.status==='CANCELLED').length,totalSpentAmd:completed.reduce((sum,order)=>sum+order.fareAmd,0)};
  });
  res.json({customers:result,total:result.length});
 }));
