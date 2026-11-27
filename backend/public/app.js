@@ -220,9 +220,8 @@ function bindFareCalculator(form){
   const wrap=document.createElement('label');wrap.className='fare-field district-picker-wrap';
   const title=document.createElement('span');title.textContent=label;
   const select=document.createElement('select');select.name=name;select.required=true;select.innerHTML=options;
-  wrap.append(title,select);field.insertAdjacentElement('beforebegin',wrap);
+  wrap.append(title,select);if(oldLabel)oldLabel.insertAdjacentElement('beforebegin',wrap);else field.insertAdjacentElement('beforebegin',wrap);
   districtFields.push({field,select});
-  select.addEventListener('change',schedule);
  });
  form._getDistrict=field=>districtFields.find(x=>x.field===field)?.select.value||'';
  form._getFullAddress=field=>form._getDistrict(field)+' վարչական շրջան';
