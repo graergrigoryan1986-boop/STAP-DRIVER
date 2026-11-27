@@ -1695,3 +1695,15 @@ body.driver-portal-mode #dashboard .driver-bottom-dock button{background:#1a292b
 #driverCapabilitiesField{border:1px solid #aab2ae;border-radius:9px;padding:12px}
 #driverCapabilitiesField legend{font-weight:800}
 #driverCapabilitiesField label{display:flex;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+
+body.driver-user-mode #dashboard,body.driver-portal-mode #dashboard{font-size:16px;line-height:1.5}
+body.driver-user-mode #dashboard .driver-order-card h3,
+body.driver-user-mode #dashboard .driver-order-card h4,
+body.driver-portal-mode #dashboard .driver-order-card h3,
+body.driver-portal-mode #dashboard .driver-order-card h4{font-size:17px}
+body.driver-user-mode #dashboard .driver-order-card small,
+body.driver-portal-mode #dashboard .driver-order-card small{font-size:13px}
+body.driver-user-mode #dashboard .driver-pending-toggle>span,
+body.driver-portal-mode #dashboard .driver-pending-toggle>span{font-size:15px}
+body.driver-user-mode #dashboard .driver-pending-toggle>small,
+body.driver-portal-mode #dashboard .driver-pending-toggle>small{font-size:12px}
