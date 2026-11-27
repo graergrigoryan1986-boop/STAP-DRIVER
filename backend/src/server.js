@@ -46,7 +46,7 @@ function encryptPrivate(value){if(value==null)return null;const nonce=randomByte
 function decryptPrivate(value){if(!value)return null;const data=Buffer.from(value);if(data.subarray(0,5).toString()!=='STAP1')return data;const nonce=data.subarray(5,17),tag=data.subarray(17,33),body=data.subarray(33),decipher=createDecipheriv('aes-256-gcm',DOCUMENT_KEY,nonce);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(body),decipher.final()])}
 const publicUser = user => ({
   id: user.id, name: user.name, email: user.email, phone: user.phone,
-  role: user.role, isBlocked: user.isBlocked, isVerified: user.isVerified,
+  role: user.role, isBlocked: user.isBlocked, isVerified: user.isVerified, driverServiceCapabilities: user.driverServiceCapabilities || [],
   balanceAmd: user.balanceAmd, driverNegativeBalanceLimitAmd: user.driverNegativeBalanceLimitAmd ?? 0, rating: user.rating, driverLicense: user.driverLicense,
   driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
@@ -155,7 +155,8 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
     driverPatronymicLatin: z.string().trim().max(80).optional(),
     driverLicenseSeries: z.string().trim().max(40).optional(),
     driverLicenseExpiresAt: z.iso.date().optional(),
-    driverLicenseIssuedAt: z.iso.date().optional()
+    driverLicenseIssuedAt: z.iso.date().optional(),
+    driverServiceCapabilities:z.array(z.enum(['ACCESSIBILITY_ASSIST','WHEELCHAIR_ASSIST','ELDERLY_ASSIST','CHILD_ASSIST','LUGGAGE_ASSIST'])).max(5).optional().default([])
   }).parse(req.body);
   if (input.role === 'DRIVER' && !input.driverLicense) return res.status(400).json({ error: 'Վարորդական իրավունքի տվյալները պարտադիր են' });
   const exists = await prisma.user.findUnique({ where: { email: input.email } });
@@ -177,7 +178,8 @@ app.post('/api/auth/register', asyncRoute(async (req, res) => {
       driverLastNameLatin:input.driverLastNameLatin||null,driverPatronymicLatin:input.driverPatronymicLatin||null,
       driverLicenseSeries:input.driverLicenseSeries||null,
       driverLicenseExpiresAt:input.driverLicenseExpiresAt?new Date(input.driverLicenseExpiresAt+'T00:00:00.000Z'):null,
-      driverLicenseIssuedAt:input.driverLicenseIssuedAt?new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z'):null
+      driverLicenseIssuedAt:input.driverLicenseIssuedAt?new Date(input.driverLicenseIssuedAt+'T00:00:00.000Z'):null,
+      driverServiceCapabilities:input.role==='DRIVER'?input.driverServiceCapabilities:[]
     }});
   }
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
@@ -203,7 +205,7 @@ app.get('/api/site-content',asyncRoute(async(_req,res)=>{const r=await prisma.si
 app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const input=z.object({content:z.record(z.string(),z.string())}).parse(req.body);const existing=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(existing?.content&&typeof existing.content==='object'?existing.content:{}),...Object.fromEntries(Object.entries(input.content).map(([k,v])=>[k,v.slice(0,12000)]))};const r=await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});io.emit('site-content:updated',{updatedAt:r.updatedAt});res.json({success:true,content:r.content,updatedAt:r.updatedAt,message:'Կայքի բովանդակությունը պահպանվեց և հրապարակվեց։'})}));
 app.get('/api/tariffs',asyncRoute(async(_req,res)=>{const row=await prisma.siteContent.findUnique({where:{id:'main'}});const tariffs=Array.isArray(row?.content?.tariffs)?row.content.tariffs:[];res.json({tariffs:tariffs.filter(item=>item&&item.active!==false)});}));
 app.put('/api/admin/tariffs',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const input=z.object({tariffs:z.array(z.object({id:z.string().trim().min(1).max(80),title:z.string().trim().min(2).max(120),description:z.string().trim().max(2000),requirements:z.string().trim().max(2000).optional().default(''),extraInfo:z.string().trim().max(1500).optional().default(''),dispatchMode:z.enum(['NETWORK','CATEGORY']).optional().default('NETWORK'),requiredLicenseCategory:z.string().trim().max(5).optional().default(''),priceAmd:z.number().int().min(0).max(100000000),image:z.string().max(5_000_000).optional().default(''),active:z.boolean().default(true)}).refine(item=>item.dispatchMode!=='CATEGORY'||Boolean(item.requiredLicenseCategory),{message:'Ընտրեք պարտադիր վարորդական կարգը։'})).max(100)}).parse(req.body);
+ const input=z.object({tariffs:z.array(z.object({id:z.string().trim().min(1).max(80),title:z.string().trim().min(2).max(120),description:z.string().trim().max(2000),requirements:z.string().trim().max(2000).optional().default(''),extraInfo:z.string().trim().max(1500).optional().default(''),dispatchMode:z.enum(['NETWORK','CATEGORY','CAPABILITY']).optional().default('NETWORK'),requiredLicenseCategory:z.string().trim().max(5).optional().default(''),requiredCapability:z.enum(['ACCESSIBILITY_ASSIST','WHEELCHAIR_ASSIST','ELDERLY_ASSIST','CHILD_ASSIST','LUGGAGE_ASSIST']).optional().default(''),priceAmd:z.number().int().min(0).max(100000000),image:z.string().max(5_000_000).optional().default(''),active:z.boolean().default(true)}).refine(item=>item.dispatchMode!=='CATEGORY'||Boolean(item.requiredLicenseCategory),{message:'Ընտրեք պարտադիր վարորդական կարգը։'}).refine(item=>item.dispatchMode!=='CAPABILITY'||Boolean(item.requiredCapability),{message:'Ընտրեք վարորդի պարտադիր հմտությունը։'})).max(100)}).parse(req.body);
  const row=await prisma.siteContent.findUnique({where:{id:'main'}});
  const content={...(row?.content&&typeof row.content==='object'?row.content:{}),tariffs:input.tariffs};
  await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});
@@ -521,11 +523,12 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const service=input.serviceId?catalogue.find(item=>item?.id===input.serviceId&&item.active!==false):null;
   if(input.serviceId&&!service)return res.status(400).json({error:'Ընտրված ծառայությունն այլևս հասանելի չէ։ Թարմացրեք էջը։'});
   const servicePriceAmd=Number.isInteger(service?.priceAmd)?service.priceAmd:0;
-  const dispatchMode=service?.dispatchMode==='CATEGORY'?'CATEGORY':'NETWORK';
+  const dispatchMode=['CATEGORY','CAPABILITY'].includes(service?.dispatchMode)?service.dispatchMode:'NETWORK';
   const requiredLicenseCategory=dispatchMode==='CATEGORY'?(service?.requiredLicenseCategory||'B'):input.requiredLicenseCategory;
+  const requiredCapability=dispatchMode==='CAPABILITY'?(service?.requiredCapability||''):'';
   let eligibleDrivers=[];
-  if(dispatchMode==='CATEGORY'){
-   eligibleDrivers=await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false,driverLicenseCategories:{has:requiredLicenseCategory},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
+  if(dispatchMode==='CATEGORY'||dispatchMode==='CAPABILITY'){
+   eligibleDrivers=await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false,...(dispatchMode==='CATEGORY'?{driverLicenseCategories:{has:requiredLicenseCategory}}:{driverServiceCapabilities:{has:requiredCapability}}),...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
    if(!eligibleDrivers.length)return res.status(409).json({error:'Այս ծառայության պարտադիր կարգին համապատասխան հաստատված վարորդ այս պահին չկա։ Ընտրեք այլ ծառայություն կամ կապվեք ադմինի հետ։'});
   }
   const totalExtraAmd=input.extraChargeAmd+servicePriceAmd;
@@ -534,7 +537,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,totalExtraAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+totalExtraAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   const event={id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
   if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else io.to('drivers').emit('order:new',event);
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Պատվերը հրապարակվեց՝ ընտրված ծառայության և համապատասխան վարորդների պայմաններով։'});
@@ -717,6 +720,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
         ...(categories.length?[{dispatchMode:'CATEGORY',driverId:null,OR:[{requiredLicenseCategory:{in:categories}},{requiredLicenseCategory:''}]}]:[]),
+        ...((req.user.driverServiceCapabilities||[]).length?[{dispatchMode:'CAPABILITY',driverId:null,serviceCapability:{in:req.user.driverServiceCapabilities}}]:[]),
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ],
       ...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})
@@ -801,7 +805,9 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  if(requestedOrder.dispatchMode==='CATEGORY'&&(!(req.user.driverLicenseCategories||[]).includes(requestedOrder.requiredLicenseCategory)||(requestedOrder.transmissionType==='MANUAL'&&req.user.driverTransmission!=='MANUAL')))return res.status(403).json({error:'Այս պատվերի ծառայության պարտադիր պայմաններին չեք համապատասխանում։'});
+  if(requestedOrder.dispatchMode==='CATEGORY'&&!(req.user.driverLicenseCategories||[]).includes(requestedOrder.requiredLicenseCategory))return res.status(403).json({error:'Այս պատվերի վարորդական կարգի պահանջին չեք համապատասխանում։'});
+  if(requestedOrder.dispatchMode==='CAPABILITY'&&!(req.user.driverServiceCapabilities||[]).includes(requestedOrder.serviceCapability||''))return res.status(403).json({error:'Այս պատվերի ծառայության հատուկ հմտության պահանջին չեք համապատասխանում։'});
+  if(requestedOrder.transmissionType==='MANUAL'&&req.user.driverTransmission!=='MANUAL')return res.status(403).json({error:'Այս պատվերի մեխանիկական փոխանցման տուփի պահանջին չեք համապատասխանում։'});
   // Accepting an order must not be blocked by legacy license-category or transmission metadata.
   // Dispatch visibility/assignment is handled separately when the order is created.
   const settingsRow = await prisma.siteContent.findUnique({ where: { id: 'main' } });
