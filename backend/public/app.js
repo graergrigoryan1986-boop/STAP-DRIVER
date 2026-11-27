@@ -240,14 +240,15 @@ function bindFareCalculator(form){
  if(preview&&form.id!=='adminTestOrderForm')preview.insertAdjacentElement('afterend',fareGuide);
  if(!pickup||!destination||!extra||!fare)return;
  let timer=null,requestNo=0,lastQuote=null,lastQuoteKey='';
- const updateTotal=()=>{if(!lastQuote)return;const surcharge=Math.max(0,Math.round(Number(extra.value)||0))+(urgent?.checked?2500:0),total=lastQuote.baseFareAmd+surcharge;fare.value=String(total);if(summary)summary.textContent=(lastQuote.districtCount||0)+' վարչական շրջանի սակագին՝ '+money(lastQuote.baseFareAmd)+' · Հավելավճար՝ '+money(surcharge)+' · Վերջնական արժեք՝ '+money(total)};
+ const updateTotal=()=>{if(!lastQuote)return;const surcharge=Math.max(0,Math.round(Number(extra.value)||0))+(urgent?.checked?2500:0)+(urgent?.checked?Number(lastQuote.demandExtraChargeAmd||0):0),total=lastQuote.baseFareAmd+surcharge;fare.value=String(total);if(summary)summary.textContent=(lastQuote.districtCount||0)+' վարչական շրջանի սակագին՝ '+money(lastQuote.baseFareAmd)+' · Հավելավճար՝ '+money(surcharge)+(urgent?.checked&&lastQuote.demandCoefficientPercent?' · Պահանջարկի գործակից՝ +'+String(lastQuote.demandCoefficientPercent).replace('.',',')+'%':'')+' · Վերջնական արժեք՝ '+money(total)};
  const refresh=async()=>{
   const from=fullAddress(pickup),to=fullAddress(destination);
   if(from.length<3||to.length<3){lastQuote=null;fare.value='';if(preview)preview.textContent='Մուտքագրեք երկու ամբողջական հասցեները․ համակարգն ինքնուրույն կգտնի վարչական շրջանները և երթուղին։';if(summary)summary.textContent='';return false}
-  const quoteKey=from+' → '+to;if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
+  const isUrgent=Boolean(urgent?.checked),extraChargeAmd=Math.max(0,Math.round(Number(extra.value)||0));
+  const quoteKey=from+' → '+to+'|urgent:'+isUrgent+'|extra:'+extraChargeAmd;if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
   const id=++requestNo;if(preview)preview.textContent='Քարտեզի վրա որոշվում են հասցեների վարչական շրջանները և հաշվարկվում մեքենայի երթուղին…';fare.value='';
   try{
-   const quote=await api('/api/routes/quote',{method:'POST',body:JSON.stringify({pickupAddress:from,destinationAddress:to})});
+   const quote=await api('/api/routes/quote',{method:'POST',body:JSON.stringify({pickupAddress:from,destinationAddress:to,isUrgent,extraChargeAmd})});
    if(id!==requestNo)return false;lastQuote=quote;lastQuoteKey=quoteKey;updateTotal();
    const km=(quote.distanceMeters/1000).toFixed(1).replace('.',','),minutes=Math.max(1,Math.round(quote.durationSeconds/60));
    if(preview)preview.innerHTML='<strong>🗺️ Երթուղու հաշվարկ՝ Երևանի վարչական շրջաններով</strong><span class="route-community-count">Երթուղին անցնում է <b>'+Number(quote.districtCount||0)+'</b> տարբեր վարչական շրջանով</span><span>Մեկնարկի հասցե՝ <b>'+esc(quote.pickupDistrict||'—')+'</b></span><span>Նպատակակետի հասցե՝ <b>'+esc(quote.destinationDistrict||'—')+'</b></span><span class="route-community-sequence">'+esc((quote.routeDistricts||[]).join(' → '))+'</span><span>'+km+' կմ · մոտ '+minutes+' րոպե</span>';
@@ -256,7 +257,7 @@ function bindFareCalculator(form){
  };
  const schedule=()=>{clearTimeout(timer);form.dataset.routeQuoteReady='false';lastQuote=null;lastQuoteKey='';fare.value='';if(summary)summary.textContent='';timer=setTimeout(refresh,1000)};
  [pickup,destination].forEach(el=>el.addEventListener('input',schedule));
- urgent?.addEventListener('change',updateTotal);extra.addEventListener('input',updateTotal);extra.addEventListener('change',updateTotal);
+ urgent?.addEventListener('change',schedule);extra.addEventListener('input',schedule);extra.addEventListener('change',schedule);
  form._refreshRouteQuote=async()=>{clearTimeout(timer);if(lastQuote&&form.dataset.routeQuoteReady==='true')return true;return refresh()};
  if(pickup.value&&destination.value)refresh();else if(preview)preview.textContent='Մուտքագրեք երկու ամբողջական հասցեները․ վարչական շրջանները կճշտվեն ավտոմատ։';
 }
