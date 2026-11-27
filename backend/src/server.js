@@ -605,45 +605,16 @@ app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
 }));
 
 app.get('/api/admin/customers',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const customers=await prisma.user.findMany({
-  where:{role:'CUSTOMER'},
-  orderBy:{createdAt:'desc'},
-  select:{
-   id:true,name:true,email:true,phone:true,rating:true,isBlocked:true,createdAt:true,
-   customerOrders:{
-    orderBy:{createdAt:'desc'},
-    include:{
-     driver:{select:{id:true,name:true,phone:true,rating:true}},
-     ratings:{orderBy:{createdAt:'desc'},include:{
-      fromUser:{select:{id:true,name:true,phone:true,role:true}},
-      toUser:{select:{id:true,name:true,phone:true,role:true}}
-     }}
-    }
-   }
-  }
- });
- const grouped=new Map();
- for(const customer of customers){
-  const orders=customer.customerOrders||[];
-  const key=normalizePhone(customer.phone)||('account:'+customer.id);
-  const existing=grouped.get(key);
-  if(existing){
-   existing.orders.push(...orders);
-   if(existing.email?.endsWith('@guest.stap.invalid')&&!customer.email?.endsWith('@guest.stap.invalid')){
-    existing.id=customer.id;existing.name=customer.name;existing.email=customer.email;existing.phone=customer.phone;existing.rating=customer.rating;existing.isBlocked=customer.isBlocked;existing.createdAt=customer.createdAt;
-   }
-  }else{
-   grouped.set(key,{id:customer.id,name:customer.name,email:customer.email,phone:customer.phone,rating:customer.rating,isBlocked:customer.isBlocked,createdAt:customer.createdAt,orders:[...orders]});
-  }
- }
- const result=[...grouped.values()].map(customer=>{
-  customer.orders.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-  const completed=customer.orders.filter(order=>order.status==='COMPLETED');
-  return {...customer,totalOrders:customer.orders.length,completedOrders:completed.length,cancelledOrders:customer.orders.filter(order=>order.status==='CANCELLED').length,totalSpentAmd:completed.reduce((sum,order)=>sum+order.fareAmd,0)};
- });
- res.json({customers:result,total:result.length});
+ const users=await prisma.user.findMany({where:{role:'CUSTOMER'},orderBy:{createdAt:'desc'},select:{id:true,name:true,email:true,phone:true,rating:true,isBlocked:true,createdAt:true}});
+ const orders=await prisma.order.findMany({orderBy:{createdAt:'desc'},include:{customer:{select:{id:true,name:true,email:true,phone:true,rating:true}},driver:{select:{id:true,name:true,phone:true,rating:true}},ratings:{orderBy:{createdAt:'desc'},include:{fromUser:{select:{id:true,name:true,phone:true,role:true}},toUser:{select:{id:true,name:true,phone:true,role:true}}}}}});
+ const groups=new Map(),accountGroups=new Map(),keyFor=value=>normalizePhone(value)||null;
+ for(const user of users){const key=keyFor(user.phone)||('account:'+user.id);let group=groups.get(key);if(!group){group={id:user.id,name:user.name,email:user.email,phone:user.phone,rating:user.rating,isBlocked:user.isBlocked,createdAt:user.createdAt,orders:[],accounts:[]};groups.set(key,group)}else if(group.email?.endsWith('@guest.stap.invalid')&&!user.email?.endsWith('@guest.stap.invalid'))Object.assign(group,{id:user.id,name:user.name,email:user.email,phone:user.phone,rating:user.rating,isBlocked:user.isBlocked,createdAt:user.createdAt});group.accounts.push(user.id);accountGroups.set(user.id,group)}
+ for(const order of orders){const customer=order.customer,customerPhone=keyFor(customer?.phone),orderPhone=keyFor(order.phonePrimary);let group=(customer&&accountGroups.get(customer.id))||groups.get(customerPhone)||groups.get(orderPhone);if(!group){const key=customerPhone||orderPhone||('order:'+order.id);group={id:customer?.id||order.id,name:customer?.name||'Անանուն պատվիրատու',email:customer?.email||'',phone:customer?.phone||order.phonePrimary||'',rating:customer?.rating??5,isBlocked:customer?.isBlocked||false,createdAt:order.createdAt,orders:[],accounts:[]};groups.set(key,group)}
+  for(const alias of [customerPhone,orderPhone].filter(Boolean)){const other=groups.get(alias);if(other&&other!==group){group.orders.push(...other.orders);group.accounts.push(...other.accounts);if(group.email?.endsWith('@guest.stap.invalid')&&!other.email?.endsWith('@guest.stap.invalid'))Object.assign(group,{id:other.id,name:other.name,email:other.email,phone:other.phone,rating:other.rating,isBlocked:other.isBlocked,createdAt:other.createdAt});for(const [k,v] of groups)if(v===other)groups.set(k,group)}groups.set(alias,group)}
+  if(customer?.id&&!group.accounts.includes(customer.id))group.accounts.push(customer.id);if(!group.orders.some(item=>item.id===order.id))group.orders.push(order)}
+ const result=[...new Set(groups.values())].map(group=>{group.orders.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const ratings=group.orders.flatMap(order=>order.ratings||[]),customerRatings=ratings.filter(r=>r.toUser?.role==='CUSTOMER'),ratingAverage=customerRatings.length?customerRatings.reduce((sum,r)=>sum+r.score,0)/customerRatings.length:Number(group.rating??5),completed=group.orders.filter(order=>order.status==='COMPLETED');return {...group,rating:ratingAverage,ratingCount:customerRatings.length,ratings,totalOrders:group.orders.length,completedOrders:completed.length,cancelledOrders:group.orders.filter(order=>order.status==='CANCELLED').length,totalSpentAmd:completed.reduce((sum,order)=>sum+order.fareAmd,0)}}).sort((a,b)=>new Date(b.orders[0]?.createdAt||b.createdAt)-new Date(a.orders[0]?.createdAt||a.createdAt));
+ res.json({customers:result,total:result.length,totalOrders:orders.length});
 }));
- 
 app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const orders=await prisma.order.findMany({orderBy:{createdAt:'desc'},include:{
     customer:{select:{id:true,name:true,phone:true}},
