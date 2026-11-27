@@ -529,7 +529,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   let eligibleDrivers=[];
   if(dispatchMode==='CATEGORY'||dispatchMode==='CAPABILITY'){
    eligibleDrivers=await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false,...(dispatchMode==='CATEGORY'?{driverLicenseCategories:{has:requiredLicenseCategory}}:{driverServiceCapabilities:{has:requiredCapability}}),...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
-   if(!eligibleDrivers.length)return res.status(409).json({error:'Այս ծառայության պարտադիր կարգին համապատասխան հաստատված վարորդ այս պահին չկա։ Ընտրեք այլ ծառայություն կամ կապվեք ադմինի հետ։'});
+   if(!eligibleDrivers.length)return res.status(409).json({error:dispatchMode==='CAPABILITY'?'Այս հատուկ հմտությունն ունեցող հաստատված վարորդ այս պահին չկա։ Վարորդները պետք է իրենց պրոֆիլում նշեն այդ հմտությունը։':'Այս վարորդական կարգով հաստատված վարորդ այս պահին չկա։ Ընտրեք այլ ծառայություն կամ կապվեք ադմինի հետ։'});
   }
   const totalExtraAmd=input.extraChargeAmd+servicePriceAmd;
   const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
