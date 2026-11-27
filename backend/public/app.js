@@ -1,6 +1,22 @@
 const $ = (s) => document.querySelector(s);
 const authPanel = $('#authPanel'), appPanel = $('#appPanel'), authForm = $('#authForm');
 let mode = 'login', token = localStorage.getItem('stap_token') || '', currentUser = null;
+let realtimeSocket = null, realtimeRefreshTimer = null;
+function connectRealtime(){
+ if(!window.io||!token)return;
+ if(realtimeSocket)realtimeSocket.disconnect();
+ realtimeSocket=window.io({auth:{token},transports:['websocket','polling']});
+ const refresh=()=>{
+  if(realtimeRefreshTimer)clearTimeout(realtimeRefreshTimer);
+  realtimeRefreshTimer=setTimeout(async()=>{
+   if(!currentUser)return;
+   try{if(currentUser.role==='ADMIN')await adminView();else if(currentUser.role==='DRIVER')await driverView();else await customerView();connectRealtime()}catch(error){console.warn('Live refresh failed',error)}
+  },450);
+ };
+ ['order:new','order:cancelled','order:accepted','order:fare-updated','order:completed','notification:new','rating:updated','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
+ realtimeSocket.on('connect_error',error=>console.warn('STAP live connection:',error.message));
+}
+
 const appParams = new URLSearchParams(location.search);
 const appMode = (appParams.get('app') || appParams.get('portal'))?.toUpperCase();
 const lockedAppRole = ['CUSTOMER','DRIVER','ADMIN'].includes(appMode) ? appMode : null;
@@ -18,7 +34,7 @@ function syncLicenseField(){const active=mode==='register',driver=$('#role').val
 async function api(path, options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization='Bearer '+token;const res=await fetch(path,{...options,headers});const data=await res.json().catch(()=>({error:'Սերվերի պատասխանը հասկանալի չէ'}));if(!res.ok)throw new Error(data.error||'Հարցումը չհաջողվեց');return data}
 authForm.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(authForm);const body={email:f.get('email'),password:f.get('password')};if(mode==='register'){body.name=f.get('name');body.phone=f.get('phone');body.role=lockedAppRole||f.get('role');if(f.get('driverLicenseIssuedAt'))body.driverLicenseIssuedAt=f.get('driverLicenseIssuedAt');if(body.role==='DRIVER'){body.driverLicense=f.get('driverLicense');body.driverFirstNameLatin=f.get('driverFirstNameLatin');body.driverLastNameLatin=f.get('driverLastNameLatin');body.driverPatronymicLatin=f.get('driverPatronymicLatin');body.driverLicenseSeries=f.get('driverLicenseSeries');body.driverLicenseExpiresAt=f.get('driverLicenseExpiresAt')}}
 try{message('#authMessage','Կատարվում է...');const data=await api(mode==='login'?'/api/auth/login':'/api/auth/register',{method:'POST',body:JSON.stringify(body)});if(lockedAppRole&&data.user.role!==lockedAppRole)throw new Error(lockedAppRole==='DRIVER'?'Այս հավելվածում մուտք գործելու համար անհրաժեշտ է վարորդի հաշիվ։':lockedAppRole==='ADMIN'?'Ադմինի մուտքի տվյալները սխալ են կամ հաշիվը ադմին չէ։':'Այս հավելվածում մուտք գործելու համար անհրաժեշտ է հաճախորդի հաշիվ։');token=data.token;localStorage.setItem('stap_token',token);currentUser=data.user;await showApp()}catch(err){const details=err.details?.map(x=>x.message).filter(Boolean).join('։ ');message('#authMessage',details?err.message+'։ '+details:err.message,true)}});
-$('#logout').addEventListener('click',()=>{token='';currentUser=null;localStorage.removeItem('stap_token');document.body.classList.remove('authenticated');appPanel.classList.add('hidden');authPanel.classList.remove('hidden');setPublicAuthVisible(true);setMode('login')});
+$('#logout').addEventListener('click',()=>{if(realtimeSocket){realtimeSocket.disconnect();realtimeSocket=null}token='';currentUser=null;localStorage.removeItem('stap_token');document.body.classList.remove('authenticated');appPanel.classList.add('hidden');authPanel.classList.remove('hidden');setPublicAuthVisible(true);setMode('login')});
 async function showApp(){try{const data=await api('/api/me');currentUser=data.user;if(lockedAppRole&&currentUser.role!==lockedAppRole)throw new Error(lockedAppRole==='ADMIN'?'Այս էջը հասանելի է միայն ադմինիստրատորին։':'Այս հաշիվը չի համապատասխանում հավելվածի տեսակին։');$('#dashboard').classList.remove('admin-light');document.body.classList.add('authenticated');authPanel.classList.add('hidden');appPanel.classList.remove('hidden');setPublicAuthVisible(false);$('#welcome').textContent='Բարի գալուստ, '+currentUser.name;const welcomeAvatar=$('#welcomeAvatar');if(welcomeAvatar){welcomeAvatar.textContent=(currentUser.name||'?').trim().charAt(0).toUpperCase();if(currentUser.role==='DRIVER'){try{const photo=await api('/api/drivers/profile-photo');if(photo.photo){welcomeAvatar.textContent='';welcomeAvatar.style.backgroundImage='url("'+photo.photo+'")';welcomeAvatar.classList.add('has-photo')}}catch(_){}}}$('#accountMeta').textContent=currentUser.role==='DRIVER'?[driverAgeLabel(currentUser.dateOfBirth),(currentUser.driverLicenseCategories||[]).join(', '),currentUser.driverTransmission==='MANUAL'?'Մեխանիկական + ավտոմատ':'Ավտոմատ','Ստաժ՝ '+driverExperienceLabel(currentUser.driverExperienceMonths,currentUser.driverLicenseIssuedAt)].filter(Boolean).join(' • '):currentUser.email+' • '+({ADMIN:'Ադմինիստրատոր',DRIVER:'Վարորդ',CUSTOMER:'Հաճախորդ'}[currentUser.role]);if(currentUser.role==='ADMIN')await adminView();else if(currentUser.role==='DRIVER')await driverView();else await customerView()}catch(err){message('#authMessage',err.message,true);token='';localStorage.removeItem('stap_token');document.body.classList.remove('authenticated');appPanel.classList.add('hidden');authPanel.classList.remove('hidden');setPublicAuthVisible(true)}}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function money(n){return new Intl.NumberFormat('hy-AM').format(n||0)+' ֏'}
