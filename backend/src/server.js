@@ -355,7 +355,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),isTest:z.boolean().default(false)
   }).parse(req.body);
-  const route=await calculateYerevanRoute(input.pickupNeighborhood+', '+input.pickupAddress,input.destinationNeighborhood+', '+input.destinationAddress);
+  const route=await calculateYerevanRoute(input.pickupNeighborhood+', '+input.pickupAddress,input.destinationNeighborhood+', '+input.destinationAddress,input.pickupNeighborhood,input.destinationNeighborhood);
   const pickupAddress=input.pickupNeighborhood+', '+input.pickupAddress,destinationAddress=input.destinationNeighborhood+', '+input.destinationAddress;
   const urgentExtraChargeAmd=input.isUrgent?2500:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
@@ -427,7 +427,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   if(input.scheduleType!=='NOW'&&!input.scheduledAt)return res.status(400).json({error:'Ընտրեք պատվերի ամսաթիվն ու ժամը։'});
   const scheduledAt=input.scheduleType==='NOW'?null:new Date(input.scheduledAt);
   if(scheduledAt&&scheduledAt.getTime()<=Date.now())return res.status(400).json({error:'Պատվերի նախատեսված ժամը պետք է լինի ապագայում։'});
-  const route=await calculateYerevanRoute(input.pickupNeighborhood+', '+input.pickupAddress,input.destinationNeighborhood+', '+input.destinationAddress);
+  const route=await calculateYerevanRoute(input.pickupNeighborhood+', '+input.pickupAddress,input.destinationNeighborhood+', '+input.destinationAddress,input.pickupNeighborhood,input.destinationNeighborhood);
   const pickupAddress=input.pickupNeighborhood+', '+input.pickupAddress,destinationAddress=input.destinationNeighborhood+', '+input.destinationAddress;
   const urgentExtraChargeAmd=input.isUrgent?2500:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
