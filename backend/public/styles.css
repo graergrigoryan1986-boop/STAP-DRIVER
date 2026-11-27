@@ -950,3 +950,24 @@ body.authenticated footer{display:none!important}
 /* Driver dashboard priority and next scheduled order */
 .driver-next-order-card{border:2px solid rgba(232,199,126,.9)!important;box-shadow:0 0 0 2px rgba(201,164,91,.12),0 14px 34px rgba(0,0,0,.28)!important}
 .driver-next-order-label{margin:-3px 0 14px;padding:10px 12px;border:1px solid rgba(232,199,126,.42);border-radius:9px;background:rgba(201,164,91,.12);color:#f0d69b;font-size:.78rem;font-weight:800;letter-spacing:.045em}
+
+/* Driver dashboard: two-column workspace with order queues in center */
+.driver-workspace{display:grid!important;grid-template-columns:minmax(245px,300px) minmax(0,1fr)!important;gap:22px!important;align-items:start!important}
+.driver-sidebar{grid-column:1;grid-row:1;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding-right:4px}
+.driver-main{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:14px}
+.driver-main>.dash-section{margin:0!important}
+.driver-main .driver-pending-heading{align-items:center}
+.driver-main .driver-pending-heading h3{font-size:17px}
+.driver-ready-order{order:0;border:2px solid rgba(232,199,126,.92)!important;background:linear-gradient(145deg,rgba(201,164,91,.15),rgba(12,15,19,.98))!important;box-shadow:0 10px 34px rgba(0,0,0,.28)!important}
+.driver-ready-order .driver-pending-heading h3{color:#f0d69b}
+.driver-ready-order #driverReadyOrder .driver-order-card{border:2px solid rgba(232,199,126,.62)!important;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.driver-pending-bookings{order:1}
+.driver-accepted-order{order:2}
+.driver-main>details{order:3}
+@media(max-width:760px){
+ .driver-workspace{grid-template-columns:minmax(0,1fr)!important;gap:15px!important}
+ .driver-sidebar{grid-column:1;grid-row:2;position:static;max-height:none;overflow:visible;padding:0}
+ .driver-main{grid-column:1;grid-row:1}
+ .driver-sidebar .driver-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:480px){.driver-sidebar .driver-overview{grid-template-columns:1fr 1fr}.driver-main>.dash-section{padding:13px}}
