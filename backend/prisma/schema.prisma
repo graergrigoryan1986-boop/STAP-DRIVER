@@ -114,6 +114,8 @@ model Order {
   commissionAmd      Int         @default(0)
   driverEarningAmd   Int         @default(0)
   note               String?
+  pickupNote         String?
+  destinationNote    String?
   createdAt          DateTime    @default(now())
   acceptedAt         DateTime?
   arrivedAt          DateTime?
