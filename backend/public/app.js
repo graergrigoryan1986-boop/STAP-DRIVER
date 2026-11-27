@@ -43,13 +43,14 @@ function enhanceAdminBookingForm(form){
  if(!form||form.dataset.neonReady==='true')return;
  form.dataset.neonReady='true';form.classList.add('neon-dispatch-form');
  const heading=form.querySelector('.booking-form-heading');
- if(heading){heading.querySelector('h3').textContent='Նոր պատվերի կառավարում';heading.querySelector('p').textContent='Ստեղծեք պատվեր, ընտրեք երթուղին և կարգավորեք վարորդների բաշխումը։'}
+ if(heading){heading.querySelector('h3').textContent='Նոր պատվերի ձևակերպում';heading.querySelector('p').textContent='Լրացրեք բաժինները հերթականությամբ՝ նախ պատվերի ժամը, ապա մեքենան, երթուղին և վերջնական արժեքը։'}
  const groups=[
-  ['neon-route-group','01 · ԵՐԹՈՒՂԻ',['.district-street-picker','[name="pickupAddress"]','[name="destinationAddress"]']],
-  ['neon-passenger-group','02 · ՈՒՂԵՎՈՐԻ ՏՎՅԱԼՆԵՐ',['[name="phonePrimary"]','[name="phoneSecondary"]','[name="passengerCount"]']],
-  ['neon-vehicle-group','03 · ՄԵՔԵՆԱՅԻ ՊԱՀԱՆՋՆԵՐ',['[name="transmissionType"]','[name="vehicleFuelType"]']],
-  ['neon-dispatch-group','04 · ՊԱՏՎԵՐԻ ԿԱՌԱՎԱՐՈՒՄ',['[name="scheduleType"]','[name="scheduledAtLocal"]','[name="dispatchMode"]','[name="driverId"]','[name="note"]','[name="isTest"]']],
-  ['neon-price-group','05 · ԳԻՆ ԵՎ ՀԱՍՏԱՏՈՒՄ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]','.urgent-order-toggle']]
+  ['neon-schedule-group','01 · ՊԱՏՎԵՐԻ ԺԱՄԱՆԱԿԸ',['[name="scheduleType"]','[name="scheduledAtLocal"]']],
+  ['neon-vehicle-group','02 · ՄԵՔԵՆԱՅԻ ԵՎ ՓՈԽԱՆՑՄԱՆ ՏՈՒՓԻ ՏԵՍԱԿԸ',['[name="vehicleFuelType"]','[name="transmissionType"]']],
+  ['neon-route-group','03 · ՄԵԿՆՄԱՆ ԵՎ ԺԱՄԱՆՄԱՆ ՀԱՍՑԵՆԵՐԸ',['.district-street-picker','[name="pickupAddress"]','[name="destinationAddress"]']],
+  ['neon-price-group','04 · ԵՐԹՈՒՂԻ ԵՎ ՎԵՐՋՆԱԿԱՆ ԱՐԺԵՔ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]','.urgent-order-toggle']],
+  ['neon-passenger-group','05 · ԿՈՆՏԱԿՏԱՅԻՆ ՏՎՅԱԼՆԵՐ ԵՎ ՈՒՂԵՎՈՐՆԵՐԻ ՔԱՆԱԿ',['[name="phonePrimary"]','[name="phoneSecondary"]','[name="passengerCount"]']],
+  ['neon-dispatch-group','06 · ՊԱՏՎԵՐԻ ԿԱՌԱՎԱՐՈՒՄ',['[name="dispatchMode"]','[name="driverId"]','[name="note"]','[name="isTest"]']]
  ];
  const used=new Set([heading].filter(Boolean));
  for(const [className,title,selectors] of groups){
@@ -67,6 +68,8 @@ function enhanceAdminBookingForm(form){
   const span=document.createElement('span');span.textContent=input.name==='phonePrimary'?'Հեռախոսահամար 1':input.name==='phoneSecondary'?'Հեռախոսահամար 2':'Լրացուցիչ նշում';
   input.parentNode.insertBefore(label,input);label.append(span,input);
  });
+ const vehicleLabel=form.querySelector('label:has([name="vehicleFuelType"]) span');
+ if(vehicleLabel)vehicleLabel.textContent='Մեքենայի տեսակ / շարժիչ';
 }
 function setupAdminOrdersTabs(){
  const panel=$('#adminOrdersPanel'),box=$('#adminOrdersHistory'),create=$('#adminCreateOrderPanel');if(!panel||!box||!create)return;
