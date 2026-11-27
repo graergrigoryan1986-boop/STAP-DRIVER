@@ -1770,3 +1770,10 @@ body.driver-portal-mode #dashboard .driver-pending-toggle>small{font-size:12px}
 .customer-panel button,.customer-panel input,.customer-panel select{min-height:46px}
 .customer-panel form>label{font-size:14px}
 @media(max-width:600px){.customer-quick-grid{position:sticky;top:6px;z-index:5;background:#101719;padding:6px;border-radius:12px}.customer-quick-grid button{min-height:58px;font-size:18px}.customer-panel{padding:10px;border-radius:12px}.customer-panel form{gap:9px}.customer-panel input,.customer-panel select,.customer-panel textarea{font-size:16px!important;min-height:46px}.customer-panel form>button[type=submit]{width:100%;min-height:54px;font-size:16px}.driver-pending-action-row{grid-template-columns:1fr 1fr;gap:8px}.driver-pending-action-row button{min-height:54px!important;font-size:14px!important}}
+
+#dashboard .customer-order-compact{display:grid;gap:10px;padding:13px;margin:0 0 11px;border:1px solid rgba(200,166,107,.35);border-radius:14px;background:#111719;color:#f4eee2}
+#dashboard .customer-order-compact-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#dashboard .customer-order-compact-price{font-size:22px;color:#f4d27c}
+#dashboard .customer-order-compact-route{display:grid;gap:7px;font-size:14px;overflow-wrap:anywhere}
+#dashboard .customer-order-compact-driver{font-size:13px;color:#d9c7a3}
+#dashboard .customer-order-compact [data-cancel]{background:linear-gradient(135deg,#ffb347,#f07816)!important;border:2px solid #d65b08!important;color:#281300!important;min-height:50px;font-weight:900;animation:stapCancelPulse 1.15s ease-in-out infinite}
