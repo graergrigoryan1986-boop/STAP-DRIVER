@@ -819,6 +819,8 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   let result;
   try {
     result = await prisma.$transaction(async tx => {
+      // Serialize this driver's accept operations so simultaneous taps cannot bypass the daily tier.
+      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', req.user.id);
       const acceptedAt = new Date();
       // Armenia local day (UTC+4): count earlier accepted surcharge orders, excluding cancelled ones.
       const yerevanNow = new Date(acceptedAt.getTime() + 4 * 60 * 60 * 1000);
