@@ -601,12 +601,20 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message});
 }));
+function maskDriverOrderContacts(order,now=new Date()){
+ if(!order)return order;
+ const scheduled=order.scheduleType!=='NOW'&&order.scheduledAt?new Date(order.scheduledAt):null;
+ const revealAt=scheduled?new Date(scheduled.getTime()-3*60*60*1000):null;
+ const isOpen=order.status==='OPEN'||order.status==='SKIPPED';
+ const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt);
+ if(!contactHidden)return order;
+ return {...order,phonePrimary:null,phoneSecondary:null,note:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:revealAt?.toISOString()||null};
+}
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const categories=req.user.driverLicenseCategories||[];
   const orders = await prisma.order.findMany({
     where: {
       status:'OPEN',
-      AND:[{OR:[{scheduledAt:null},{scheduledAt:{lte:new Date()}}]}],
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
@@ -614,10 +622,10 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
         {dispatchMode:'DIRECT',driverId:req.user.id}
       ]
     },
-    orderBy:{createdAt:'desc'},
+    orderBy:[{scheduleType:'asc'},{scheduledAt:'asc'},{createdAt:'desc'}],
     include:{customer:{select:{id:true,name:true,phone:true}}}
   });
-  res.json({orders});
+  res.json({orders:orders.map(order=>maskDriverOrderContacts(order))});
 }));
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   if (req.user.role === 'DRIVER') {
@@ -626,7 +634,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
       prisma.skippedOrder.findMany({ where: { driverId: req.user.id }, include: { order: true }, orderBy: { createdAt: 'desc' } })
     ]);
     const orders = [...assigned, ...skipped.map(x => ({ ...x.order, status: 'SKIPPED', skippedAt: x.createdAt }))].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
-    return res.json({ orders });
+    return res.json({orders:orders.map(order=>maskDriverOrderContacts(order))});
   }
   const where = req.user.role === 'CUSTOMER' ? { customerId: req.user.id } : {};
   const orders = await prisma.order.findMany({
@@ -680,8 +688,11 @@ app.post('/api/orders/:id/skip', auth, only('DRIVER'), verifiedDriver, asyncRout
 }));
 
 app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
+  const existing=await prisma.order.findFirst({where:{id:req.params.id,customerId:req.user.id}});
+  if(!existing)return res.status(404).json({error:'Պատվերը չի գտնվել։'});
+  if(existing.scheduleType!=='NOW')return res.status(403).json({error:'Նախնական պատվերը կարող է չեղարկել միայն ադմինը։'});
   const result = await prisma.order.updateMany({
-    where: { id: req.params.id, customerId: req.user.id, status: { in: ['OPEN', 'ACCEPTED', 'ARRIVED'] } },
+    where: { id: req.params.id, customerId: req.user.id, scheduleType:'NOW', status: { in: ['OPEN', 'ACCEPTED', 'ARRIVED'] } },
     data: { status: 'CANCELLED' }
   });
   if (!result.count) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ չեղարկել այս կարգավիճակում' });
@@ -725,7 +736,7 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   }
   if (!result) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
   io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
-  res.json(result);
+  res.json({...result,order:maskDriverOrderContacts(result.order)});
 }));
 
 app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
@@ -739,7 +750,7 @@ app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRo
   });
   const order = await prisma.order.findUnique({ where: { id: existing.id } });
   if (!changed.count && order?.status !== 'ARRIVED') return res.status(409).json({ error: 'Պատվերի կարգավիճակը փոխվել է։ Թարմացրեք էջը։' });
-  return res.json({ order, message: 'Ժամանումը և մեքենայի համապատասխանության ստուգումը հաստատվեց։' });
+  return res.json({order:maskDriverOrderContacts(order),message:'Ժամանումը և մեքենայի համապատասխանության ստուգումը հաստատվեց։'});
 }));
 
 app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
@@ -749,14 +760,17 @@ app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRou
   if (existing.status !== 'ARRIVED' || !existing.vehicleInspectionPassed) return res.status(409).json({ error: 'Նախ նշեք՝ տեղում եք և մեքենան ստուգվել է ու համապատասխանում է ծառայության պահանջներին։' });
   const changed = await prisma.order.updateMany({ where: { id: req.params.id, driverId: req.user.id, status: 'ARRIVED', vehicleInspectionPassed: true }, data: { status: 'IN_PROGRESS' } });
   const order = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
-  if (order?.status === 'IN_PROGRESS') return res.json({ order, message: changed.count ? 'Ուղևորությունը սկսվեց։' : 'Ուղևորությունն արդեն սկսված է։' });
+  if(order?.status==='IN_PROGRESS')return res.json({order:maskDriverOrderContacts(order),message:changed.count?'Ուղևորությունը սկսվեց։':'Ուղևորությունն արդեն սկսված է։'});
   return res.status(409).json({ error: 'Պատվերի կարգավիճակը փոխվել է։ Թարմացրեք էջը և կրկին փորձեք։' });
 }));
 
 app.post('/api/orders/:id/driver-cancel', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const { reason } = z.object({ reason: z.string().trim().min(3).max(500) }).parse(req.body);
+  const existing=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id}});
+  if(!existing)return res.status(404).json({error:'Պատվերը կապված չէ ձեր վարորդական հաշվի հետ։'});
+  if(existing.scheduleType!=='NOW')return res.status(403).json({error:'Նախնական պատվերը կարող է չեղարկել միայն ադմինը։'});
   const changed = await prisma.order.updateMany({
-    where: { id: req.params.id, driverId: req.user.id, status: { in: ['ACCEPTED', 'ARRIVED'] } },
+    where: { id: req.params.id, driverId: req.user.id, scheduleType:'NOW', status: { in: ['ACCEPTED', 'ARRIVED'] } },
     data: { status: 'CANCELLED', driverCancellationReason: reason }
   });
   if (!changed.count) return res.status(409).json({ error: 'Այս փուլում պատվերը հնարավոր չէ չեղարկել։' });
