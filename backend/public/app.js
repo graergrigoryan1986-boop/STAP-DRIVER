@@ -20,6 +20,7 @@ function connectRealtime(){
 const appParams = new URLSearchParams(location.search);
 const appMode = (appParams.get('app') || appParams.get('portal'))?.toUpperCase();
 const lockedAppRole = ['CUSTOMER','DRIVER','ADMIN'].includes(appMode) ? appMode : null;
+if (lockedAppRole === 'DRIVER') document.body.classList.add('driver-portal-mode');
 if (lockedAppRole === 'ADMIN') { $('#registerTab')?.classList.add('hidden'); $('#registerTab')?.setAttribute('disabled','disabled'); }
 if (lockedAppRole) { const roleField = $('#role'); if (roleField) { roleField.value = lockedAppRole; roleField.closest('label')?.classList.add('hidden'); } }
 const publicAuthActions=$('#publicAuthActions');
