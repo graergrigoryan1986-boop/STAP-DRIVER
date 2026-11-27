@@ -350,7 +350,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const fareAmd=route.baseFareAmd+input.extraChargeAmd;
   const order=await prisma.order.create({data:{customerId:req.user.id,pickupAddress:input.pickupAddress,destinationAddress:input.destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
-  res.status(201).json({order,routeDistricts:route.routeDistricts,distanceMeters:route.distanceMeters,message:'Ուղեվարձը հաշվարկվեց քարտեզային երթուղով։'});
+  res.status(201).json({order,routeNeighborhoods:route.routeNeighborhoods,neighborhoodCount:route.neighborhoodCount,distanceMeters:route.distanceMeters,message:'Ուղեվարձը հաշվարկվեց Երևանի թաղամասերի քարտեզային սահմաններով։'});
 }));
 
 app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
