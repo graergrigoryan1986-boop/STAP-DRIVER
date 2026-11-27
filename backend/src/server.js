@@ -13,6 +13,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 
 const prisma = new PrismaClient();
 const app = express();
+app.set('trust proxy', 1); // Render runs behind one trusted reverse proxy
 const server = http.createServer(app);
 const PORT = Number(process.env.PORT || 10000);
 const JWT_SECRET = process.env.JWT_SECRET;
