@@ -244,7 +244,7 @@ function bindFareCalculator(form){
  const refresh=async()=>{
   const from=fullAddress(pickup),to=fullAddress(destination);
   if(from.length<3||to.length<3){lastQuote=null;fare.value='';if(preview)preview.textContent='Մուտքագրեք երկու ամբողջական հասցեները․ համակարգն ինքնուրույն կգտնի վարչական շրջանները և երթուղին։';if(summary)summary.textContent='';return false}
-  const isUrgent=Boolean(urgent?.checked),extraChargeAmd=Math.max(0,Math.round(Number(extra.value)||0));
+  const scheduleField=form.querySelector('[name="scheduleType"]'),isUrgent=Boolean(urgent?.checked&&(!scheduleField||scheduleField.value==='NOW')),extraChargeAmd=Math.max(0,Math.round(Number(extra.value)||0));
   const quoteKey=from+' → '+to+'|urgent:'+isUrgent+'|extra:'+extraChargeAmd;if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
   const id=++requestNo;if(preview)preview.textContent='Քարտեզի վրա որոշվում են հասցեների վարչական շրջանները և հաշվարկվում մեքենայի երթուղին…';fare.value='';
   try{
@@ -256,7 +256,7 @@ function bindFareCalculator(form){
   }catch(error){if(id!==requestNo)return false;lastQuote=null;fare.value='';form.dataset.routeQuoteReady='false';if(preview)preview.textContent='⚠ '+error.message;if(summary)summary.textContent='Գինը չի հաշվարկվել․ ճշտեք հասցեները։';return false}
  };
  const schedule=()=>{clearTimeout(timer);form.dataset.routeQuoteReady='false';lastQuote=null;lastQuoteKey='';fare.value='';if(summary)summary.textContent='';timer=setTimeout(refresh,1000)};
- [pickup,destination].forEach(el=>el.addEventListener('input',schedule));
+ [pickup,destination].forEach(el=>el.addEventListener('input',schedule));form.querySelector('[name="scheduleType"]')?.addEventListener('change',schedule);
  urgent?.addEventListener('change',schedule);extra.addEventListener('input',schedule);extra.addEventListener('change',schedule);
  form._refreshRouteQuote=async()=>{clearTimeout(timer);if(lastQuote&&form.dataset.routeQuoteReady==='true')return true;return refresh()};
  if(pickup.value&&destination.value)refresh();else if(preview)preview.textContent='Մուտքագրեք երկու ամբողջական հասցեները․ վարչական շրջանները կճշտվեն ավտոմատ։';
