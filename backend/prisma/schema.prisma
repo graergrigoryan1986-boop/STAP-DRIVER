@@ -47,6 +47,7 @@ model User {
   driverLicenseIssuedAt DateTime?
   driverExperienceMonths Int?
   driverLicenseCategories String[] @default([])
+  driverServiceCapabilities String[] @default([])
   driverTransmission String @default("AUTOMATIC")
   driverLicenseFront Bytes?
   driverLicenseBack Bytes?
