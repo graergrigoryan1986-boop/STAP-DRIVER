@@ -536,6 +536,7 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
  const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
  const customers=await prisma.user.findMany({where:{role:'CUSTOMER'},select:{id:true,email:true,phone:true}});
  let customer=customers.find(person=>normalizePhone(person.phone)===phone);
+ if(customer&&!customer.email.endsWith('@guest.stap.invalid'))return res.status(409).json({error:'Այս հեռախոսահամարը գրանցված հաշիվ ունի։ Շարունակելու համար մուտք գործեք այդ հաշվով։'});
  if(!customer){
   const email=guestEmailForPhone(phone);
   customer=await prisma.user.findUnique({where:{email}});
