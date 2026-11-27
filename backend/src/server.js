@@ -352,10 +352,11 @@ app.get('/api/geo/streets',auth,asyncRoute(async(req,res)=>{
  url.searchParams.set('q',q+', '+district+', Երևան, Հայաստան');
  url.searchParams.set('format','jsonv2');url.searchParams.set('limit','15');url.searchParams.set('addressdetails','1');url.searchParams.set('countrycodes','am');
  url.searchParams.set('viewbox','44.30,40.35,44.75,40.00');url.searchParams.set('bounded','1');url.searchParams.set('accept-language','hy,en');
+ const wait=Math.max(0,1100-(Date.now()-lastYerevanGeocodeAt));if(wait)await new Promise(resolve=>setTimeout(resolve,wait));lastYerevanGeocodeAt=Date.now();
  const results=await fetchJsonWithTimeout(url.toString(),{headers:{'User-Agent':'STAP-DRIVER/1.0','Accept-Language':'hy,en'}});
  const streets=[...new Set((Array.isArray(results)?results:[]).filter(item=>{
   const lat=Number(item.lat),lon=Number(item.lon);
-  return Number.isFinite(lat)&&Number.isFinite(lon)&&districtForPoint({lat,lon},features)===district;
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return false;try{return districtForPoint({lat,lon},features)===district}catch(_){return false}
  }).map(item=>item.address?.road||item.address?.pedestrian||item.address?.residential||item.name).filter(Boolean))].slice(0,8);
  res.json({streets});
 }));
