@@ -346,7 +346,6 @@ async function customerView(){
   <nav class="customer-quick-grid" aria-label="Հաճախորդի բաժիններ">
    <button type="button" data-customer-panel="new">＋<span>Նոր պատվեր</span></button>
    <button type="button" data-customer-panel="orders">▤<span>Իմ պատվերները</span></button>
-   <button type="button" data-customer-panel="profile">◉<span>Իմ տվյալները</span></button>
   </nav>
   <section class="customer-panel" data-customer-content="new" hidden>
    <div class="customer-panel-head"><h3>Նոր պատվեր</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
@@ -370,10 +369,6 @@ async function customerView(){
   <section class="customer-panel" data-customer-content="orders" hidden>
    <div class="customer-panel-head"><h3>Իմ պատվերները</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
    <div id="myOrders" class="stack"></div>
-  </section>
-  <section class="customer-panel" data-customer-content="profile" hidden>
-   <div class="customer-panel-head"><h3>Իմ տվյալները</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
-   <p><strong>${esc(currentUser.name||'')}</strong></p><p>${esc(currentUser.email||'')}</p><p>${esc(currentUser.phone||'')}</p>
   </section>
  `;
  const toggleCustomerPanel=name=>{
