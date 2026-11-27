@@ -586,7 +586,7 @@ app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     customer:{select:{id:true,name:true,phone:true}},
     driver:{select:{id:true,name:true,phone:true,isVerified:true}}
   }});
-  res.json({orders});
+  res.json({orders:await withCustomerOrderNumbers(orders)});
 }));
 
 app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
@@ -594,7 +594,7 @@ app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,
     customer:{select:{id:true,name:true,phone:true}},
     driver:{select:{id:true,name:true,phone:true,isVerified:true}}
   }});
-  res.json({orders});
+  res.json({orders:await withCustomerOrderNumbers(orders)});
 }));
 
 app.get('/api/admin/orders/archive',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
@@ -609,7 +609,7 @@ app.get('/api/admin/orders/archive',auth,only('ADMIN'),asyncRoute(async(req,res)
   driver:{select:{id:true,name:true,phone:true,isVerified:true}}
  }});
  const filtered=phoneDigits?orders.filter(order=>[order.phonePrimary,order.phoneSecondary,order.customer?.phone,order.driver?.phone].some(value=>String(value||'').replace(/\\D/g,'').includes(phoneDigits))):orders;
- res.json({orders:filtered,total:filtered.length,phoneSearch:phoneDigits||null,status});
+ res.json({orders:await withCustomerOrderNumbers(filtered),total:filtered.length,phoneSearch:phoneDigits||null,status});
 }));
 app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const existing=await prisma.order.findUnique({where:{id:req.params.id}});
@@ -702,6 +702,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message});
 }));
+async function withCustomerOrderNumbers(orders){if(!orders?.length)return orders||[];const customerIds=[...new Set(orders.map(order=>order.customerId).filter(Boolean))];if(!customerIds.length)return orders;const history=await prisma.order.findMany({where:{customerId:{in:customerIds}},select:{id:true,customerId:true,createdAt:true},orderBy:[{createdAt:'asc'},{id:'asc'}]});const stats=new Map();for(const item of history){const current=stats.get(item.customerId)||{total:0,numbers:new Map()};current.total++;current.numbers.set(item.id,current.total);stats.set(item.customerId,current)}return orders.map(order=>{const current=stats.get(order.customerId);return current?{...order,customerOrderNumber:current.numbers.get(order.id)||current.total,customerOrderTotal:current.total}:order})}
 function maskDriverOrderContacts(order,now=new Date()){
  if(!order)return order;
  const scheduled=order.scheduleType!=='NOW'&&order.scheduledAt?new Date(order.scheduledAt):null;
@@ -728,7 +729,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
     orderBy:[{scheduleType:'asc'},{scheduledAt:'asc'},{createdAt:'desc'}],
     include:{customer:{select:{id:true,name:true,phone:true}}}
   });
-  res.json({orders:orders.map(order=>maskDriverOrderContacts(order))});
+  res.json({orders:await withCustomerOrderNumbers(orders.map(order=>maskDriverOrderContacts(order)))});
 }));
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   if (req.user.role === 'DRIVER') {
@@ -737,7 +738,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
       prisma.skippedOrder.findMany({ where: { driverId: req.user.id }, include: { order: true }, orderBy: { createdAt: 'desc' } })
     ]);
     const orders = [...assigned, ...skipped.map(x => ({ ...x.order, status: 'SKIPPED', skippedAt: x.createdAt }))].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
-    return res.json({orders:orders.map(order=>maskDriverOrderContacts(order))});
+    return res.json({orders:await withCustomerOrderNumbers(orders.map(order=>maskDriverOrderContacts(order)))});
   }
   const where = req.user.role === 'CUSTOMER' ? { customerId: req.user.id } : {};
   const orders = await prisma.order.findMany({
