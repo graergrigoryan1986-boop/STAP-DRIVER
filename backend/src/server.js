@@ -572,7 +572,7 @@ app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,
 }));
 
 app.get('/api/admin/orders/archive',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const phoneDigits=String(req.query.phone||'').replace(/\\D/g,'');
+ const phoneDigits=String(req.query.phone||'').replace(/\D/g,'');
  const status=String(req.query.status||'ARCHIVE').toUpperCase();
  const allowed=['ARCHIVE','ALL','COMPLETED','CANCELLED','OPEN','ACCEPTED','IN_PROGRESS'];
  if(!allowed.includes(status))return res.status(400).json({error:'Ընտրեք ճիշտ կարգավիճակ։'});
