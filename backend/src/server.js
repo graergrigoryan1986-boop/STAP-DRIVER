@@ -862,7 +862,7 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
     throw error;
   }
   if (!result) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
+  io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});\n  io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
   res.json({...result,order:maskDriverOrderContacts(result.order)});
 }));
 
@@ -943,7 +943,7 @@ app.post('/api/orders/:id/intermediate-community', auth, only('DRIVER'), verifie
       const [order, driver] = await Promise.all([tx.order.findUnique({ where: { id: existing.id } }), tx.user.findUnique({ where: { id: req.user.id }, select: { balanceAmd: true } })]);
       return { order, balanceAmd: driver.balanceAmd, commissionAmd, addedFareAmd };
     });
-    io.to('user:' + existing.customerId).emit('order:fare-updated', { id: existing.id, fareAmd: result.order.fareAmd, intermediateCommunities: result.order.intermediateCommunities });
+    io.to('user:' + req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});\n   io.to('user:' + existing.customerId).emit('order:fare-updated', { id: existing.id, fareAmd: result.order.fareAmd, intermediateCommunities: result.order.intermediateCommunities });
     return res.json(result);
   } catch (error) {
     if (error.message === 'WALLET_MINIMUM_NOT_MET') return res.status(409).json({ error: 'Հաշվեկշիռը բավարար չէ միջանկյալ համայնքի հավելավճարի միջնորդավճարի համար։' });
