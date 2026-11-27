@@ -454,7 +454,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
       id:true,name:true,rating:true,driverFirstNameLatin:true,driverLastNameLatin:true,
       driverLicenseIssuedAt:true,driverLicenseCategories:true,driverTransmission:true,dateOfBirth:true,
       isVerified:true,driverProfilePhoto:true
-    }}} : undefined
+    }},ratings:{where:{fromUserId:req.user.id},select:{id:true,score:true,reasonTags:true,comment:true}}} : undefined
   });
   const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => ({
     ...o, driver: o.driver ? {
@@ -466,6 +466,25 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
     } : null
   })) : orders;
   res.json({ orders: safeOrders });
+}));
+
+app.post('/api/orders/:id/rate-driver',auth,only('CUSTOMER'),asyncRoute(async(req,res)=>{
+ const input=z.object({score:z.number().int().min(1).max(5),reasonTags:z.array(z.string().trim().min(1).max(100)).max(8).default([]),comment:z.string().trim().max(500).optional().or(z.literal(''))}).parse(req.body);
+ if(input.score<=3&&!input.reasonTags.length)return res.status(400).json({error:'Ցածր գնահատականի դեպքում պատճառ ընտրելը պարտադիր է։'});
+ const result=await prisma.$transaction(async tx=>{
+  const order=await tx.order.findFirst({where:{id:req.params.id,customerId:req.user.id,status:'COMPLETED',driverId:{not:null}}});
+  if(!order)return {error:'Գնահատել կարելի է միայն ավարտված պատվերի վարորդին։'};
+  const existing=await tx.rating.findUnique({where:{orderId_fromUserId:{orderId:order.id,fromUserId:req.user.id}}});
+  if(existing)return {error:'Այս պատվերի համար արդեն գնահատական եք տվել։'};
+  await tx.rating.create({data:{orderId:order.id,fromUserId:req.user.id,toUserId:order.driverId,score:input.score,reasonTags:input.reasonTags,comment:input.comment||null}});
+  const aggregate=await tx.rating.aggregate({where:{toUserId:order.driverId},_avg:{score:true}});
+  const rating=aggregate._avg.score===null?5:Number(aggregate._avg.score.toFixed(2));
+  await tx.user.update({where:{id:order.driverId},data:{rating}});
+  return {rating};
+ });
+ if(result.error)return res.status(409).json({error:result.error});
+ io.emit('rating:updated',{userId:req.user.id,driverId:result.rating});
+ res.json({success:true,rating:result.rating,message:'Վարորդի գնահատականը պահպանվեց։ Շնորհակալություն։'});
 }));
 
 app.post('/api/orders/:id/skip', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
@@ -614,8 +633,10 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
   const input = z.object({
     score: z.number().int().min(1).max(5),
     tags: z.array(z.string().trim().min(1).max(80)).max(8).default([]),
+    reasonTags: z.array(z.string().trim().min(1).max(100)).max(8).default([]),
     comment: z.string().trim().max(500).optional().or(z.literal(''))
   }).parse(req.body);
+  if(input.score<=3&&!input.reasonTags.length)return res.status(400).json({error:'Ցածր գնահատականի դեպքում պատճառ ընտրելը պարտադիր է։'});
   const result = await prisma.$transaction(async tx => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, driverId: req.user.id, status: 'IN_PROGRESS' } });
     if (!order) return null;
@@ -626,7 +647,7 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
     });
     if (!changed.count) return null;
     await tx.rating.create({
-      data: { orderId: order.id, fromUserId: req.user.id, toUserId: order.customerId, score: input.score, comment: feedbackText || null }
+      data: { orderId: order.id, fromUserId: req.user.id, toUserId: order.customerId, score: input.score, reasonTags: input.reasonTags, comment: [input.tags.join(', '),input.comment].filter(Boolean).join(' — ').slice(0,500)||null }
     });
     const customerRating = await tx.rating.aggregate({ where: { toUserId: order.customerId }, _avg: { score: true } });
     const updatedCustomerRating = customerRating._avg.score === null ? 5 : Number(customerRating._avg.score.toFixed(2));
@@ -904,22 +925,41 @@ app.patch('/api/admin/drivers/:id/verify',auth,only('ADMIN'),asyncRoute(async(re
 
 
 // Admin can inspect and remove individual ratings. Driver score is recomputed by the daily job.
+function ratingTrend(ratings){
+ const now=Date.now(),day=86400000,cutoff=now-90*day,mid=now-45*day;
+ const recent=(ratings||[]).filter(r=>new Date(r.createdAt).getTime()>=cutoff);
+ const avg=list=>list.length?Number((list.reduce((sum,r)=>sum+r.score,0)/list.length).toFixed(2)):null;
+ const previous=recent.filter(r=>new Date(r.createdAt).getTime()<mid);
+ const latest=recent.filter(r=>new Date(r.createdAt).getTime()>=mid);
+ const weekly=Array.from({length:13},(_,i)=>{
+  const start=now-(13-i)*7*day,end=start+7*day;
+  const values=recent.filter(r=>{const t=new Date(r.createdAt).getTime();return t>=start&&t<end});
+  return {label:(12-i)+'շ',average:avg(values),count:values.length};
+ });
+ return {average90:avg(recent),previous45:avg(previous),recent45:avg(latest),change:avg(previous)!==null&&avg(latest)!==null?Number((avg(latest)-avg(previous)).toFixed(2)):null,count90:recent.length,weekly};
+}
+
 app.get('/api/admin/ratings/overview',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const users=await prisma.user.findMany({
   where:{role:{in:['DRIVER','CUSTOMER']}},
-  select:{id:true,name:true,role:true,rating:true,ratingsReceived:{
+  select:{id:true,name:true,phone:true,role:true,rating:true,ratingsReceived:{
    orderBy:{createdAt:'desc'},
-   include:{fromUser:{select:{name:true,role:true}},order:{select:{id:true,createdAt:true}}}
+   include:{fromUser:{select:{name:true,phone:true,role:true}},order:{select:{id:true,createdAt:true}}}
   }}
  });
- res.json({users});
+ res.json({users:users.map(user=>({...user,trend:ratingTrend(user.ratingsReceived)}))});
 }));
 
 app.get('/api/admin/drivers/:id/ratings',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
  if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
- const ratings=await prisma.rating.findMany({where:{toUserId:driver.id},orderBy:{createdAt:'desc'},include:{fromUser:{select:{name:true}},order:{select:{id:true,createdAt:true}}}});
+ const ratings=await prisma.rating.findMany({where:{toUserId:driver.id},orderBy:{createdAt:'desc'},include:{fromUser:{select:{name:true,phone:true,role:true}},order:{select:{id:true,createdAt:true}}}});
  res.json({ratings});
+}));
+app.get('/api/ratings/me/trend',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
+ const since=new Date(Date.now()-90*86400000);
+ const ratings=await prisma.rating.findMany({where:{toUserId:req.user.id,createdAt:{gte:since}},select:{score:true,createdAt:true},orderBy:{createdAt:'asc'}});
+ res.json({trend:ratingTrend(ratings)});
 }));
 app.delete('/api/admin/ratings/:id',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const rating=await prisma.rating.findUnique({where:{id:req.params.id}});
