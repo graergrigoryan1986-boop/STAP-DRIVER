@@ -168,7 +168,7 @@ async function driverView(){
    </div>
    <div id="driverBalanceHistoryPanel" class="driver-compact-panel" hidden><div class="driver-panel-title"><h3>Հաշվեկշռի պատմություն</h3><button type="button" class="action" data-driver-close="driverBalanceHistoryPanel">Փակել ×</button></div><div class="ledger-list">${wallet.transactions.length?wallet.transactions.map(t=>'<article class="ledger-row"><div><strong>'+esc(t.description)+'</strong><small>'+new Date(t.createdAt).toLocaleString('hy-AM')+' · '+esc(t.type)+'</small></div><b class="'+(t.amountAmd>=0?'positive':'negative')+'">'+(t.amountAmd>0?'+':'')+money(t.amountAmd)+'</b></article>').join(''):'<p class="empty-state">Գործարքներ դեռ չկան։</p>'}</div></div>
    <div id="driverRatingHistoryPanel" class="driver-compact-panel" hidden><div class="driver-panel-title"><h3>Վարկանիշի պատմություն</h3><button type="button" class="action" data-driver-close="driverRatingHistoryPanel">Փակել ×</button></div></div>
-   <div id="myOrders" class="driver-compact-panel" hidden><div class="driver-panel-title"><h3 id="driverOrdersPanelTitle">Պատվերների պատմություն</h3><button type="button" class="action" data-driver-close="myOrders">Փակել ×</button></div><div class="order-filters"><button class="action active" data-filter="COMPLETED">Կատարված</button><button class="action" data-filter="REJECTED">Չեղարկված</button></div><div id="driverOrderHistoryList" class="stack"></div></div>
+   <div id="myOrders" class="driver-compact-panel" hidden><div class="driver-panel-title"><h3 id="driverOrdersPanelTitle">Պատվերների պատմություն</h3><button type="button" class="action" data-driver-close="myOrders">Փակել ×</button></div><div class="order-filters"><button class="action" data-filter="ALL">Բոլորը</button><button class="action active" data-filter="COMPLETED">Կատարված</button><button class="action" data-filter="REJECTED">Չեղարկված</button></div><div id="driverOrderHistoryList" class="stack"></div></div>
    ${u.isVerified?'':`<section class="driver-docs-compact"><details><summary>Գրանցման փաստաթղթեր</summary>
     <p class="driver-admin-data"><strong>Վարորդական կարգեր՝</strong> ${esc((u.driverLicenseCategories||[]).join(', ')||'Դեռ նշված չէ')}<br><strong>Փոխանցման տուփ՝</strong> ${u.driverTransmission==='MANUAL'?'Ավտոմատ / մեխանիկական':'Ավտոմատ'}</p>
     <form id="driverDocsForm" class="docs-form">
@@ -189,7 +189,7 @@ async function driverView(){
   <nav class="driver-bottom-dock" aria-label="Վարորդի հիմնական ցուցանիշներ">
    <button type="button" id="driverBalanceMenuButton"><span>Հաշվեկշիռ</span><b>${money(u.balanceAmd)}</b></button>
    <button type="button" id="driverRatingHistoryButton"><span>Վարկանիշ</span><b>★ ${Number(u.rating??5).toFixed(1)}</b></button>
-   <button type="button" data-driver-history="COMPLETED"><span>Պատվերներ</span><b>${mine.orders.length}</b></button>
+   <button type="button" data-driver-history="ALL"><span>Պատվերներ</span><b>${mine.orders.length}</b></button>
    <button type="button" data-driver-history="COMPLETED"><span>Կատարված</span><b>${mine.orders.filter(o=>o.status==='COMPLETED').length}</b></button>
    <button type="button" data-driver-history="REJECTED"><span>Չեղարկված</span><b>${mine.orders.filter(o=>['CANCELLED','SKIPPED'].includes(o.status)).length}</b></button>
   </nav>
@@ -202,7 +202,7 @@ async function driverView(){
  const ratingHistoryButton=$('#driverRatingHistoryButton'),ratingHistoryPanel=$('#driverRatingHistoryPanel');
  if(ratingHistoryButton&&ratingHistoryPanel){
   const toggleRatingHistory=async()=>{const opening=ratingHistoryPanel.hidden;ratingHistoryPanel.hidden=!opening;ratingHistoryButton.setAttribute('aria-expanded',String(opening));ratingHistoryButton.classList.toggle('active',opening);if(!opening)return;if(ratingHistoryPanel.dataset.loaded==='true')return;ratingHistoryPanel.innerHTML='<p>Վարկանիշի պատմությունը բեռնվում է…</p>';try{const data=await api('/api/ratings/me/received'),trend=ratingTrendData.trend||{};const trendHtml='<section class="rating-trend-card"><strong>ՎԱՐԿԱՆԻՇԻ ՓՈՓՈԽՈՒԹՅՈՒՆ · 90 ՕՐ</strong><div class="rating-trend-numbers"><b>★ '+(trend.average90==null?'—':Number(trend.average90).toFixed(2))+'</b><span>'+(trend.count90||0)+' գնահատական</span></div><small>'+(trend.change==null?'Համեմատության համար բավարար տվյալներ չկան':'Վերջին 45 օրվա փոփոխություն՝ '+(trend.change>0?'+':'')+Number(trend.change).toFixed(2))+'</small><div class="rating-trend-bars">'+(trend.weekly||[]).map(w=>'<span title="'+esc(w.label)+' · '+(w.average==null?'Գնահատական չկա':Number(w.average).toFixed(2)+' / 5')+'" style="height:'+Math.max(4,(w.average||0)/5*100)+'%"></span>').join('')+'</div><small>Շաբաթական միջին գնահատական՝ վերջին 90 օրվա ընթացքում</small></section>';ratingHistoryPanel.innerHTML=trendHtml+((data.ratings||[]).length?'<h3>Ձեր ստացած գնահատականները</h3>' +(data.ratings||[]).map(r=>'<article class="ledger-row"><div><strong>★ '+r.score+'/5</strong><small>'+new Date(r.createdAt).toLocaleString('hy-AM')+'</small></div></article>').join(''):'<p class="empty-state">Գնահատականների պատմություն դեռ չկա։</p>');ratingHistoryPanel.dataset.loaded='true'}catch(error){ratingHistoryPanel.innerHTML='<p class="empty-state">'+esc(error.message)+'</p>'}};
-  ratingHistoryButton.addEventListener('click',()=>{const opening=ratingHistoryPanel.hidden;ratingHistoryPanel.hidden=!opening;ratingHistoryButton.classList.toggle('active',opening);if(opening)toggleRatingHistory();});
+  ratingHistoryButton.addEventListener('click',toggleRatingHistory);
   
  }
  const balanceMenuButton=$('#driverBalanceMenuButton'),balanceHistoryPanel=$('#driverBalanceHistoryPanel');
@@ -224,7 +224,7 @@ async function driverView(){
  const orderRoot=$('#driverOrderHistoryList');
  const readyOrders=mine.orders.filter(o=>['ARRIVED','IN_PROGRESS'].includes(o.status)).sort((a,b)=>({ARRIVED:0,IN_PROGRESS:1}[a.status]-({ARRIVED:0,IN_PROGRESS:1}[b.status])));renderOrders($('#driverReadyOrder'),readyOrders,'mine');
  const acceptedOrders=mine.orders.filter(o=>o.status==='ACCEPTED').sort((a,b)=>{const schedule=o=>o.scheduleType==='NOW'?0:(o.scheduledAt?Date.parse(o.scheduledAt):Number.MAX_SAFE_INTEGER);return schedule(a)-schedule(b)});renderOrders($('#driverAcceptedOrders'),acceptedOrders,'mine');
- const drawOrders=(filter='COMPLETED')=>{const filtered=filter==='REJECTED'?mine.orders.filter(o=>['SKIPPED','CANCELLED'].includes(o.status)):mine.orders.filter(o=>o.status==='COMPLETED');renderOrders($('#driverOrderHistoryList'),filtered,'mine');document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter))};
+ const drawOrders=(filter='COMPLETED')=>{const filtered=filter==='ALL'?mine.orders:filter==='REJECTED'?mine.orders.filter(o=>['SKIPPED','CANCELLED'].includes(o.status)):mine.orders.filter(o=>o.status==='COMPLETED');renderOrders($('#driverOrderHistoryList'),filtered,'mine');document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter))};
  drawOrders();
  document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>drawOrders(b.dataset.filter));
  const docsForm=$('#driverDocsForm');
