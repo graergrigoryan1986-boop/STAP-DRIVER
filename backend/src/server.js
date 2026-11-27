@@ -202,7 +202,7 @@ let yerevanDistrictFeaturesCache=null, yerevanDistrictFeaturesFetchedAt=0;
 let yerevanNeighborhoodFeaturesCache=null, yerevanNeighborhoodFeaturesFetchedAt=0;
 const yerevanGeocodeCache=new Map();
 let lastYerevanGeocodeAt=0;
-const YEREVAN_FARE_BY_NEIGHBORHOOD_COUNT=count=>count<=1?7000:10000+(count-2)*2500;
+const YEREVAN_FARE_BY_DISTRICT_COUNT=count=>count<=1?7000:10000+(count-2)*2500;
 async function fetchJsonWithTimeout(url,options={},timeoutMs=18000){
  const response=await fetch(url,{...options,signal:AbortSignal.timeout(timeoutMs)});
  if(!response.ok)throw new Error('Քարտեզային ծառայությունը չպատասխանեց։');
@@ -318,7 +318,7 @@ function districtSequenceForRoute(coords,features){
   }
  }
  const last=coords[coords.length-1];if(last)pushPoint(last[0],last[1]);
- if(!total||covered/total<0.95||ambiguous/total>0.03||!sequence.length)throw new Error('Երթուղին ամբողջությամբ չի համընկնում Երևանի վարչական համայնքների քարտեզային սահմաններին։ Գինը չի հաշվարկվել։');
+ if(!total||covered/total<0.95||ambiguous/total>0.03||!sequence.length)throw new Error('Երթուղին ամբողջությամբ չի համընկնում Երևանի 12 վարչական շրջանների քարտեզային սահմաններին։ Գինը չի հաշվարկվել։');
  return sequence.filter((name,index)=>index===0||name!==sequence[index-1]);
 }
 function districtForPoint(point,features){
@@ -337,7 +337,7 @@ async function calculateYerevanRoute(pickupAddress,destinationAddress){
  const routeDistricts=districtSequenceForRoute(coords,districtFeatures);
  if(routeDistricts[0]!==pickupDistrict||routeDistricts[routeDistricts.length-1]!==destinationDistrict)throw new Error('Երթուղու սկզբնական կամ վերջնական վարչական շրջանը չի համընկնում հասցեների քարտեզային դիրքի հետ։ Հասցեները ճշտեք։');
  const districtCount=new Set(routeDistricts).size;
- return {pickup,destination,pickupDistrict,destinationDistrict,routeDistricts,districtCount,distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_NEIGHBORHOOD_COUNT(districtCount)};
+ return {pickup,destination,pickupDistrict,destinationDistrict,routeDistricts,districtCount,distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_DISTRICT_COUNT(districtCount)};
 }
 
 app.get('/api/geo/neighborhoods',auth,asyncRoute(async(req,res)=>{const features=await getYerevanNeighborhoodFeatures();const names=[...new Set(features.map(neighborhoodNameFromFeature).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'hy'));res.json({neighborhoods:names});}));
@@ -360,7 +360,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const pickupAddress=input.pickupAddress,destinationAddress=input.destinationAddress;
   const urgentExtraChargeAmd=input.isUrgent?2500:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,distanceMeters:route.distanceMeters,message:'Ուղեվարձը հաշվարկվեց Երևանի վարչական շրջանների քարտեզային սահմաններով։'});
 }));
@@ -449,7 +449,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   try {
     order=await prisma.order.create({data:{
       customerId:req.user.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent:input.isUrgent,urgentExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
-      destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
+      destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeDistanceMeters:route.distanceMeters,fareAmd,phonePrimary:input.phonePrimary,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
       vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note
     }});
