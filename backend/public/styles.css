@@ -1215,3 +1215,58 @@ body.authenticated footer{display:none!important}
 .urgent-order-toggle small{font-size:10px;line-height:1;color:inherit;opacity:.9;}
 .urgent-order-toggle:has(input:checked){background:#ef4444!important;color:#fff!important;box-shadow:0 0 16px rgba(239,68,68,.28);}
 .neon-schedule-group .urgent-order-toggle{justify-self:start;}
+
+
+/* STAP DRIVER — premium pending network order cards (web + mobile) */
+.driver-pending-bookings{
+ border:1px solid rgba(211,177,111,.62)!important;
+ border-radius:20px!important;
+ padding:clamp(13px,2vw,21px)!important;
+ background:radial-gradient(ellipse at 100% 0,rgba(201,164,91,.16),transparent 48%),linear-gradient(145deg,#191b20,#0e1014)!important;
+ box-shadow:0 16px 38px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.035);
+}
+.driver-pending-heading{align-items:center;margin-bottom:14px!important}
+.driver-pending-heading h3{font-size:clamp(16px,2vw,20px)!important;color:#f1d59a!important;letter-spacing:.015em!important}
+.driver-pending-heading p{max-width:540px;color:#c4bcae!important;font-size:12px!important}
+.driver-pending-count{min-width:44px!important;height:44px!important;background:linear-gradient(145deg,#e8cf9b,#b58b47)!important;border:1px solid #f4dfb4!important;color:#211a0e!important;box-shadow:0 5px 16px rgba(201,164,91,.2)}
+.driver-pending-card{
+ display:block;overflow:hidden;margin:11px 0;border:1px solid rgba(207,174,112,.38);
+ border-radius:17px;background:linear-gradient(140deg,#252830 0%,#15171d 68%,#101216 100%);
+ box-shadow:0 9px 24px rgba(0,0,0,.2);transition:border-color .18s,box-shadow .18s;
+}
+.driver-pending-card:hover,.driver-pending-card[open]{
+ border-color:rgba(235,204,145,.8);box-shadow:0 12px 28px rgba(0,0,0,.28),0 0 0 1px rgba(201,164,91,.12);
+}
+.driver-pending-card>summary{
+ position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 14px;
+ padding:15px 17px 14px 20px;cursor:pointer;list-style:none;
+}
+.driver-pending-card>summary:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(#e5c989,#a77b35)}
+.driver-pending-card>summary::-webkit-details-marker{display:none}
+.driver-pending-card-id{grid-column:1;color:#e6c98d;font-size:10px;font-weight:900;letter-spacing:.12em}
+.driver-prebook-badge,.driver-immediate-badge{
+ display:inline-flex;align-items:center;justify-content:center;justify-self:start;grid-column:1;
+ padding:5px 9px;border-radius:6px;font-size:9px;font-weight:900;letter-spacing:.06em;
+}
+.driver-prebook-badge{background:rgba(96,165,250,.14);border:1px solid rgba(125,175,235,.4);color:#c6ddff}
+.driver-immediate-badge{background:rgba(34,197,94,.13);border:1px solid rgba(74,222,128,.36);color:#a7f3c0}
+.driver-pending-card-route{grid-column:1;grid-row:3;white-space:normal;overflow-wrap:anywhere;color:#fff;font-size:14px;line-height:1.5;font-weight:850}
+.driver-pending-card-price{grid-column:2;grid-row:1/4;align-self:center;color:#f3d99f;font-size:clamp(19px,2.2vw,25px);font-weight:900;white-space:nowrap}
+.driver-pending-card-meta{grid-column:1;color:#c7c0b5;font-size:11px}
+.driver-pending-card-toggle{grid-column:1/-1;justify-self:stretch;margin-top:3px;padding-top:9px;border-top:1px solid rgba(255,255,255,.09);color:#e4c88f;font-size:10px;font-weight:850}
+.driver-pending-card[open]>summary{background:linear-gradient(90deg,rgba(201,164,91,.12),rgba(201,164,91,.025));border-bottom:1px solid rgba(201,164,91,.25)}
+.driver-pending-card>.driver-order-card{margin:0;border:0;border-radius:0;box-shadow:none}
+.driver-pending-card>.driver-order-card:before{display:none}
+.driver-contact-locked{
+ grid-column:1/-1;display:grid;gap:5px;padding:12px 13px;border:1px dashed rgba(224,190,120,.48);
+ border-radius:11px;background:rgba(201,164,91,.09);color:#f0d9a9;
+}
+.driver-contact-locked strong{font-size:11px}.driver-contact-locked span{font-size:10px;line-height:1.5;color:#cfc3ab}
+@media(max-width:600px){
+ .driver-pending-bookings{padding:12px!important}
+ .driver-pending-heading{gap:9px}
+ .driver-pending-card>summary{padding:13px 12px 12px 16px;gap:7px 8px}
+ .driver-pending-card-route{font-size:13px}
+ .driver-pending-card-price{font-size:19px}
+ .driver-pending-card-meta{font-size:10px}
+}
