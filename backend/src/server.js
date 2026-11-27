@@ -435,8 +435,9 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   }).parse(req.body);
   const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
   const pickupAddress=input.pickupAddress,destinationAddress=input.destinationAddress;
-  const demand=await getUrgentDemandCoefficient(isUrgent);
-  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,isUrgent,demand.demandCoefficientPercent);
+  const demandEligibleUrgent=isUrgent&&input.scheduleType==='NOW';
+  const demand=await getUrgentDemandCoefficient(demandEligibleUrgent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,demandEligibleUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
   const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
