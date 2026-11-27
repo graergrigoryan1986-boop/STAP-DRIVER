@@ -571,6 +571,20 @@ app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,
   res.json({orders});
 }));
 
+app.get('/api/admin/orders/archive',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const phoneDigits=String(req.query.phone||'').replace(/\\D/g,'');
+ const status=String(req.query.status||'ARCHIVE').toUpperCase();
+ const allowed=['ARCHIVE','ALL','COMPLETED','CANCELLED','OPEN','ACCEPTED','IN_PROGRESS'];
+ if(!allowed.includes(status))return res.status(400).json({error:'Ընտրեք ճիշտ կարգավիճակ։'});
+ if(phoneDigits&&phoneDigits.length<3)return res.status(400).json({error:'Հեռախոսահամարի որոնման համար մուտքագրեք առնվազն 3 թվանշան։'});
+ const where=status==='ARCHIVE'?{status:{in:['COMPLETED','CANCELLED']}}:status==='ALL'?{}:{status};
+ const orders=await prisma.order.findMany({where,orderBy:{createdAt:'desc'},take:500,include:{
+  customer:{select:{id:true,name:true,phone:true}},
+  driver:{select:{id:true,name:true,phone:true,isVerified:true}}
+ }});
+ const filtered=phoneDigits?orders.filter(order=>[order.phonePrimary,order.phoneSecondary,order.customer?.phone,order.driver?.phone].some(value=>String(value||'').replace(/\\D/g,'').includes(phoneDigits))):orders;
+ res.json({orders:filtered,total:filtered.length,phoneSearch:phoneDigits||null,status});
+}));
 app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const existing=await prisma.order.findUnique({where:{id:req.params.id}});
   if(!existing)return res.status(404).json({error:'Պատվերը չի գտնվել։'});
