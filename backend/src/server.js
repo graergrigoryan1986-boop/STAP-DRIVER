@@ -200,7 +200,7 @@ const YEREVAN_DISTRICT_GIS_URL='https://gis.yerevan.am/server/rest/services/Host
 let yerevanDistrictFeaturesCache=null, yerevanDistrictFeaturesFetchedAt=0;
 const yerevanGeocodeCache=new Map();
 let lastYerevanGeocodeAt=0;
-const YEREVAN_FARE_BY_DISTRICT_COUNT=count=>count<=1?7000:count===2?10000:12000+(count-3)*1000;
+const YEREVAN_FARE_BY_DISTRICT_COUNT=count=>count<=1?7000:10000+(count-2)*2500;
 async function fetchJsonWithTimeout(url,options={},timeoutMs=18000){
  const response=await fetch(url,{...options,signal:AbortSignal.timeout(timeoutMs)});
  if(!response.ok)throw new Error('Քարտեզային ծառայությունը չպատասխանեց։');
