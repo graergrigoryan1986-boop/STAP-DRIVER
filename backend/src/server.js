@@ -1015,8 +1015,8 @@ app.patch('/api/drivers/capabilities',auth,only('DRIVER'),asyncRoute(async(req,r
 async function attachWalletOrderDetails(transactions){
  const orderIds=[...new Set(transactions.map(item=>item.orderId).filter(Boolean))];
  if(!orderIds.length)return transactions;
- const orders=await prisma.order.findMany({where:{id:{in:orderIds}},select:{id:true,fareAmd:true,demandCoefficientChargeAmd:true,commissionAmd:true,commissionRate:true}});
- const byId=new Map(orders.map(order=>[order.id,{id:order.id,actualFareAmd:Math.max(0,order.fareAmd-(order.demandCoefficientChargeAmd||0)),commissionAmd:order.commissionAmd||0,commissionRate:order.commissionRate||0}]));
+ const orders=await prisma.order.findMany({where:{id:{in:orderIds}},select:{id:true,fareAmd:true,isUrgent:true,urgentExtraChargeAmd:true,demandCoefficientChargeAmd:true,commissionAmd:true,commissionRate:true}});
+ const byId=new Map(orders.map(order=>{const storedCoefficient=order.demandCoefficientChargeAmd||0;const legacyCoefficient=!storedCoefficient&&order.isUrgent&&(order.urgentExtraChargeAmd||0)>2500;const actualFareAmd=storedCoefficient?Math.max(0,order.fareAmd-storedCoefficient):legacyCoefficient?Math.min(order.fareAmd,Math.round((order.commissionAmd||0)/0.25)+2500):order.fareAmd;return [order.id,{id:order.id,actualFareAmd,commissionAmd:order.commissionAmd||0,commissionRate:order.commissionRate||0}]}));
  return transactions.map(item=>({...item,orderDetails:item.orderId?byId.get(item.orderId)||null:null}));
 }
 app.get('/api/drivers/wallet', auth, only('DRIVER'), asyncRoute(async (req, res) => {
