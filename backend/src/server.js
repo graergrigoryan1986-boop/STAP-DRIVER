@@ -302,11 +302,13 @@ function haversineMeters(a,b){
  return 2*R*Math.asin(Math.sqrt(x));
 }
 function districtSequenceForRoute(coords,features){
- const sequence=[];
+ const sequence=[];let total=0,covered=0,ambiguous=0;
  const pushPoint=(lon,lat)=>{
-  const found=features.find(feature=>pointInDistrictGeometry(lon,lat,feature.geometry));
-  if(!found)return;
-  const name=districtNameFromFeature(found);
+  total++;
+  const matches=features.filter(feature=>pointInDistrictGeometry(lon,lat,feature.geometry));
+  if(matches.length!==1){if(matches.length>1)ambiguous++;return}
+  covered++;
+  const name=districtNameFromFeature(matches[0]);
   if(name&&sequence[sequence.length-1]!==name)sequence.push(name);
  };
  for(let i=0;i<coords.length-1;i++){
@@ -316,6 +318,7 @@ function districtSequenceForRoute(coords,features){
   }
  }
  const last=coords[coords.length-1];if(last)pushPoint(last[0],last[1]);
+ if(!total||covered/total<0.95||ambiguous/total>0.03||!sequence.length)throw new Error('Երթուղին ամբողջությամբ չի համընկնում Երևանի վարչական համայնքների քարտեզային սահմաններին։ Գինը չի հաշվարկվել։');
  return sequence.filter((name,index)=>index===0||name!==sequence[index-1]);
 }
 async function calculateYerevanRoute(pickupAddress,destinationAddress){
