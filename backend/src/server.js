@@ -1289,13 +1289,10 @@ function makeDocumentsPdf(title, pages){
   for(const p of pages){
     const img=decryptPrivate(p.data);let iw=1200,ih=800;for(let k=2;k<img.length-8;k++){if(img[k]===0xff&&[0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf].includes(img[k+1])){ih=img.readUInt16BE(k+5);iw=img.readUInt16BE(k+7);break}}const imgId=add(Buffer.concat([Buffer.from('<< /Type /XObject /Subtype /Image /Width '+iw+' /Height '+ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>
 stream
-'),img,Buffer.from('
-endstream')]));
+'),img,Buffer.from('\nendstream')]));
     const scale=Math.min(520/iw,700/ih),dw=Math.round(iw*scale),dh=Math.round(ih*scale),x=Math.round((595-dw)/2),y=Math.round(430-dh/2);const contentText='BT /F1 14 Tf 40 810 Td ('+String(p.label).replace(/[()\\]/g,'')+') Tj ET
 q '+dw+' 0 0 '+dh+' '+x+' '+y+' cm /Im0 Do Q';
-    const content=Buffer.from(contentText,'binary'),contentId=add(Buffer.concat([Buffer.from('<< /Length '+content.length+' >>
-stream
-'),content,Buffer.from('
+    const content=Buffer.from(contentText,'binary'),contentId=add(Buffer.concat([Buffer.from('<< /Length '+content.length+' >>\nstream\n'),content,Buffer.from('
 endstream')]));
     const pageId=add('');pageIds.push(pageId);
     objs[pageId-1]=Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 '+fontId+' 0 R >> /XObject << /Im0 '+imgId+' 0 R >> >> /Contents '+contentId+' 0 R >>');
