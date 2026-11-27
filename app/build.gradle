@@ -31,6 +31,13 @@ android {
             buildConfigField 'String', 'APP_ROLE', '"DRIVER"'
             resValue 'string', 'app_name', 'STAP Վարորդ'
         }
+        admin {
+            dimension 'audience'
+            applicationIdSuffix '.admin'
+            versionNameSuffix '-admin'
+            buildConfigField 'String', 'APP_ROLE', '"ADMIN"'
+            resValue 'string', 'app_name', 'STAP Ադմին'
+        }
     }
 
     buildFeatures {
