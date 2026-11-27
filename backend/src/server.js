@@ -549,7 +549,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
 app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHeaders:'draft-8',legacyHeaders:false}),asyncRoute(async(req,res)=>{
  const input=z.object({
   name:z.string().trim().min(2).max(100),phone:z.string().trim().min(7).max(30),
-  pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),
+  pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),serviceId:z.string().trim().min(1).max(80).optional(),
   extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
   requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),
   transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
@@ -559,10 +559,24 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
  const phone=normalizePhone(input.phone);
  if(phone.replace(/\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք ճիշտ հեռախոսահամար։'});
  const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
+ const contentRow=await prisma.siteContent.findUnique({where:{id:'main'}});
+ const catalogue=Array.isArray(contentRow?.content?.tariffs)?contentRow.content.tariffs:[];
+ const service=input.serviceId?catalogue.find(item=>item?.id===input.serviceId&&item.active!==false):null;
+ if(input.serviceId&&!service)return res.status(400).json({error:'Ընտրված ծառայությունն այլևս հասանելի չէ։ Թարմացրեք էջը։'});
+ const servicePriceAmd=Number.isInteger(service?.priceAmd)?service.priceAmd:0;
+ const dispatchMode=['CATEGORY','CAPABILITY'].includes(service?.dispatchMode)?service.dispatchMode:'NETWORK';
+ const requiredLicenseCategory=dispatchMode==='CATEGORY'?(service?.requiredLicenseCategory||'B'):input.requiredLicenseCategory;
+ const requiredCapability=dispatchMode==='CAPABILITY'?(service?.requiredCapability||''):'';
+ let eligibleDrivers=[];
+ if(dispatchMode!=='NETWORK'){
+  eligibleDrivers=await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false,...(dispatchMode==='CATEGORY'?{driverLicenseCategories:{has:requiredLicenseCategory}}:{driverServiceCapabilities:{has:requiredCapability}})},select:{id:true}});
+  if(!eligibleDrivers.length)return res.status(409).json({error:'Այս ծառայության պահանջներին համապատասխան հաստատված վարորդ այս պահին չկա։'});
+ }
+ 
  const demand=await getUrgentDemandCoefficient(input.isUrgent);
- const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
+ const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,servicePriceAmd+input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
  const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
- const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
+ const fareAmd=route.baseFareAmd+servicePriceAmd+input.extraChargeAmd+urgentExtraChargeAmd;
  const customers=await prisma.user.findMany({where:{role:'CUSTOMER'},select:{id:true,email:true,phone:true}});
  let customer=customers.find(person=>normalizePhone(person.phone)===phone);
  if(customer&&!customer.email.endsWith('@guest.stap.invalid'))return res.status(409).json({error:'Այս հեռախոսահամարը գրանցված հաշիվ ունի։ Շարունակելու համար մուտք գործեք այդ հաշվով։'});
@@ -572,12 +586,13 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
   if(!customer)customer=await prisma.user.create({data:{name:input.name,email,phone:input.phone,passwordHash:await bcrypt.hash(randomBytes(32).toString('hex'),12),role:'CUSTOMER'}});
  }
  const order=await prisma.order.create({data:{
-  customerId:customer.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,phonePrimary:input.phone,
+  customerId:customer.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,phonePrimary:input.phone,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,requiredLicenseCategory,
   pickupAddress:route.pickupDistrict+' վարչական շրջան',destinationAddress:route.destinationDistrict+' վարչական շրջան',
   routeDistricts:route.routeDistricts,routeNeighborhoods:[],fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,
   transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
  }});
- io.to('drivers').emit('order:new',{id:order.id,isTest:false,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,isUrgent:order.isUrgent,createdAt:order.createdAt});
+ const guestEvent={id:order.id,isTest:false,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,isUrgent:order.isUrgent,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
+  if(dispatchMode!=='NETWORK')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',guestEvent);else io.to('drivers').emit('order:new',guestEvent);
  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
  const title='Նոր պատվեր՝ առանց գրանցման',notificationMessage='Հաճախորդ՝ '+input.name+' · '+input.phone+' · '+order.pickupAddress+' → '+order.destinationAddress;
  if(admins.length){await prisma.notification.createMany({data:admins.map(admin=>({userId:admin.id,title,message:notificationMessage,type:'NEW_GUEST_ORDER'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title,message:notificationMessage,type:'NEW_GUEST_ORDER',orderId:order.id,createdAt:new Date()});}
