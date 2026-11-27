@@ -94,6 +94,8 @@ model Order {
   pickupLng          Float?
   destinationLat     Float?
   destinationLng     Float?
+  routeDistricts     String[]    @default([])
+  routeDistanceMeters Int?
   status             OrderStatus @default(OPEN)
   isTest             Boolean     @default(false)
   fareAmd            Int
