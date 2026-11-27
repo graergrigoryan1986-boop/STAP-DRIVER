@@ -52,7 +52,7 @@ const publicUser = user => ({
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
   driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, driverExperienceMonths: user.driverExperienceMonths, dateOfBirth: user.dateOfBirth, createdAt: user.createdAt
 });
-const normalizePhone = value => { let digits=String(value||'').replace(/\\D/g,''); if(digits.startsWith('00'))digits=digits.slice(2); if(digits.startsWith('374'))return '+374'+digits.slice(3); if(digits.startsWith('0')&&digits.length===9)return '+374'+digits.slice(1); return digits?'+'+digits:''; };
+const normalizePhone = value => { let digits=String(value||'').replace(/\D/g,''); if(digits.startsWith('00'))digits=digits.slice(2); if(digits.startsWith('374'))return '+374'+digits.slice(3); if(digits.startsWith('0')&&digits.length===9)return '+374'+digits.slice(1); return digits?'+'+digits:''; };
 const guestEmailForPhone = phone => 'guest+' + createHash('sha256').update(normalizePhone(phone)).digest('hex').slice(0,32) + '@guest.stap.invalid';
 const LICENSE_CATEGORIES = ['AM','A1','A','B1','B','C1','C','D1','D','BE','C1E','CE','D1E','DE'];
 function extractLicenseCategories(raw) {
