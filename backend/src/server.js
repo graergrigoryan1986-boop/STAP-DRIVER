@@ -510,19 +510,34 @@ app.post('/api/routes/quote',asyncRoute(async(req,res)=>{
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const input = z.object({
     pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),
+    serviceId:z.string().trim().min(1).max(80).optional(),
     extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),pickupNote:z.string().trim().max(500).optional().or(z.literal('')),destinationNote:z.string().trim().max(500).optional().or(z.literal('')),isTest:z.boolean().default(false)
   }).parse(req.body);
   const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
+  const contentRow=await prisma.siteContent.findUnique({where:{id:'main'}});
+  const catalogue=Array.isArray(contentRow?.content?.tariffs)?contentRow.content.tariffs:[];
+  const service=input.serviceId?catalogue.find(item=>item?.id===input.serviceId&&item.active!==false):null;
+  if(input.serviceId&&!service)return res.status(400).json({error:'Ընտրված ծառայությունն այլևս հասանելի չէ։ Թարմացրեք էջը։'});
+  const servicePriceAmd=Number.isInteger(service?.priceAmd)?service.priceAmd:0;
+  const dispatchMode=service?.dispatchMode==='CATEGORY'?'CATEGORY':'NETWORK';
+  const requiredLicenseCategory=dispatchMode==='CATEGORY'?(service?.requiredLicenseCategory||'B'):input.requiredLicenseCategory;
+  let eligibleDrivers=[];
+  if(dispatchMode==='CATEGORY'){
+   eligibleDrivers=await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false,driverLicenseCategories:{has:requiredLicenseCategory},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
+   if(!eligibleDrivers.length)return res.status(409).json({error:'Այս ծառայության պարտադիր կարգին համապատասխան հաստատված վարորդ այս պահին չկա։ Ընտրեք այլ ծառայություն կամ կապվեք ադմինի հետ։'});
+  }
+  const totalExtraAmd=input.extraChargeAmd+servicePriceAmd;
   const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
   const demand=await getUrgentDemandCoefficient(input.isUrgent);
-  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,input.isUrgent,demand.demandCoefficientPercent);
+  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,totalExtraAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
-  const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
-  io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
-  res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Գինը հաշվարկվել է միայն Երևանի վարչական շրջանների քարտեզով։'});
+  const fareAmd=route.baseFareAmd+totalExtraAmd+urgentExtraChargeAmd;
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
+  const event={id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
+  if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else io.to('drivers').emit('order:new',event);
+  res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Պատվերը հրապարակվեց՝ ընտրված ծառայության և համապատասխան վարորդների պայմաններով։'});
 }));
 
 app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHeaders:'draft-8',legacyHeaders:false}),asyncRoute(async(req,res)=>{
@@ -701,9 +716,10 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
-        {dispatchMode:'CATEGORY',driverId:null},
+        ...(categories.length?[{dispatchMode:'CATEGORY',driverId:null,requiredLicenseCategory:{in:categories}}]:[]),
         {dispatchMode:'DIRECT',driverId:req.user.id}
-      ]
+      ],
+      ...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})
     },
     orderBy:[{scheduleType:'asc'},{scheduledAt:'asc'},{createdAt:'desc'}],
     include:{customer:{select:{id:true,name:true,phone:true}}}
@@ -785,6 +801,7 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
+  if(requestedOrder.dispatchMode==='CATEGORY'&&(!(req.user.driverLicenseCategories||[]).includes(requestedOrder.requiredLicenseCategory)||(requestedOrder.transmissionType==='MANUAL'&&req.user.driverTransmission!=='MANUAL')))return res.status(403).json({error:'Այս պատվերի ծառայության պարտադիր պայմաններին չեք համապատասխանում։'});
   // Accepting an order must not be blocked by legacy license-category or transmission metadata.
   // Dispatch visibility/assignment is handled separately when the order is created.
   const settingsRow = await prisma.siteContent.findUnique({ where: { id: 'main' } });
