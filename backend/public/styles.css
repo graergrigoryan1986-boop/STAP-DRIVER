@@ -1017,3 +1017,7 @@ body.authenticated footer{display:none!important}
 #dashboard .fare-guide small{display:block;color:#64748b;line-height:1.5}
 #dashboard.admin-light .verified-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:#dcfce7;border:1px solid #86efac;color:#166534;font-size:11px;font-weight:900;letter-spacing:.08em;vertical-align:middle}
 #dashboard.admin-light .pending-badge{display:inline-flex;padding:4px 9px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:11px;font-weight:900;letter-spacing:.08em;vertical-align:middle}
+
+.urgent-order-toggle{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid rgba(255,176,72,.45);border-radius:12px;background:rgba(255,176,72,.08);font-weight:800;color:#f5b85f}
+.urgent-order-toggle input{accent-color:#e99a35;width:18px;height:18px}
+.urgent-order-badge{display:inline-flex;align-items:center;gap:6px;margin:8px 0;padding:8px 11px;border-radius:9px;background:rgba(255,176,72,.12);border:1px solid rgba(255,176,72,.42);color:#f5b85f;font-size:12px;font-weight:800}
