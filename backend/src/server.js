@@ -484,8 +484,7 @@ app.get('/api/geo/streets',auth,asyncRoute(async(req,res)=>{
  res.json({streets});
 }));
 
-app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
- if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
+app.post('/api/routes/quote',asyncRoute(async(req,res)=>{
  const input=z.object({pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),isUrgent:z.boolean().default(false),extraChargeAmd:z.number().int().min(0).max(1000000).default(0)}).parse(req.body);
  try {
   const fare=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
