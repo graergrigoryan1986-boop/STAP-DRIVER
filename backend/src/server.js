@@ -1164,4 +1164,13 @@ server.listen(PORT, '0.0.0.0', () => {
   bootstrapAdmin().catch(error => {
     console.error('Admin bootstrap failed:', error);
   });
+  Promise.allSettled([getYerevanDistrictFeatures(), getYerevanNeighborhoodFeatures()]).then(results => {
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'fulfilled') {
+        console.log(index === 0 ? 'Yerevan district GIS map loaded and persisted.' : 'Yerevan neighborhood GIS map loaded and persisted.');
+      } else {
+        console.error(index === 0 ? 'Yerevan district GIS import failed:' : 'Yerevan neighborhood GIS import failed:', result.reason?.message || result.reason);
+      }
+    }
+  });
 });
