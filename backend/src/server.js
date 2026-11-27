@@ -329,26 +329,28 @@ async function calculateYerevanRoute(pickupAddress,destinationAddress){
  const neighborhoodResult=neighborhoodSequenceForRoute(coords,neighborhoodFeatures);
  const routeNeighborhoods=neighborhoodResult.sequence;
  const neighborhoodCount=new Set(routeNeighborhoods).size;
- return {pickup,destination,routeDistricts,routeNeighborhoods,neighborhoodCount,neighborhoodCoverage:Number(neighborhoodResult.coverage.toFixed(4)),distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_NEIGHBORHOOD_COUNT(neighborhoodCount)};
+ const communityCount=new Set(routeDistricts).size;
+ return {pickup,destination,routeDistricts,routeNeighborhoods,neighborhoodCount,communityCount,neighborhoodCoverage:Number(neighborhoodResult.coverage.toFixed(4)),distanceMeters:Math.round(route.distance),durationSeconds:Math.round(route.duration),baseFareAmd:YEREVAN_FARE_BY_NEIGHBORHOOD_COUNT(communityCount)};
 }
 
 app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
  const input=z.object({pickupAddress:z.string().trim().min(3).max(300),destinationAddress:z.string().trim().min(3).max(300)}).parse(req.body);
  const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
- res.json({routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,neighborhoodCount:route.neighborhoodCount,neighborhoodCoverage:route.neighborhoodCoverage,distanceMeters:route.distanceMeters,durationSeconds:route.duration,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon,neighborhood:route.pickup.neighborhood},destination:{lat:route.destination.lat,lon:route.destination.lon,neighborhood:route.destination.neighborhood}});
+ res.json({routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,neighborhoodCount:route.neighborhoodCount,communityCount:route.communityCount,neighborhoodCoverage:route.neighborhoodCoverage,distanceMeters:route.distanceMeters,durationSeconds:route.duration,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon,neighborhood:route.pickup.neighborhood},destination:{lat:route.destination.lat,lon:route.destination.lon,neighborhood:route.destination.neighborhood}});
 }));
 
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const input = z.object({
     pickupAddress:z.string().trim().min(3).max(300),destinationAddress:z.string().trim().min(3).max(300),
-    fareAmd:z.number().int().min(1000).max(1000000).optional(),extraChargeAmd:z.number().int().min(0).max(1000000).default(0),
+    fareAmd:z.number().int().min(1000).max(1000000).optional(),extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
     note:z.string().max(1000).optional(),isTest:z.boolean().default(false)
   }).parse(req.body);
   const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
-  const fareAmd=route.baseFareAmd+input.extraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,pickupAddress:input.pickupAddress,destinationAddress:input.destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
+  const urgentExtraChargeAmd=input.isUrgent?2500:0;
+  const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
+  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,pickupAddress:input.pickupAddress,destinationAddress:input.destinationAddress,pickupLat:route.pickup.lat,pickupLng:route.pickup.lon,destinationLat:route.destination.lat,destinationLng:route.destination.lon,routeDistricts:route.routeDistricts,routeNeighborhoods:route.routeNeighborhoods,routeDistanceMeters:route.distanceMeters,fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,isTest:input.isTest}});
   io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,createdAt:order.createdAt});
   res.status(201).json({order,routeNeighborhoods:route.routeNeighborhoods,neighborhoodCount:route.neighborhoodCount,distanceMeters:route.distanceMeters,message:'Ուղեվարձը հաշվարկվեց Երևանի թաղամասերի քարտեզային սահմաններով։'});
 }));
@@ -400,7 +402,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const input=z.object({
     pickupAddress:z.string().trim().min(3).max(300),
     destinationAddress:z.string().trim().min(3).max(300),
-    fareAmd:z.number().int().min(1000).max(1000000).optional(),extraChargeAmd:z.number().int().min(0).max(1000000).default(0),
+    fareAmd:z.number().int().min(1000).max(1000000).optional(),extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     phonePrimary:z.string().trim().min(5).max(30),
     phoneSecondary:z.string().trim().min(5).max(30).optional().or(z.literal('')),
     passengerCount:z.number().int().min(1).max(8).default(1),
@@ -417,7 +419,8 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const scheduledAt=input.scheduleType==='NOW'?null:new Date(input.scheduledAt);
   if(scheduledAt&&scheduledAt.getTime()<=Date.now())return res.status(400).json({error:'Պատվերի նախատեսված ժամը պետք է լինի ապագայում։'});
   const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
-  const fareAmd=route.baseFareAmd+input.extraChargeAmd;
+  const urgentExtraChargeAmd=input.isUrgent?2500:0;
+  const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
   let driverId=null, eligibleDrivers=[];
   const driverWhere={role:'DRIVER',isVerified:true,isBlocked:false};
   if(input.dispatchMode==='DIRECT'){
@@ -549,13 +552,14 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   const minimumBalanceAmd = Number.isInteger(Number(rawMinimum)) && Number(rawMinimum) >= 0 ? Number(rawMinimum) : 0;
   const personalNegativeLimitAmd = Number.isInteger(req.user.driverNegativeBalanceLimitAmd) ? req.user.driverNegativeBalanceLimitAmd : 0;
   const minimumAllowedBalanceAmd = personalNegativeLimitAmd > 0 ? -personalNegativeLimitAmd : minimumBalanceAmd;
-  const commissionAmd = requestedOrder.isTest ? 0 : Math.round(requestedOrder.fareAmd * 0.25);
+  const commissionBaseAmd=Math.max(0,requestedOrder.fareAmd-(requestedOrder.urgentExtraChargeAmd||0));
+  const commissionAmd = requestedOrder.isTest ? 0 : Math.round(commissionBaseAmd * 0.25);
   let result;
   try {
     result = await prisma.$transaction(async tx => {
       const claimed = await tx.order.updateMany({
         where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] },
-        data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date(), commissionRate: requestedOrder.isTest ? 0 : 25, commissionAmd, driverEarningAmd: 0 }
+        data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt: new Date(), commissionRate: requestedOrder.isTest ? 0 : 25, commissionAmd, driverEarningAmd: requestedOrder.isTest ? 0 : (requestedOrder.urgentExtraChargeAmd||0) }
       });
       if (!claimed.count) return null;
       if (commissionAmd > 0) {
