@@ -45,10 +45,10 @@ function enhanceAdminBookingForm(form){
  const heading=form.querySelector('.booking-form-heading');
  if(heading){heading.querySelector('h3').textContent='Նոր պատվերի ձևակերպում';heading.querySelector('p').textContent='Լրացրեք բաժինները հերթականությամբ՝ նախ պատվերի ժամը, ապա մեքենան, երթուղին և վերջնական արժեքը։'}
  const groups=[
-  ['neon-schedule-group','01 · ՊԱՏՎԵՐԻ ԺԱՄԱՆԱԿԸ',['[name="scheduleType"]','[name="scheduledAtLocal"]']],
+  ['neon-schedule-group','01 · ՊԱՏՎԵՐԻ ԺԱՄԱՆԱԿԸ',['[name="scheduleType"]','[name="scheduledAtLocal"]','.urgent-order-toggle']],
   ['neon-vehicle-group','02 · ՄԵՔԵՆԱՅԻ ԵՎ ՓՈԽԱՆՑՄԱՆ ՏՈՒՓԻ ՏԵՍԱԿԸ',['[name="vehicleFuelType"]','[name="transmissionType"]']],
   ['neon-route-group','03 · ՄԵԿՆՄԱՆ ԵՎ ԺԱՄԱՆՄԱՆ ՀԱՍՑԵՆԵՐԸ',['.district-street-picker','[name="pickupAddress"]','[name="destinationAddress"]']],
-  ['neon-price-group','04 · ԵՐԹՈՒՂԻ ԵՎ ՎԵՐՋՆԱԿԱՆ ԱՐԺԵՔ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]','.urgent-order-toggle']],
+  ['neon-price-group','04 · ԵՐԹՈՒՂԻ ԵՎ ՎԵՐՋՆԱԿԱՆ ԱՐԺԵՔ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]']],
   ['neon-passenger-group','05 · ԿՈՆՏԱԿՏԱՅԻՆ ՏՎՅԱԼՆԵՐ ԵՎ ՈՒՂԵՎՈՐՆԵՐԻ ՔԱՆԱԿ',['[name="phonePrimary"]','[name="phoneSecondary"]','[name="passengerCount"]']],
   ['neon-dispatch-group','06 · ՊԱՏՎԵՐԻ ԿԱՌԱՎԱՐՈՒՄ',['[name="dispatchMode"]','[name="driverId"]','[name="note"]','[name="isTest"]']]
  ];
@@ -234,7 +234,7 @@ function bindFareCalculator(form){
  form._getFullAddress=field=>fullAddress(field);
 
  form.querySelectorAll('[name="pickupNeighborhood"],[name="destinationNeighborhood"]').forEach(el=>el.remove());
- const urgent=form.querySelector('[name="isUrgent"]')||(()=>{const label=document.createElement('label');label.className='urgent-order-toggle';label.innerHTML='<input type="checkbox" name="isUrgent"> ՇՏԱՊ ՊԱՏՎԵՐ · +2 500 ֏ վարորդի մոտեցման համար';(extra?.closest('label')||fare?.closest('label')||form).insertAdjacentElement('beforebegin',label);return label.querySelector('input')})();
+ const urgent=form.querySelector('[name="isUrgent"]')||(()=>{const label=document.createElement('label');label.className='urgent-order-toggle';label.innerHTML='<input type="checkbox" name="isUrgent" aria-label="Շտապ պատվեր"><span>ՇՏԱՊ</span><small>+2 500 ֏</small>';const schedule=form.querySelector('.neon-schedule-group');(schedule||form).appendChild(label);return label.querySelector('input')})();
  const fareGuide=document.createElement('details');fareGuide.className='fare-guide';
  fareGuide.innerHTML='<summary>ԵՐԵՎԱՆԻ 12 ՎԱՐՉԱԿԱՆ ՇՐՋԱՆՆԵՐ ԵՎ ՍԱԿԱԳՆԵՐ</summary><p>Գինը որոշվում է մեքենայի քարտեզային երթուղով անցնող տարբեր վարչական շրջանների քանակով, ոչ թե թաղամասերով։</p><div class="fare-guide-grid"><span>1 վարչական շրջան</span><strong>7 000 ֏</strong><span>2 վարչական շրջան</span><strong>10 000 ֏</strong><span>3 վարչական շրջան</span><strong>12 500 ֏</strong><span>4 վարչական շրջան</span><strong>15 000 ֏</strong><span>5 վարչական շրջան</span><strong>17 500 ֏</strong><span>6 վարչական շրջան</span><strong>20 000 ֏</strong></div><small>Յուրաքանչյուր հաջորդ տարբեր վարչական շրջանի համար ավելանում է 2 500 ֏։ Շտապ պատվերի դեպքում՝ ևս 2 500 ֏ վարորդի մոտեցման համար։</small>';
  if(preview&&form.id!=='adminTestOrderForm')preview.insertAdjacentElement('afterend',fareGuide);
