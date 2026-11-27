@@ -809,9 +809,7 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  if(requestedOrder.dispatchMode==='CATEGORY'&&!(req.user.driverLicenseCategories||[]).includes(requestedOrder.requiredLicenseCategory))return res.status(403).json({error:'Այս պատվերի վարորդական կարգի պահանջին չեք համապատասխանում։'});
-  if(requestedOrder.dispatchMode==='CAPABILITY'&&!(req.user.driverServiceCapabilities||[]).includes(requestedOrder.serviceCapability||''))return res.status(403).json({error:'Այս պատվերի ծառայության հատուկ հմտության պահանջին չեք համապատասխանում։'});
-  if(requestedOrder.transmissionType==='MANUAL'&&req.user.driverTransmission!=='MANUAL')return res.status(403).json({error:'Այս պատվերի մեխանիկական փոխանցման տուփի պահանջին չեք համապատասխանում։'});
+  // Legacy license/capability/transmission metadata must not block accepting an order.
   // Accepting an order must not be blocked by legacy license-category or transmission metadata.
   // Dispatch visibility/assignment is handled separately when the order is created.
   const settingsRow = await prisma.siteContent.findUnique({ where: { id: 'main' } });
