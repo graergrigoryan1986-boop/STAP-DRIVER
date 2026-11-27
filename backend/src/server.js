@@ -226,11 +226,12 @@ async function geocodeYerevanAddress(rawAddress){
  lastYerevanGeocodeAt=Date.now();
  const url=new URL('https://nominatim.openstreetmap.org/search');
  url.searchParams.set('q',address+', Երևան, Հայաստան');
- url.searchParams.set('format','jsonv2');url.searchParams.set('limit','1');url.searchParams.set('countrycodes','am');
+ url.searchParams.set('format','jsonv2');url.searchParams.set('limit','1');url.searchParams.set('addressdetails','1');url.searchParams.set('countrycodes','am');
  url.searchParams.set('viewbox','44.30,40.35,44.75,40.00');url.searchParams.set('bounded','1');url.searchParams.set('accept-language','hy,en');
  const results=await fetchJsonWithTimeout(url.toString(),{headers:{'User-Agent':'STAP-DRIVER/1.0','Accept-Language':'hy,en'}});
  if(!Array.isArray(results)||!results.length)throw new Error('Հասցեն քարտեզի վրա չգտնվեց։ Փորձեք նշել փողոցը, շենքի համարը կամ մոտակա հայտնի օբյեկտը։');
- const point={lat:Number(results[0].lat),lon:Number(results[0].lon),displayName:results[0].display_name};
+ const addr=results[0].address||{};
+ const point={lat:Number(results[0].lat),lon:Number(results[0].lon),displayName:results[0].display_name,neighborhood:addr.neighbourhood||addr.suburb||addr.quarter||addr.city_district||null};
  if(!Number.isFinite(point.lat)||!Number.isFinite(point.lon)||point.lat<40||point.lat>40.35||point.lon<44.3||point.lon>44.75)throw new Error('Նշված հասցեն Երևանի սահմաններից դուրս է։');
  yerevanGeocodeCache.set(cacheKey,point);
  if(yerevanGeocodeCache.size>1000)yerevanGeocodeCache.delete(yerevanGeocodeCache.keys().next().value);
@@ -269,7 +270,7 @@ function districtSequenceForRoute(coords,features){
   if(name&&sequence[sequence.length-1]!==name)sequence.push(name);
  };
  for(let i=0;i<coords.length-1;i++){
-  const a=coords[i],b=coords[i+1],distance=haversineMeters(a,b),steps=Math.max(1,Math.ceil(distance/65));
+  const a=coords[i],b=coords[i+1],distance=haversineMeters(a,b),steps=Math.max(1,Math.ceil(distance/25));
   for(let step=0;step<steps;step++){
    const t=step/steps;pushPoint(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t);
   }
@@ -294,7 +295,7 @@ app.post('/api/routes/quote',auth,asyncRoute(async(req,res)=>{
  if(!['ADMIN','CUSTOMER'].includes(req.user.role))return res.status(403).json({error:'Այս գործողությունը հասանելի չէ։'});
  const input=z.object({pickupAddress:z.string().trim().min(3).max(300),destinationAddress:z.string().trim().min(3).max(300)}).parse(req.body);
  const route=await calculateYerevanRoute(input.pickupAddress,input.destinationAddress);
- res.json({routeDistricts:route.routeDistricts,districtCount:route.districtCount,distanceMeters:route.distanceMeters,durationSeconds:route.duration,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon},destination:{lat:route.destination.lat,lon:route.destination.lon}});
+ res.json({routeDistricts:route.routeDistricts,districtCount:route.districtCount,distanceMeters:route.distanceMeters,durationSeconds:route.duration,baseFareAmd:route.baseFareAmd,pickup:{lat:route.pickup.lat,lon:route.pickup.lon,neighborhood:route.pickup.neighborhood},destination:{lat:route.destination.lat,lon:route.destination.lon,neighborhood:route.destination.neighborhood}});
 }));
 
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
