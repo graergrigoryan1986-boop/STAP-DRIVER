@@ -57,7 +57,8 @@ const guestEmailForPhone = phone => 'guest+' + createHash('sha256').update(norma
 const LICENSE_CATEGORIES = ['AM','A1','A','B1','B','C1','C','D1','D','BE','C1E','CE','D1E','DE'];
 function extractLicenseCategories(raw) {
   const text = String(raw || '').toUpperCase().replace(/[|]/g, 'I');
-  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  const lines = text.split(/\r?
+/).map(line => line.trim()).filter(Boolean);
   const heading = lines.findIndex(line => /CATEGOR|CAT[ÉE]GOR|КАТЕГОР|ԿԱՐԳԵՐ|ԿԱՐԳԵՐԸ/.test(line));
   const source = heading >= 0 ? lines.slice(heading, heading + 18).join(' ') : text;
   const found = new Set();
@@ -82,7 +83,8 @@ function mrzDate(value, kind) {
   return date.getUTCMonth()===month-1&&date.getUTCDate()===day?date:null;
 }
 function parseMrzIdentity(raw) {
-  const lines=String(raw||'').toUpperCase().split(/\r?\n/).map(line=>line.replace(/[^A-Z0-9<]/g,'')).filter(line=>line.length>=28);
+  const lines=String(raw||'').toUpperCase().split(/\r?
+/).map(line=>line.replace(/[^A-Z0-9<]/g,'')).filter(line=>line.length>=28);
   for(let i=0;i<lines.length;i++){
     const first=lines[i];
     if(!/^[PIAC][<A-Z]/.test(first))continue;
@@ -104,7 +106,8 @@ function transliterateArmenian(value) {
   return Array.from(String(value||'').toUpperCase()).map(ch=>map[ch]||ch).join('');
 }
 function labelledDate(raw, labels) {
-  const lines=String(raw||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const lines=String(raw||'').split(/\r?
+/).map(x=>x.trim()).filter(Boolean);
   const datePattern=/(\d{4}[./-]\d{2}[./-]\d{2}|\d{2}[./-]\d{2}[./-]\d{4})/;
   for(let i=0;i<lines.length;i++){
     if(!labels.some(label=>label.test(lines[i])))continue;
@@ -862,7 +865,8 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
     throw error;
   }
   if (!result) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
-  io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});\n  io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
+  io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
+  io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
   res.json({...result,order:maskDriverOrderContacts(result.order)});
 }));
 
@@ -943,7 +947,8 @@ app.post('/api/orders/:id/intermediate-community', auth, only('DRIVER'), verifie
       const [order, driver] = await Promise.all([tx.order.findUnique({ where: { id: existing.id } }), tx.user.findUnique({ where: { id: req.user.id }, select: { balanceAmd: true } })]);
       return { order, balanceAmd: driver.balanceAmd, commissionAmd, addedFareAmd };
     });
-    io.to('user:' + req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});\n   io.to('user:' + existing.customerId).emit('order:fare-updated', { id: existing.id, fareAmd: result.order.fareAmd, intermediateCommunities: result.order.intermediateCommunities });
+    io.to('user:' + req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
+   io.to('user:' + existing.customerId).emit('order:fare-updated', { id: existing.id, fareAmd: result.order.fareAmd, intermediateCommunities: result.order.intermediateCommunities });
     return res.json(result);
   } catch (error) {
     if (error.message === 'WALLET_MINIMUM_NOT_MET') return res.status(409).json({ error: 'Հաշվեկշիռը բավարար չէ միջանկյալ համայնքի հավելավճարի միջնորդավճարի համար։' });
@@ -979,6 +984,7 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
     return { commissionAmd: order.isTest ? 0 : order.commissionAmd, driverEarningAmd: 0, fareAmd: order.fareAmd, isTest: order.isTest, balanceAmd: driver.balanceAmd, customerRating: updatedCustomerRating };
   });
   if (!result) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ ավարտել' });
+  io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
   io.emit('order:completed', { id: req.params.id });
   res.json({ success: true, settlement: result, balanceAmd: result.balanceAmd, message: 'Պատվերն ավարտվեց, պատվիրատուի գնահատականը պահպանվեց։' });
 }));
@@ -1076,6 +1082,7 @@ app.post('/api/admin/drivers/:id/top-up', auth, only('ADMIN'), asyncRoute(async 
     await tx.walletTransaction.create({ data: { userId: driver.id, amountAmd, type: 'ADMIN_TOP_UP', description, createdByAdmin: req.user.id } });
     return user;
   });
+  io.to('user:'+driver.id).emit('driver:balance-updated',{driverId:driver.id,balanceAmd:updated.balanceAmd,updatedAt:new Date().toISOString()});
   res.json({ driver: publicUser(updated) });
 }));
 
@@ -1102,6 +1109,7 @@ app.post('/api/admin/drivers/:id/withdraw', auth, only('ADMIN'), asyncRoute(asyn
     });
     return user;
   });
+  io.to('user:'+driver.id).emit('driver:balance-updated',{driverId:driver.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
   res.json({ driver: publicUser(result), message: 'Գումարը ելքագրվեց։ Հաշվեկշիռը կարող է դառնալ բացասական։' });
 }));
 
@@ -1226,19 +1234,39 @@ function makeDocumentsPdf(title, pages){
   const objs=[];const add=v=>{objs.push(Buffer.isBuffer(v)?v:Buffer.from(v,'binary'));return objs.length};
   const catalog=add(''),pagesId=add(''),fontId=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),pageIds=[];
   for(const p of pages){
-    const img=decryptPrivate(p.data);let iw=1200,ih=800;for(let k=2;k<img.length-8;k++){if(img[k]===0xff&&[0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf].includes(img[k+1])){ih=img.readUInt16BE(k+5);iw=img.readUInt16BE(k+7);break}}const imgId=add(Buffer.concat([Buffer.from('<< /Type /XObject /Subtype /Image /Width '+iw+' /Height '+ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>\nstream\n'),img,Buffer.from('\nendstream')]));
-    const scale=Math.min(520/iw,700/ih),dw=Math.round(iw*scale),dh=Math.round(ih*scale),x=Math.round((595-dw)/2),y=Math.round(430-dh/2);const contentText='BT /F1 14 Tf 40 810 Td ('+String(p.label).replace(/[()\\]/g,'')+') Tj ET\nq '+dw+' 0 0 '+dh+' '+x+' '+y+' cm /Im0 Do Q';
-    const content=Buffer.from(contentText,'binary'),contentId=add(Buffer.concat([Buffer.from('<< /Length '+content.length+' >>\nstream\n'),content,Buffer.from('\nendstream')]));
+    const img=decryptPrivate(p.data);let iw=1200,ih=800;for(let k=2;k<img.length-8;k++){if(img[k]===0xff&&[0xc0,0xc1,0xc2,0xc3,0xc5,0xc6,0xc7,0xc9,0xca,0xcb,0xcd,0xce,0xcf].includes(img[k+1])){ih=img.readUInt16BE(k+5);iw=img.readUInt16BE(k+7);break}}const imgId=add(Buffer.concat([Buffer.from('<< /Type /XObject /Subtype /Image /Width '+iw+' /Height '+ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>
+stream
+'),img,Buffer.from('
+endstream')]));
+    const scale=Math.min(520/iw,700/ih),dw=Math.round(iw*scale),dh=Math.round(ih*scale),x=Math.round((595-dw)/2),y=Math.round(430-dh/2);const contentText='BT /F1 14 Tf 40 810 Td ('+String(p.label).replace(/[()\\]/g,'')+') Tj ET
+q '+dw+' 0 0 '+dh+' '+x+' '+y+' cm /Im0 Do Q';
+    const content=Buffer.from(contentText,'binary'),contentId=add(Buffer.concat([Buffer.from('<< /Length '+content.length+' >>
+stream
+'),content,Buffer.from('
+endstream')]));
     const pageId=add('');pageIds.push(pageId);
     objs[pageId-1]=Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 '+fontId+' 0 R >> /XObject << /Im0 '+imgId+' 0 R >> >> /Contents '+contentId+' 0 R >>');
   }
   objs[catalog-1]=Buffer.from('<< /Type /Catalog /Pages '+pagesId+' 0 R >>');
   objs[pagesId-1]=Buffer.from('<< /Type /Pages /Kids ['+pageIds.map(id=>id+' 0 R').join(' ')+'] /Count '+pageIds.length+' >>');
-  let out=Buffer.from('%PDF-1.4\n%âãÏÓ\n','binary'),offsets=[0];
-  objs.forEach((o,i)=>{offsets.push(out.length);out=Buffer.concat([out,Buffer.from((i+1)+' 0 obj\n'),o,Buffer.from('\nendobj\n')])});
-  const xref=out.length;out=Buffer.concat([out,Buffer.from('xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n')]);
-  for(let i=1;i<offsets.length;i++)out=Buffer.concat([out,Buffer.from(String(offsets[i]).padStart(10,'0')+' 00000 n \n')]);
-  out=Buffer.concat([out,Buffer.from('trailer\n<< /Size '+(objs.length+1)+' /Root '+catalog+' 0 R >>\nstartxref\n'+xref+'\n%%EOF')]);return out;
+  let out=Buffer.from('%PDF-1.4
+%âãÏÓ
+','binary'),offsets=[0];
+  objs.forEach((o,i)=>{offsets.push(out.length);out=Buffer.concat([out,Buffer.from((i+1)+' 0 obj
+'),o,Buffer.from('
+endobj
+')])});
+  const xref=out.length;out=Buffer.concat([out,Buffer.from('xref
+0 '+(objs.length+1)+'
+0000000000 65535 f 
+')]);
+  for(let i=1;i<offsets.length;i++)out=Buffer.concat([out,Buffer.from(String(offsets[i]).padStart(10,'0')+' 00000 n 
+')]);
+  out=Buffer.concat([out,Buffer.from('trailer
+<< /Size '+(objs.length+1)+' /Root '+catalog+' 0 R >>
+startxref
+'+xref+'
+%%EOF')]);return out;
 }
 app.get('/api/admin/drivers/:id/documents.pdf',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
   const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
