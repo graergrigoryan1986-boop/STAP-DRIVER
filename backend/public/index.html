@@ -40,7 +40,20 @@
 <button class="gold-btn booking-submit full" type="submit" id="submitAuth">Մուտք գործել</button>
 </div>
 </form>
-<p id="authMessage" class="message" role="status"></p><small class="fineprint">Գրանցման համար գաղտնաբառը պետք է ունենա առնվազն 10 նիշ։ Վարորդի հաշիվը պատվերներ ընդունելուց առաջ պետք է հաստատվի ադմինի կողմից։</small>
+<details class="guest-booking-card">
+<summary>ՇԱՐՈՒՆԱԿԵԼ ԱՌԱՆՑ ԳՐԱՆՑՄԱՆ · ՊԱՏՎԻՐԵԼ ՀԵՌԱԽՈՍԱՀԱՄԱՐՈՎ</summary>
+<p class="fineprint">Մուտքագրեք անունն ու հեռախոսահամարը։ Պատվերը կհայտնվի ադմինի և վարորդների մոտ։ Նույն համարով հետագա պատվերներն ու գնահատականները կպահպանվեն միասին։</p>
+<form id="guestOrderForm" class="form-grid">
+<label class="field full">Անուն Ազգանուն<input name="name" required minlength="2" maxlength="100" placeholder="Ձեր անունը"></label>
+<label class="field full">Հեռախոսահամար<input name="phone" type="tel" required minlength="7" maxlength="30" placeholder="+374 ..."></label>
+<label class="field">Մեկնարկի վարչական շրջան<select name="pickupDistrict" required><option value="">Ընտրեք շրջանը</option></select></label>
+<label class="field">Նպատակակետի վարչական շրջան<select name="destinationDistrict" required><option value="">Ընտրեք շրջանը</option></select></label>
+<label class="field full urgent-order-toggle"><input type="checkbox" name="isUrgent"><span>⚡ ՇՏԱՊ · ՀԵՆՑ ՀԻՄԱ · ՀՆԱՐԱՎՈՐԻՆՍ ԱՐԱԳ</span><small>Գինը կհաշվարկվի գործող պահանջարկի գործակցով</small></label>
+<label class="field full">Լրացուցիչ նշում<textarea name="note" rows="2" maxlength="1000" placeholder="Ըստ ցանկության"></textarea></label>
+<p class="fare-breakdown full" id="guestFareSummary">Ընտրեք երկու վարչական շրջան՝ գինը հաշվարկելու համար։</p>
+<button class="gold-btn booking-submit full" type="submit">⚡ ՊԱՏՎԻՐԵԼ ԱՌԱՆՑ ԳՐԱՆՑՄԱՆ</button>
+</form><p id="guestOrderMessage" class="message" role="status"></p>
+</details><p id="authMessage" class="message" role="status"></p><small class="fineprint">Գրանցման համար գաղտնաբառը պետք է ունենա առնվազն 10 նիշ։ Վարորդի հաշիվը պատվերներ ընդունելուց առաջ պետք է հաստատվի ադմինի կողմից։</small>
 </section>
 <section id="appPanel" class="booking-card hidden">
 <div class="account-head dash-top"><div><div class="eyebrow">ԱՆՁՆԱԿԱՆ ՏԱՐԱԾՔ</div><div class="welcome-line"><div id="welcomeAvatar" class="welcome-avatar" aria-label="Պրոֆիլի լուսանկար"></div><h2 id="welcome"></h2></div><p id="accountMeta" class="muted"></p></div></div>
