@@ -510,7 +510,7 @@ if(guestOrderForm){
  guestOrderForm.addEventListener('submit',async event=>{event.preventDefault();const button=guestOrderForm.querySelector('button[type=submit]');button.disabled=true;try{const f=new FormData(guestOrderForm);const result=await api('/api/orders/guest',{method:'POST',body:JSON.stringify({name:f.get('name'),phone:f.get('phone'),pickupDistrict:f.get('pickupDistrict'),destinationDistrict:f.get('destinationDistrict'),isUrgent:f.get('isUrgent')==='on',note:f.get('note')||''})});message('#guestOrderMessage',result.message+' Պատվերի համար՝ #'+String(result.order.id).slice(-8)+' · '+money(result.order.fareAmd));guestOrderForm.reset();$('#guestFareSummary').textContent='Պատվերն ուղարկվեց։';}catch(error){message('#guestOrderMessage',error.message,true)}finally{button.disabled=false}});
 }
 
-async async function loadPublishedTariffs(){
+async async async function loadPublishedTariffs(){
  const root=$('#publishedTariffs');if(!root)return;
  try{const data=await api('/api/tariffs');const items=data.tariffs||[];if(!items.length){root.hidden=true;return}root.hidden=false;root.innerHTML=items.map(item=>'<article class="service-card published-tariff-card">'+(item.image?'<img class="published-tariff-image" src="'+esc(item.image)+'" alt="'+esc(item.title)+'">':'')+'<span class="service-index">STAP · ԾԱՌԱՅՈՒԹՅՈՒՆ</span><h3>'+esc(item.title)+'</h3><p>'+esc(item.description||'')+'</p>'+(item.requirements?'<p class="service-requirements"><strong>Պարտադիր պայմաններ՝</strong> '+esc(item.requirements)+'</p>':'')+(item.extraInfo?'<p>'+esc(item.extraInfo)+'</p>':'')+'<strong class="published-tariff-price">Հավելավճար՝ '+money(item.priceAmd)+'</strong></article>').join('')}catch(error){console.warn('Tariff catalogue unavailable:',error.message)}
 }
