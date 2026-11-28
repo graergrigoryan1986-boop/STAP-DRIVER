@@ -817,7 +817,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
 }));
 function maskDriverOrderEvidence(order){
  if(!order)return order;
- const trim=report=>report?{...report,photos:undefined,customerSignature:undefined,photoCount:Array.isArray(report.photos)?report.photos.length:0,hasCustomerSignature:Boolean(report.customerSignature)}:null;
+ const trim=report=>report?{...report,photos:undefined,passportPhotos:undefined,damagePhotos:undefined,customerSignature:undefined,passportPhotoCount:Array.isArray(report.passportPhotos)?report.passportPhotos.length:0,damagePhotoCount:Array.isArray(report.damagePhotos)?report.damagePhotos.length:0}:null;
  return {...order,vehicleInspectionReport:trim(order.vehicleInspectionReport),vehicleReturnInspection:trim(order.vehicleReturnInspection)};
 }
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
@@ -996,31 +996,25 @@ app.get('/api/admin/orders/:id/inspection',auth,only('ADMIN'),asyncRoute(async(r
 }));
 app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const input=z.object({
-    mode:z.enum(['HANDOVER','RETURN']).default('HANDOVER'),
-    checks:z.record(z.string(),z.boolean()).refine(value=>Object.keys(value).length>=8,{message:'Լրացրեք ստուգման բոլոր կետերը։'}),
-    damageNotes:z.string().trim().max(2000).optional().default(''),
-    damageAreas:z.array(z.string().trim().min(1).max(80)).max(20).optional().default([]),
-    odometer:z.string().trim().max(40).optional().default(''),
-    fuelLevel:z.string().trim().max(40).optional().default(''),
-    belongings:z.string().trim().max(1000).optional().default(''),
-    keyCount:z.string().trim().max(20).optional().default(''),
-    customerName:z.string().trim().min(2).max(120),
-    customerConfirmed:z.literal(true),
-    customerSignature:z.string().max(1800000).regex(/^data:image\/png;base64,/),
-    photos:z.array(z.string().max(1800000).regex(/^data:image\/(jpeg|png|webp);base64,/)).min(5).max(8)
+    mode:z.literal('HANDOVER').default('HANDOVER'),
+    checks:z.object({exteriorChecked:z.literal(true),vehicleMatches:z.literal(true)}),
+    passportPhotos:z.array(z.string().max(1800000).regex(/^data:image\/(jpeg|png|webp);base64,/)).length(2),
+    hasDamage:z.boolean(),
+    damagePhotos:z.array(z.string().max(1800000).regex(/^data:image\/(jpeg|png|webp);base64,/)).max(5).default([])
   }).parse(req.body);
   const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id}});
   if(!order)return res.status(404).json({error:'Պատվերը կապված չէ ձեր վարորդական հաշվի հետ։'});
   if(input.mode==='HANDOVER'){
     if(order.status!=='ACCEPTED')return res.status(409).json({error:'Մեքենայի ընդունման ստուգումը հասանելի է միայն ընդունված պատվերի համար։'});
-    const required=['registrationViewed','ownerIdentityVerified','ownerOrAuthorized','mtplChecked','vehicleMatches','exteriorChecked','interiorChecked','safetyChecked','tiresChecked','lightsChecked','dashboardWarningsChecked','visibleSafetyIssuesChecked','vehicleSafe'];
-    if(required.some(key=>input.checks[key]!==true))return res.status(400).json({error:'Մեքենայի ընդունման բոլոր պարտադիր ստուգումները պետք է հաստատվեն։'});
+    if(input.checks.exteriorChecked!==true||input.checks.vehicleMatches!==true)return res.status(400).json({error:'Հաստատեք մեքենայի արտաքին զննումը և համարանիշի նույնականացումը։'});
+    if(input.hasDamage&&input.damagePhotos.length===0)return res.status(400).json({error:'Վնասվածք նշելու դեպքում առնվազն մեկ լուսանկար պարտադիր է։'});
+    if(!input.hasDamage&&input.damagePhotos.length>0)return res.status(400).json({error:'Վնասվածքի լուսանկարները կցելուց առաջ նշեք վնասվածքի առկայությունը։'});
     const report={...input,driverId:req.user.id,driverName:req.user.name,orderId:order.id,orderCode:order.orderCode,recordedAt:new Date().toISOString(),ip:req.ip};
     const changed=await prisma.order.updateMany({where:{id:order.id,driverId:req.user.id,status:'ACCEPTED',vehicleInspectionPassed:false},data:{status:'ARRIVED',arrivedAt:new Date(),vehicleInspectionPassed:true,vehicleInspectionReport:report}});
     if(!changed.count)return res.status(409).json({error:'Ստուգման արձանագրությունը արդեն պահպանվել է կամ պատվերի կարգավիճակը փոխվել է։'});
     const updated=await prisma.order.findUnique({where:{id:order.id}});
     emitOrderStatusChange(updated,'ARRIVED','Մեքենայի ընդունման ստուգումն ու հաճախորդի հաստատումը գրանցվել են։');
-    return res.json({order:maskDriverOrderEvidence(maskDriverOrderContacts(updated)),message:'Մեքենայի ընդունման արձանագրությունը պահպանվեց։ Կարող եք սկսել ուղևորությունը։'});
+    return res.json({order:maskDriverOrderEvidence(maskDriverOrderContacts(updated)),message:'Ստուգումն ավարտված է։ Կարող եք շարունակել պատվերը։'});
   }
   if(order.status!=='IN_PROGRESS')return res.status(409).json({error:'Վերադարձի ստուգումը հասանելի է միայն ուղևորության ընթացքում։'});
   const returnRequired=['exteriorChecked','interiorChecked','odometerChecked','belongingsChecked','keysReturned'];
@@ -1116,8 +1110,6 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
     comment: z.string().trim().max(500).optional().or(z.literal(''))
   }).parse(req.body);
   if(input.score<=3&&!input.reasonTags.length)return res.status(400).json({error:'Ցածր գնահատականի դեպքում պատճառ ընտրելը պարտադիր է։'});
-  const completedOrder=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id,status:'IN_PROGRESS'},select:{vehicleReturnInspection:true}});
-  if(!completedOrder?.vehicleReturnInspection)return res.status(409).json({error:'Պատվերն ավարտելուց առաջ պարտադիր է լրացնել մեքենայի վերադարձի ստուգումը և լուսանկարները։'});
   const result = await prisma.$transaction(async tx => {
     const order = await tx.order.findFirst({ where: { id: req.params.id, driverId: req.user.id, status: 'IN_PROGRESS' } });
     if (!order) return null;
