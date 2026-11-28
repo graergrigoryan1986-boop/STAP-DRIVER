@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileChooserCallback;
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 1002;
+    private static final int INITIAL_PERMISSION_REQUEST_CODE = 1003;
     private PermissionRequest pendingCameraPermissionRequest;
     private Uri pendingCameraCaptureUri;
     private WebChromeClient.FileChooserParams pendingFileChooserParams;
@@ -157,7 +158,27 @@ public class MainActivity extends Activity {
         root.addView(errorPanel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
         loadPlatform();
-        if (BuildConfig.APP_ROLE.equals("DRIVER")) requestCameraPermissionIfNeeded();
+        requestInitialPermissions();
+    }
+
+    private void requestInitialPermissions() {
+        android.content.SharedPreferences prefs = getSharedPreferences("stap_permissions", MODE_PRIVATE);
+        if (prefs.getBoolean("initial_permissions_requested", false)) return;
+        java.util.ArrayList<String> required = new java.util.ArrayList<>();
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) required.add(Manifest.permission.CAMERA);
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) required.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) required.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) required.add(Manifest.permission.RECORD_AUDIO);
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            if (checkSelfPermission("android.permission.READ_MEDIA_IMAGES") != PackageManager.PERMISSION_GRANTED) required.add("android.permission.READ_MEDIA_IMAGES");
+            if (checkSelfPermission("android.permission.READ_MEDIA_VISUAL_USER_SELECTED") != PackageManager.PERMISSION_GRANTED) required.add("android.permission.READ_MEDIA_VISUAL_USER_SELECTED");
+        } else if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission("android.permission.READ_MEDIA_IMAGES") != PackageManager.PERMISSION_GRANTED) required.add("android.permission.READ_MEDIA_IMAGES");
+        } else if (checkSelfPermission("android.permission.READ_EXTERNAL_STORAGE") != PackageManager.PERMISSION_GRANTED) {
+            required.add("android.permission.READ_EXTERNAL_STORAGE");
+        }
+        prefs.edit().putBoolean("initial_permissions_requested", true).apply();
+        if (!required.isEmpty()) requestPermissions(required.toArray(new String[0]), INITIAL_PERMISSION_REQUEST_CODE);
     }
 
     private boolean isTrustedCameraOrigin(Uri origin) {
@@ -241,6 +262,9 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == INITIAL_PERMISSION_REQUEST_CODE) {
+            return;
+        }
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             cameraPermissionRequestInFlight = false;
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
