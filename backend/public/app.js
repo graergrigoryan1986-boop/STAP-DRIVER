@@ -603,38 +603,7 @@ function bindFareCalculator(form){
  form._refreshRouteQuote=async()=>{clearTimeout(timer);if(lastQuote&&form.dataset.routeQuoteReady==='true')return true;return refresh()};
  if(districtFields.every(x=>x.select.value))refresh();else if(preview)preview.textContent='Ընտրեք մեկնարկային և վերջնակետային վարչական շրջանները՝ գինը տեսնելու համար։';
 }
-function enhanceAdminBookingForm(form){
- if(!form||form.dataset.neonReady==='true')return;
- form.dataset.neonReady='true';form.classList.add('neon-dispatch-form');
- const heading=form.querySelector('.booking-form-heading');
- if(heading){heading.querySelector('h3').textContent='Նոր պատվերի ձևակերպում';heading.querySelector('p').textContent='Ընտրեք պատվերի ժամը, մեքենան և երկու վարչական շրջանները․ հասցեները սակագնի վրա չեն ազդում։'}
- const groups=[
-  ['neon-schedule-group','01 · ՊԱՏՎԵՐԻ ԺԱՄԱՆԱԿԸ',['[name="scheduleType"]','[name="scheduledAtLocal"]']],
-  ['neon-vehicle-group','02 · ՄԵՔԵՆԱՅԻ ԵՎ ՓՈԽԱՆՑՄԱՆ ՏՈՒՓԻ ՏԵՍԱԿԸ',['[name="vehicleFuelType"]','[name="transmissionType"]']],
-  ['neon-route-group','03 · ՄԵԿՆԱՐԿԻ ԵՎ ՆՊԱՏԱԿԱԿԵՏԻ ՎԱՐՉԱԿԱՆ ՇՐՋԱՆՆԵՐԸ',['.urgent-order-toggle','.district-picker-wrap']],
-  ['neon-price-group','04 · ՎԵՐՋՆԱԿԱՆ ԱՐԺԵՔ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]']],
-  ['neon-passenger-group','05 · ԿՈՆՏԱԿՏԱՅԻՆ ՏՎՅԱԼՆԵՐ ԵՎ ՈՒՂԵՎՈՐՆԵՐԻ ՔԱՆԱԿ',['[name="phonePrimary"]','[name="phoneSecondary"]','[name="passengerCount"]']],
-  ['neon-dispatch-group','06 · ՊԱՏՎԵՐԻ ԿԱՌԱՎԱՐՈՒՄ',['[name="dispatchMode"]','[name="driverId"]','[name="note"]','[name="isTest"]']]
- ];
- const used=new Set([heading].filter(Boolean));
- for(const [className,title,selectors] of groups){
-  const section=document.createElement('section');section.className='neon-form-group '+className;
-  const h=document.createElement('h4');h.textContent=title;section.appendChild(h);
-  const nodes=[...form.children].filter(node=>!used.has(node)&&selectors.some(sel=>node.matches?.(sel)||node.querySelector?.(sel)));
-  for(const node of nodes){used.add(node);section.appendChild(node)}
-  if(section.children.length>1)form.appendChild(section);
- }
- const button=form.querySelector('button[type="submit"],button:not([type])');
- if(button){button.classList.add('neon-create-order');button.textContent='⚡ ՍՏԵՂԾԵԼ ԵՎ ՀՐԱՊԱՐԱԿԵԼ ՊԱՏՎԵՐԸ';form.appendChild(button)}
- form.querySelectorAll('input[name="phonePrimary"],input[name="phoneSecondary"],input[name="note"]').forEach(input=>{
-  if(input.closest('label'))return;
-  const label=document.createElement('label');label.className='admin-form-field neon-input-label';
-  const span=document.createElement('span');span.textContent=input.name==='phonePrimary'?'Հեռախոսահամար 1':input.name==='phoneSecondary'?'Հեռախոսահամար 2':'Լրացուցիչ նշում';
-  input.parentNode.insertBefore(label,input);label.append(span,input);
- });
- const vehicleLabel=form.querySelector('label:has([name="vehicleFuelType"]) span');
- if(vehicleLabel)vehicleLabel.textContent='Մեքենայի տեսակ / շարժիչ';
-}
+
 
 async function customerView(){
  const [mine,serviceData]=await Promise.all([api('/api/orders/mine'),api('/api/tariffs')]);
