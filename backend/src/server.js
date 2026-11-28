@@ -526,7 +526,7 @@ app.post('/api/routes/quote',asyncRoute(async(req,res)=>{
 
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const input = z.object({
-    pickupDistrict:z.string().trim().min(2).max(80).optional(),destinationDistrict:z.string().trim().min(2).max(80).optional(),pickupAddress:z.string().trim().min(3).max(300).optional(),destinationAddress:z.string().trim().min(3).max(300).optional(),senderPhone:z.string().trim().max(30).optional(),recipientPhone:z.string().trim().max(30).optional(),recipientName:z.string().trim().max(120).optional(),parcelAccepted:z.boolean().optional(),
+    pickupDistrict:z.string().trim().min(2).max(80).optional(),destinationDistrict:z.string().trim().min(2).max(80).optional(),pickupAddress:z.string().trim().min(3).max(300).optional(),destinationAddress:z.string().trim().min(3).max(300).optional(),senderName:z.string().trim().max(120).optional(),senderPhone:z.string().trim().max(30).optional(),recipientPhone:z.string().trim().max(30).optional(),recipientName:z.string().trim().max(120).optional(),parcelAccepted:z.boolean().optional(),
     serviceId:z.string().trim().min(1).max(80).optional(),
     extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),vehicleFuelType:z.enum(['PETROL','ELECTRIC','HYBRID']).default('PETROL'),passengerCount:z.number().int().min(1).max(5).default(1),
@@ -537,7 +537,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const service=input.serviceId?catalogue.find(item=>item?.id===input.serviceId&&item.active!==false):null;
   if(input.serviceId&&!service)return res.status(400).json({error:'Ընտրված ծառայությունն այլևս հասանելի չէ։ Թարմացրեք էջը։'});
   const isPremiumDelivery=service?.id==='premium-delivery';
-  if(isPremiumDelivery){if(!input.parcelAccepted)return res.status(400).json({error:'Հաստատեք առաքանու ընդունելի պայմանները։'});for(const [label,value] of [['ուղարկողի',input.senderPhone],['ստացողի',input.recipientPhone]])if(!value||normalizePhone(value).replace(/\\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք '+label+' ճիշտ հեռախոսահամարը։'});if(!input.pickupAddress||!input.destinationAddress)return res.status(400).json({error:'Լրացրեք ուղարկողի և ստացողի ամբողջական հասցեները։'});}
+  if(isPremiumDelivery){if(!input.senderName?.trim()||!input.recipientName?.trim())return res.status(400).json({error:'Լրացրեք ուղարկողի և ստացողի անունները։'});if(!input.parcelAccepted)return res.status(400).json({error:'Հաստատեք առաքանու ընդունելի պայմանները։'});for(const [label,value] of [['ուղարկողի',input.senderPhone],['ստացողի',input.recipientPhone]])if(!value||normalizePhone(value).replace(/\\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք '+label+' ճիշտ հեռախոսահամարը։'});if(!input.pickupAddress||!input.destinationAddress)return res.status(400).json({error:'Լրացրեք ուղարկողի և ստացողի ամբողջական հասցեները։'});}
   const route=isPremiumDelivery?{baseFareAmd:0,pickupDistrict:'Առաքում',destinationDistrict:'Երևան',routeDistricts:[],districtCount:0,intermediateDistricts:[]}:await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
   const servicePriceAmd=Number.isInteger(service?.priceAmd)?service.priceAmd:0;
   const dispatchMode=['CATEGORY','CAPABILITY'].includes(service?.dispatchMode)?service.dispatchMode:'NETWORK';
@@ -550,11 +550,11 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   }
   const totalExtraAmd=input.extraChargeAmd+servicePriceAmd;
   const pickupAddress=isPremiumDelivery?input.pickupAddress.trim():route.pickupDistrict+' վարչական շրջան',destinationAddress=isPremiumDelivery?input.destinationAddress.trim():route.destinationDistrict+' վարչական շրջան';
-  const orderNote=isPremiumDelivery?['ՊՐԵՄԻՈՒՄ ԱՌԱՔՈՒՄ','Ուղարկողի հեռախոս՝ '+input.senderPhone,'Ստացողի անուն՝ '+(input.recipientName||'նշված չէ'),'Ստացողի հեռախոս՝ '+input.recipientPhone,'Առաքանու պայմաններ՝ բաց, տեսանելի, ստուգելի, թափանցիկ, չկոտրվող, չփչացող',input.note||''].filter(Boolean).join(' | ').slice(0,1000):input.note;
+  const orderNote=isPremiumDelivery?['ՊՐԵՄԻՈՒՄ ԱՌԱՔՈՒՄ','Ուղարկող՝ '+input.senderName,'Ուղարկողի հեռախոս՝ '+input.senderPhone,'Ստացող՝ '+input.recipientName,'Ստացողի հեռախոս՝ '+input.recipientPhone,'Առաքանու սահմանափակում՝ առավելագույնը 10 կգ, բաց, տեսանելի, ստուգելի, թափանցիկ, չկոտրվող և չփչացող'].join(' | ').slice(0,1000):input.note;
   const demand=await getUrgentDemandCoefficient(input.isUrgent);
-  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,totalExtraAmd,input.isUrgent,demand.demandCoefficientPercent);
+  const demandExtraChargeAmd=isPremiumDelivery?0:calculateUrgentDemandCharge(route.baseFareAmd,totalExtraAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
-  const fareAmd=(isPremiumDelivery?5000:route.baseFareAmd)+input.extraChargeAmd+(isPremiumDelivery?0:servicePriceAmd)+urgentExtraChargeAmd;
+  const fareAmd=(isPremiumDelivery?5000:route.baseFareAmd)+(isPremiumDelivery?0:input.extraChargeAmd)+(isPremiumDelivery?0:servicePriceAmd)+urgentExtraChargeAmd;
   const order=await prisma.order.create({data:{orderCode:await generateUniqueOrderCode(),customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,vehicleFuelType:input.vehicleFuelType,passengerCount:input.passengerCount,note:orderNote,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   const event={id:order.id,orderCode:order.orderCode,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
   if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else io.to('drivers').emit('order:new',event);
