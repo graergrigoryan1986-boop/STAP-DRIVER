@@ -705,10 +705,13 @@ app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (
 
 app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const input=z.object({
-    pickupDistrict:z.string().trim().min(2).max(80),
+    serviceId:z.string().trim().min(1).max(80).optional(),
+    pickupAddress:z.string().trim().min(3).max(300).optional(),destinationAddress:z.string().trim().min(3).max(300).optional(),
+    senderName:z.string().trim().max(120).optional(),senderPhone:z.string().trim().max(30).optional(),recipientName:z.string().trim().max(120).optional(),recipientPhone:z.string().trim().max(30).optional(),parcelAccepted:z.boolean().optional(),
+    pickupDistrict:z.string().trim().min(2).max(80).optional(),
     destinationDistrict:z.string().trim().min(2).max(80),
     fareAmd:z.number().int().min(1000).max(1000000).optional(),extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
-    phonePrimary:z.string().trim().min(5).max(30),
+    phonePrimary:z.string().trim().min(5).max(30).optional().or(z.literal('')),
     phoneSecondary:z.string().trim().min(5).max(30).optional().or(z.literal('')),
     passengerCount:z.number().int().min(1).max(8).default(1),
     transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),
