@@ -2248,3 +2248,24 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .damage-photo-area[hidden]{display:none}
 .damage-photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:600px){.passport-photo-grid,.damage-photo-grid{grid-template-columns:1fr}.vehicle-handover-simple .inspection-checklist{grid-template-columns:1fr}}
+
+/* Driver profile image upload and gallery */
+.driver-media-panel{margin:16px 0;padding:16px;border:1px solid rgba(215,180,110,.35);border-radius:16px;background:linear-gradient(135deg,#172b3b,#252c3d 60%,#3b2c38);color:#f4f7fb}
+.driver-media-panel .driver-panel-title{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.driver-media-panel .driver-panel-title h3{margin:0;color:#f6d99d;font-size:16px}
+.driver-media-panel .driver-panel-title span{color:#d5e0e9;font-size:12px}
+.driver-photo-upload-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;margin:12px 0;padding:12px;border-radius:12px;background:rgba(255,255,255,.07)}
+.driver-photo-upload-form label{display:grid;gap:7px;min-width:0;color:#fff;font-weight:800}
+.driver-photo-upload-form input[type=file]{max-width:100%;min-width:0;padding:9px;border:1px solid #8193a3;border-radius:9px;background:#f5f7fa;color:#1a2630}
+.driver-photo-upload-form .doc-file-name{color:#d6e3ec;font-size:12px;overflow-wrap:anywhere}
+.driver-gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:12px}
+.driver-gallery-grid figure{position:relative;margin:0;min-width:0}
+.driver-gallery-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.2)}
+.driver-gallery-grid button{width:100%;margin-top:5px}
+.route-preview,.fare-breakdown{display:block;margin:12px 0;padding:14px 16px;border:1px solid rgba(216,185,125,.55);border-radius:13px;background:linear-gradient(135deg,#172b3b,#243d50 58%,#342d42)!important;color:#f7f9fc!important;font-size:13px;font-weight:650;line-height:1.65;box-shadow:0 8px 20px rgba(0,0,0,.16)}
+.route-preview strong,.route-preview b,.fare-breakdown strong{color:#ffe0a0!important}
+.route-preview span{display:block;color:#f1f5f8!important;margin:3px 0;overflow-wrap:anywhere}
+.booking-choice-group[data-booking-choice-group="transmission"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:9px}
+.booking-choice-group[data-booking-choice-group="transmission"] .booking-choice-chip{min-height:48px;padding:10px 8px;border:1px solid #8299aa;border-radius:12px;background:linear-gradient(145deg,#30495c,#26384a);color:#f7fbff;font-weight:850;white-space:normal;overflow-wrap:anywhere}
+.booking-choice-group[data-booking-choice-group="transmission"] .booking-choice-chip.selected{border-color:#69e29a;background:linear-gradient(145deg,#176b45,#19834f);color:#fff;box-shadow:0 0 0 2px rgba(105,226,154,.24),0 8px 20px rgba(0,0,0,.2)}
+@media(max-width:600px){.driver-photo-upload-form{grid-template-columns:1fr}.route-preview,.fare-breakdown{padding:12px;font-size:12px}}
