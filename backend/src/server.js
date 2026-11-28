@@ -171,6 +171,10 @@ const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next))
 app.get('/api/notifications',auth,asyncRoute(async(req,res)=>{const notifications=await prisma.notification.findMany({where:{userId:req.user.id},orderBy:{createdAt:'desc'},take:30});res.json({notifications})}));
 app.patch('/api/notifications/:id/read',auth,asyncRoute(async(req,res)=>{await prisma.notification.updateMany({where:{id:req.params.id,userId:req.user.id},data:{readAt:new Date()}});res.json({success:true})}));
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'STAP DRIVER API' }));
+app.get('/api/health/ready',asyncRoute(async(_req,res)=>{
+ await prisma.$queryRaw`SELECT 1`;
+ res.json({ok:true,service:'STAP DRIVER API',database:'connected'});
+}));
 
 app.post('/api/auth/register', asyncRoute(async (req, res) => {
   const input = z.object({
@@ -1476,7 +1480,7 @@ app.get('/api/admin/drivers/:id/verification-profile',auth,only('ADMIN'),asyncRo
  }});
  if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
  const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
- const {passportNumberEncrypted,passportIssuedByEncrypted,...safe}=d;
+ const {passportNumberEncrypted,passportIssuedByEncrypted,driverLicenseFront,driverLicenseBack,driverLicenseSelfie,passportFront,passportBack,driverProfilePhoto,pendingDriverProfilePhoto,driverPhotos,vehiclePhotosFront,vehiclePhotosBack,vehiclePhotosLeft,vehiclePhotosRight,vehicleRegistrationFront,vehicleRegistrationBack,periodicVehicleFront,periodicVehicleBack,periodicVehicleLeft,periodicVehicleRight,periodicFaceSelfie,approvedPeriodicVehicleFront,approvedPeriodicVehicleBack,approvedPeriodicVehicleLeft,approvedPeriodicVehicleRight,approvedPeriodicFaceSelfie,...safe}=d;
  res.json({profile:{
   ...safe,passportNumber:decryptPrivate(passportNumberEncrypted)?.toString('utf8')||null,passportIssuedBy:decryptPrivate(passportIssuedByEncrypted)?.toString('utf8')||null,
   documents:{license:{front:image(d.driverLicenseFront),back:image(d.driverLicenseBack),selfie:image(d.driverLicenseSelfie)},identity:{front:image(d.passportFront),back:image(d.passportBack)}},
@@ -1656,10 +1660,11 @@ io.on('connection', socket => {
   });
 });
 
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   if (err instanceof z.ZodError) return res.status(400).json({ error: 'Ստուգեք մուտքագրված տվյալները', details: err.issues });
-  console.error(err);
-  res.status(500).json({ error: 'Սերվերի ներքին սխալ' });
+  const requestId=randomBytes(6).toString('hex');
+  console.error('[STAP API ERROR]',requestId,req.method,req.originalUrl,err?.code||'',err?.message||err,err?.stack||'');
+  res.status(500).json({ error: 'Սերվերի ներքին սխալ', requestId });
 });
 
 async function bootstrapAdmin() {
