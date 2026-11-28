@@ -341,6 +341,67 @@ async function driverView(){
     </form>
    </details>
   </section>
+ `;
+
+ // Vehicle catalogue and camera handlers execute after driver dashboard markup is mounted.
+ const vehicleCatalog={
+ Toyota:['4Runner','Auris','Avalon','Avensis','C-HR','Camry','Corolla','Corolla Cross','Highlander','Hilux','Land Cruiser','Land Cruiser Prado','Prius','RAV4','Yaris'],
+ Lexus:['ES','GS','GX','IS','LX','LS','NX','RC','RX','UX'],
+ Mercedes-Benz:['A-Class','B-Class','C-Class','CLA','CLS','E-Class','G-Class','GLA','GLB','GLC','GLE','GLS','S-Class','Sprinter','Vito'],
+ BMW:['1 Series','2 Series','3 Series','4 Series','5 Series','6 Series','7 Series','8 Series','X1','X2','X3','X4','X5','X6','X7','i3','i4','i5','i7','iX'],
+ Audi:['A1','A3','A4','A5','A6','A7','A8','Q2','Q3','Q5','Q7','Q8','e-tron'],
+ Volkswagen:['Golf','Jetta','Passat','Polo','Tiguan','Touareg','T-Roc','ID.4'],
+ Hyundai:['Accent','Avante','Azera','Creta','Elantra','Getz','Grandeur','i10','i20','i30','Ioniq','Kona','Santa Fe','Sonata','Tucson','Venue'],
+ Kia:['Carnival','Cerato','Forte','K5','K8','Morning','Niro','Optima','Picanto','Rio','Sorento','Soul','Sportage','Stinger'],
+ Nissan:['Altima','Juke','Leaf','Maxima','Micra','Murano','Navara','Note','Pathfinder','Qashqai','Rogue','Sentra','Teana','X-Trail'],
+ Honda:['Accord','Civic','CR-V','Fit','HR-V','Jazz','Odyssey','Pilot'],
+ Mazda:['2','3','6','CX-3','CX-30','CX-5','CX-7','CX-9','MX-5'],
+ Mitsubishi:['ASX','Eclipse Cross','Lancer','Outlander','Pajero'],
+ Subaru:['Forester','Impreza','Legacy','Outback','XV'],
+ Ford:['EcoSport','Edge','Escape','Explorer','F-150','Fiesta','Focus','Fusion','Kuga','Mondeo','Mustang'],
+ Chevrolet:['Aveo','Camaro','Captiva','Cruze','Equinox','Malibu','Spark','Tahoe','Trailblazer'],
+ Opel:['Astra','Corsa','Insignia','Mokka','Vectra','Zafira'],
+ Renault:['Arkana','Clio','Duster','Fluence','Kangoo','Koleos','Logan','Megane','Sandero'],
+ Peugeot:['2008','206','207','208','3008','301','308','408','508','5008'],
+ Citroen:['Berlingo','C3','C4','C5','Jumpy'],
+ Skoda:['Fabia','Karoq','Kodiaq','Octavia','Rapid','Superb'],
+ Volvo:['S60','S90','V40','V60','XC40','XC60','XC90'],
+ Porsche:['911','Cayenne','Macan','Panamera','Taycan'],
+ Land Rover:['Defender','Discovery','Discovery Sport','Freelander','Range Rover','Range Rover Evoque','Range Rover Sport'],
+ Jaguar:['E-Pace','F-Pace','F-Type','XE','XF'],
+ Jeep:['Cherokee','Compass','Grand Cherokee','Renegade','Wrangler'],
+ Tesla:['Model 3','Model S','Model X','Model Y'],
+ BYD:['Atto 3','Dolphin','Han','Seal','Song Plus','Tang'],
+ Geely:['Atlas','Coolray','Emgrand','Monjaro','Tugella'],
+ Chery:['Arrizo 5','Tiggo 4','Tiggo 7','Tiggo 8'],
+ Haval:['Dargo','H6','Jolion'],
+ Renault Samsung:['SM3','SM5','SM6','QM6'],
+ Suzuki:['Grand Vitara','Jimny','Swift','SX4','Vitara'],
+ Infiniti:['EX','FX','G','JX','Q50','QX50','QX60','QX70'],
+ Acura:['MDX','RDX','TL','TLX'],
+ Cadillac:['ATS','CT5','Escalade','SRX','XT5'],
+ Daewoo:['Gentra','Lanos','Matiz','Nexia'],
+ Lada:['Granta','Niva','Priora','Vesta','XRAY'],
+ GAZ:['Gazelle','Sobol','Volga'],
+ UAZ:['Patriot','Pickup','Hunter'],
+ FAW:['Bestune T77','Bestune T99'],
+ Hongqi:['E-HS9','H5','H9'],
+ Zeekr:['001','007','009','X'],
+ Genesis:['G70','G80','G90','GV70','GV80'],
+ Mini:['Clubman','Cooper','Countryman'],
+ Fiat:['500','Doblo','Panda','Tipo'],
+ Alfa Romeo:['Giulia','Stelvio'],
+ Bentley:['Bentayga','Continental GT','Flying Spur'],
+ Maserati:['Ghibli','Grecale','Levante','Quattroporte'],
+ Ferrari:['296','488','F8','Roma'],
+ Lamborghini:['Huracan','Urus'],
+ Rolls-Royce:['Cullinan','Ghost','Phantom','Wraith']
+};
+const makeInput=$('#vehicleMakeInput'),modelInput=$('#vehicleModelInput'),makeList=$('#vehicleMakesList'),modelList=$('#vehicleModelsList');
+makeList.innerHTML=Object.keys(vehicleCatalog).sort().map(make=>'<option value="'+make+'"></option>').join('');
+const updateVehicleModels=()=>{const typed=makeInput.value.trim(),match=Object.keys(vehicleCatalog).find(name=>name.toLowerCase()===typed.toLowerCase());modelList.innerHTML=(match?vehicleCatalog[match]:[]).map(model=>'<option value="'+model.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"></option>').join('');};
+makeInput.addEventListener('input',updateVehicleModels);makeInput.addEventListener('change',updateVehicleModels);updateVehicleModels();const shots={};let stream=null,activeShot=null;const video=$('#vehicleCameraVideo'),canvas=$('#vehicleCameraCanvas'),submitVehicle=$('#vehicleSubmitButton');const captureVehicle=document.createElement('button');captureVehicle.type='button';captureVehicle.id='vehicleCaptureButton';captureVehicle.className='action vehicle-capture-button';captureVehicle.textContent='📸 ՆԿԱՐԵԼ';captureVehicle.hidden=true;video.insertAdjacentElement('afterend',captureVehicle);const shotNames={front:'Առջևի մաս',back:'Հետևի մաս',left:'Ձախ կողմ',right:'Աջ կողմ',registrationFront:'Տեխնիկական անձնագիր՝ առջև',registrationBack:'Տեխնիկական անձնագիր՝ հետև'};const stopVehicleCamera=()=>{stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null;video.hidden=true;captureVehicle.hidden=true;activeShot=null};const renderVehicleShots=()=>{$('#vehicleCaptureProgress').textContent='Պատրաստ է՝ '+Object.keys(shots).length+' / 6 լուսանկար';$('#vehicleCaptureThumbs').innerHTML=Object.entries(shots).map(([key,value])=>'<div class="vehicle-shot-preview"><img src="'+value+'" alt="'+shotNames[key]+'"><span>'+shotNames[key]+' ✓</span></div>').join('');submitVehicle.disabled=Object.keys(shots).length!==6};document.querySelectorAll('[data-vehicle-shot]').forEach(button=>button.onclick=async()=>{activeShot=button.dataset.vehicleShot;button.disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Տեսախցիկի հասանելիությունը հնարավոր չէ։ Բացեք կայքը HTTPS-ով։');if(!stream){message('#appMessage','Թույլատրեք տեսախցիկի հասանելիությունը բացվող հարցման մեջ։');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1600}},audio:false});video.srcObject=stream;video.hidden=false;await new Promise((resolve,reject)=>{if(video.readyState>=2)return resolve();video.onloadedmetadata=resolve;video.onerror=reject;setTimeout(()=>reject(new Error('Տեսախցիկը չհաջողվեց միացնել։')),10000)});await video.play();}captureVehicle.textContent='📸 ՆԿԱՐԵԼ՝ '+shotNames[activeShot].toUpperCase();captureVehicle.hidden=false;video.scrollIntoView({behavior:'smooth',block:'center'});}catch(error){message('#appMessage',error.message||'Տեսախցիկը չհաջողվեց բացել։',true);stopVehicleCamera()}finally{button.disabled=false}});captureVehicle.onclick=()=>{if(!stream||!activeShot||!video.videoWidth){message('#appMessage','Նախ ընտրեք լուսանկարի դաշտը և միացրեք տեսախցիկը։',true);return}const w=Math.min(1600,video.videoWidth),h=Math.round(video.videoHeight*w/video.videoWidth);canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(video,0,0,w,h);shots[activeShot]=canvas.toDataURL('image/jpeg',.78);const selected=document.querySelector('[data-vehicle-shot="'+activeShot+'"]');if(selected){selected.classList.add('captured');selected.textContent='✓ ՎԵՐԱՆԿԱՐԵԼ՝ '+shotNames[activeShot].toUpperCase()}renderVehicleShots();stopVehicleCamera()};$('#driverVehicleForm').onsubmit=async e=>{e.preventDefault();if(Object.keys(shots).length!==6){message('#appMessage','Նկարահանեք բոլոր 6 լուսանկարները։',true);return}const f=new FormData(e.currentTarget),b=submitVehicle;b.disabled=true;try{const r=await api('/api/drivers/vehicle',{method:'POST',body:JSON.stringify({make:f.get('make'),model:f.get('model'),year:Number(f.get('year')),plate:f.get('plate'),...shots})});currentUser=r.user;message('#appMessage',r.message);stopVehicleCamera();await driverView()}catch(err){message('#appMessage',err.message,true);b.disabled=false}};
+
 $('#driverMenuToggle')?.addEventListener('click',()=>{const menu=$('#driverBottomMenu'),toggle=$('#driverMenuToggle');if(!menu||!toggle)return;menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden));toggle.querySelector('span').textContent=menu.hidden?'Բացել':'Փակել'});
  document.querySelectorAll('[data-driver-close]').forEach(button=>button.addEventListener('click',()=>{const panel=$('#'+button.dataset.driverClose);if(panel)panel.hidden=true}));
  $('#driverPendingToggle')?.addEventListener('click',()=>{const panel=$('#driverPendingPanel');panel.hidden=!panel.hidden;$('#driverPendingToggle').classList.toggle('active',!panel.hidden);$('#driverPendingToggle').setAttribute('aria-expanded',String(!panel.hidden))});
@@ -580,64 +641,6 @@ async function customerView(){
  `;
 
  // Vehicle catalogue and camera handlers run after driver dashboard markup is mounted.
- const vehicleCatalog={
- Toyota:['4Runner','Auris','Avalon','Avensis','C-HR','Camry','Corolla','Corolla Cross','Highlander','Hilux','Land Cruiser','Land Cruiser Prado','Prius','RAV4','Yaris'],
- Lexus:['ES','GS','GX','IS','LX','LS','NX','RC','RX','UX'],
- Mercedes-Benz:['A-Class','B-Class','C-Class','CLA','CLS','E-Class','G-Class','GLA','GLB','GLC','GLE','GLS','S-Class','Sprinter','Vito'],
- BMW:['1 Series','2 Series','3 Series','4 Series','5 Series','6 Series','7 Series','8 Series','X1','X2','X3','X4','X5','X6','X7','i3','i4','i5','i7','iX'],
- Audi:['A1','A3','A4','A5','A6','A7','A8','Q2','Q3','Q5','Q7','Q8','e-tron'],
- Volkswagen:['Golf','Jetta','Passat','Polo','Tiguan','Touareg','T-Roc','ID.4'],
- Hyundai:['Accent','Avante','Azera','Creta','Elantra','Getz','Grandeur','i10','i20','i30','Ioniq','Kona','Santa Fe','Sonata','Tucson','Venue'],
- Kia:['Carnival','Cerato','Forte','K5','K8','Morning','Niro','Optima','Picanto','Rio','Sorento','Soul','Sportage','Stinger'],
- Nissan:['Altima','Juke','Leaf','Maxima','Micra','Murano','Navara','Note','Pathfinder','Qashqai','Rogue','Sentra','Teana','X-Trail'],
- Honda:['Accord','Civic','CR-V','Fit','HR-V','Jazz','Odyssey','Pilot'],
- Mazda:['2','3','6','CX-3','CX-30','CX-5','CX-7','CX-9','MX-5'],
- Mitsubishi:['ASX','Eclipse Cross','Lancer','Outlander','Pajero'],
- Subaru:['Forester','Impreza','Legacy','Outback','XV'],
- Ford:['EcoSport','Edge','Escape','Explorer','F-150','Fiesta','Focus','Fusion','Kuga','Mondeo','Mustang'],
- Chevrolet:['Aveo','Camaro','Captiva','Cruze','Equinox','Malibu','Spark','Tahoe','Trailblazer'],
- Opel:['Astra','Corsa','Insignia','Mokka','Vectra','Zafira'],
- Renault:['Arkana','Clio','Duster','Fluence','Kangoo','Koleos','Logan','Megane','Sandero'],
- Peugeot:['2008','206','207','208','3008','301','308','408','508','5008'],
- Citroen:['Berlingo','C3','C4','C5','Jumpy'],
- Skoda:['Fabia','Karoq','Kodiaq','Octavia','Rapid','Superb'],
- Volvo:['S60','S90','V40','V60','XC40','XC60','XC90'],
- Porsche:['911','Cayenne','Macan','Panamera','Taycan'],
- Land Rover:['Defender','Discovery','Discovery Sport','Freelander','Range Rover','Range Rover Evoque','Range Rover Sport'],
- Jaguar:['E-Pace','F-Pace','F-Type','XE','XF'],
- Jeep:['Cherokee','Compass','Grand Cherokee','Renegade','Wrangler'],
- Tesla:['Model 3','Model S','Model X','Model Y'],
- BYD:['Atto 3','Dolphin','Han','Seal','Song Plus','Tang'],
- Geely:['Atlas','Coolray','Emgrand','Monjaro','Tugella'],
- Chery:['Arrizo 5','Tiggo 4','Tiggo 7','Tiggo 8'],
- Haval:['Dargo','H6','Jolion'],
- Renault Samsung:['SM3','SM5','SM6','QM6'],
- Suzuki:['Grand Vitara','Jimny','Swift','SX4','Vitara'],
- Infiniti:['EX','FX','G','JX','Q50','QX50','QX60','QX70'],
- Acura:['MDX','RDX','TL','TLX'],
- Cadillac:['ATS','CT5','Escalade','SRX','XT5'],
- Daewoo:['Gentra','Lanos','Matiz','Nexia'],
- Lada:['Granta','Niva','Priora','Vesta','XRAY'],
- GAZ:['Gazelle','Sobol','Volga'],
- UAZ:['Patriot','Pickup','Hunter'],
- FAW:['Bestune T77','Bestune T99'],
- Hongqi:['E-HS9','H5','H9'],
- Zeekr:['001','007','009','X'],
- Genesis:['G70','G80','G90','GV70','GV80'],
- Mini:['Clubman','Cooper','Countryman'],
- Fiat:['500','Doblo','Panda','Tipo'],
- Alfa Romeo:['Giulia','Stelvio'],
- Bentley:['Bentayga','Continental GT','Flying Spur'],
- Maserati:['Ghibli','Grecale','Levante','Quattroporte'],
- Ferrari:['296','488','F8','Roma'],
- Lamborghini:['Huracan','Urus'],
- Rolls-Royce:['Cullinan','Ghost','Phantom','Wraith']
-};
-const makeInput=$('#vehicleMakeInput'),modelInput=$('#vehicleModelInput'),makeList=$('#vehicleMakesList'),modelList=$('#vehicleModelsList');
-makeList.innerHTML=Object.keys(vehicleCatalog).sort().map(make=>'<option value="'+make+'"></option>').join('');
-const updateVehicleModels=()=>{const typed=makeInput.value.trim(),match=Object.keys(vehicleCatalog).find(name=>name.toLowerCase()===typed.toLowerCase());modelList.innerHTML=(match?vehicleCatalog[match]:[]).map(model=>'<option value="'+model.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"></option>').join('');};
-makeInput.addEventListener('input',updateVehicleModels);makeInput.addEventListener('change',updateVehicleModels);updateVehicleModels();const shots={};let stream=null,activeShot=null;const video=$('#vehicleCameraVideo'),canvas=$('#vehicleCameraCanvas'),submitVehicle=$('#vehicleSubmitButton');const captureVehicle=document.createElement('button');captureVehicle.type='button';captureVehicle.id='vehicleCaptureButton';captureVehicle.className='action vehicle-capture-button';captureVehicle.textContent='📸 ՆԿԱՐԵԼ';captureVehicle.hidden=true;video.insertAdjacentElement('afterend',captureVehicle);const shotNames={front:'Առջևի մաս',back:'Հետևի մաս',left:'Ձախ կողմ',right:'Աջ կողմ',registrationFront:'Տեխնիկական անձնագիր՝ առջև',registrationBack:'Տեխնիկական անձնագիր՝ հետև'};const stopVehicleCamera=()=>{stream?.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null;video.hidden=true;captureVehicle.hidden=true;activeShot=null};const renderVehicleShots=()=>{$('#vehicleCaptureProgress').textContent='Պատրաստ է՝ '+Object.keys(shots).length+' / 6 լուսանկար';$('#vehicleCaptureThumbs').innerHTML=Object.entries(shots).map(([key,value])=>'<div class="vehicle-shot-preview"><img src="'+value+'" alt="'+shotNames[key]+'"><span>'+shotNames[key]+' ✓</span></div>').join('');submitVehicle.disabled=Object.keys(shots).length!==6};document.querySelectorAll('[data-vehicle-shot]').forEach(button=>button.onclick=async()=>{activeShot=button.dataset.vehicleShot;button.disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Տեսախցիկի հասանելիությունը հնարավոր չէ։ Բացեք կայքը HTTPS-ով։');if(!stream){message('#appMessage','Թույլատրեք տեսախցիկի հասանելիությունը բացվող հարցման մեջ։');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1600}},audio:false});video.srcObject=stream;video.hidden=false;await new Promise((resolve,reject)=>{if(video.readyState>=2)return resolve();video.onloadedmetadata=resolve;video.onerror=reject;setTimeout(()=>reject(new Error('Տեսախցիկը չհաջողվեց միացնել։')),10000)});await video.play();}captureVehicle.textContent='📸 ՆԿԱՐԵԼ՝ '+shotNames[activeShot].toUpperCase();captureVehicle.hidden=false;video.scrollIntoView({behavior:'smooth',block:'center'});}catch(error){message('#appMessage',error.message||'Տեսախցիկը չհաջողվեց բացել։',true);stopVehicleCamera()}finally{button.disabled=false}});captureVehicle.onclick=()=>{if(!stream||!activeShot||!video.videoWidth){message('#appMessage','Նախ ընտրեք լուսանկարի դաշտը և միացրեք տեսախցիկը։',true);return}const w=Math.min(1600,video.videoWidth),h=Math.round(video.videoHeight*w/video.videoWidth);canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(video,0,0,w,h);shots[activeShot]=canvas.toDataURL('image/jpeg',.78);const selected=document.querySelector('[data-vehicle-shot="'+activeShot+'"]');if(selected){selected.classList.add('captured');selected.textContent='✓ ՎԵՐԱՆԿԱՐԵԼ՝ '+shotNames[activeShot].toUpperCase()}renderVehicleShots();stopVehicleCamera()};$('#driverVehicleForm').onsubmit=async e=>{e.preventDefault();if(Object.keys(shots).length!==6){message('#appMessage','Նկարահանեք բոլոր 6 լուսանկարները։',true);return}const f=new FormData(e.currentTarget),b=submitVehicle;b.disabled=true;try{const r=await api('/api/drivers/vehicle',{method:'POST',body:JSON.stringify({make:f.get('make'),model:f.get('model'),year:Number(f.get('year')),plate:f.get('plate'),...shots})});currentUser=r.user;message('#appMessage',r.message);stopVehicleCamera();await driverView()}catch(err){message('#appMessage',err.message,true);b.disabled=false}};
-
  const toggleCustomerPanel=name=>{
   const panels=[...document.querySelectorAll('[data-customer-content]')];
   const target=panels.find(panel=>panel.dataset.customerContent===name);
