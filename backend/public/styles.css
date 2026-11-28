@@ -2371,3 +2371,10 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 .inspection-view-hint,.inspection-no-photos{padding:10px 12px;border-radius:9px;background:rgba(200,166,107,.1);color:#f2e8d4}
 .admin-inspection-modal-panel:fullscreen{background:#121419;color:#fff;padding:22px;overflow:auto}
 @media(max-width:520px){.admin-inspection-images{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-inspection-images img{max-height:220px}.urgent-order-toggle{flex-wrap:wrap!important}.urgent-order-toggle small{width:100%!important;margin-left:32px!important;text-align:left!important}}
+
+/* Compact live 72-hour retention countdown in driver's inspection photo viewer */
+.inspection-countdown{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:390px;margin:10px 0 14px;padding:7px 10px;border:1px solid rgba(201,169,110,.32);border-radius:9px;background:rgba(201,169,110,.09);color:#e9dfcd;font-size:11px;line-height:1.3}
+.inspection-countdown-label{opacity:.82}
+.inspection-countdown strong{white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:.04em;color:#f0d49a}
+.inspection-countdown strong.is-expired{color:#ff8c83}
+@media(max-width:520px){.inspection-countdown{max-width:100%;font-size:10px}.inspection-countdown strong{font-size:11px}}
