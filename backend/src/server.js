@@ -804,6 +804,7 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
   const orders = await prisma.order.findMany({
     where: {
       status:'OPEN',
+      ...(req.user.driverDeliveryEnabled?{}:{NOT:{serviceId:'premium-delivery'}}),
       skippedBy:{none:{driverId:req.user.id}},
       OR:[
         {dispatchMode:'NETWORK',driverId:null},
