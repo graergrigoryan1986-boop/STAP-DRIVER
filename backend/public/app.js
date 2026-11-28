@@ -384,7 +384,7 @@ function bindFareCalculator(form){
  form._getDistrict=field=>districtFields.find(x=>x.field===field)?.select.value||'';
  form._getFullAddress=field=>form._getDistrict(field)+' վարչական շրջան';
  form.querySelectorAll('[name="pickupNeighborhood"],[name="destinationNeighborhood"]').forEach(el=>el.remove());
- const urgent=form.querySelector('[name="isUrgent"]')||(()=>{const label=document.createElement('label');label.className='urgent-order-toggle';label.innerHTML='<input type="checkbox" name="isUrgent" aria-label="Շտապ պատվեր"><span>⚡ ՇՏԱՊ · ՀԵՆՑ ՀԻՄԱ · ՀՆԱՐԱՎՈՐԻՆՍ ԱՐԱԳ</span><small>Գործող պահանջարկի գործակցով</small>';const schedule=form.querySelector('.neon-schedule-group');(schedule||form).appendChild(label);return label.querySelector('input')})();
+ const urgent=form.querySelector('[name="isUrgent"]')||(()=>{const label=document.createElement('label');label.className='urgent-order-toggle';label.innerHTML='<input type="checkbox" name="isUrgent" aria-label="Շտապ պատվեր"><span>⚡ ՇՏԱՊ</span><small>Անմիջապես գտնել վարորդ · +2 500 ֏ հավելավճար</small>';const schedule=form.querySelector('.neon-schedule-group');(schedule||form).appendChild(label);return label.querySelector('input')})();
  const urgentLabel=urgent.closest('label');
  if(urgentLabel){
   urgentLabel.classList.add('urgent-order-toggle');
