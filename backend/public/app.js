@@ -593,7 +593,7 @@ async function customerView(){
   e.preventDefault();
   try{
    const f=new FormData(e.currentTarget),isDelivery=f.get('serviceId')==='premium-delivery';
-   if(isDelivery){if(!f.get('parcelAccepted'))throw new Error('Նախ հաստատեք առաքանու պայմանները։');if(!f.get('senderName')||!f.get('senderPhone')||!f.get('recipientName')||!f.get('recipientPhone'))throw new Error('Լրացրեք ուղարկողի և ստացողի անուններն ու հեռախոսահամարները։');if(!e.currentTarget.querySelector('[name="pickupAddress"]').value.trim()||!e.currentTarget.querySelector('[name="destinationAddress"]').value.trim())throw new Error('Լրացրեք երկու ամբողջական հասցեները։');}
+   if(isDelivery){if(!f.get('parcelAccepted'))throw new Error('Նախ հաստատեք առաքանու պայմանները։');if(!f.get('senderName')||!f.get('senderPhone')||!f.get('recipientName')||!f.get('recipientPhone'))throw new Error('Լրացրեք ուղարկողի և ստացողի անուններն ու հեռախոսահամարները։');if(!([...e.currentTarget.querySelectorAll('[name="pickupAddress"]')].find(field=>!field.disabled)?.value||'').trim()||!([...e.currentTarget.querySelectorAll('[name="destinationAddress"]')].find(field=>!field.disabled)?.value||'').trim())throw new Error('Լրացրեք երկու ամբողջական հասցեները։');}
    else if(!await e.currentTarget._refreshRouteQuote?.())throw new Error('Նախ պետք է ճիշտ հաշվարկել երթուղին։');
    await api('/api/orders',{method:'POST',body:JSON.stringify({
     pickupDistrict:isDelivery?undefined:e.currentTarget._getDistrict(e.currentTarget.querySelector('[name="pickupAddress"]')),
