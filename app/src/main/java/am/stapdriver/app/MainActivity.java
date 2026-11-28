@@ -1,6 +1,9 @@
 package am.stapdriver.app;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
+import android.webkit.PermissionRequest;
 import android.app.Activity;
 import android.graphics.Color;
 import android.content.Intent;
@@ -28,6 +31,8 @@ public class MainActivity extends Activity {
     private LinearLayout errorPanel;
     private ValueCallback<Uri[]> fileChooserCallback;
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = 1002;
+    private PermissionRequest pendingCameraPermissionRequest;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -52,6 +57,22 @@ public class MainActivity extends Activity {
         webView.getSettings().setLoadsImagesAutomatically(true);
         webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                runOnUiThread(() -> {
+                    boolean wantsCamera = false;
+                    for (String resource : request.getResources()) if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) wantsCamera = true;
+                    if (!wantsCamera) { request.deny(); return; }
+                    if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                    } else {
+                        if (pendingCameraPermissionRequest != null) pendingCameraPermissionRequest.deny();
+                        pendingCameraPermissionRequest = request;
+                        requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+                    }
+                });
+            }
+
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
@@ -137,6 +158,19 @@ public class MainActivity extends Activity {
 
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE && pendingCameraPermissionRequest != null) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                pendingCameraPermissionRequest.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+            } else {
+                pendingCameraPermissionRequest.deny();
+            }
+            pendingCameraPermissionRequest = null;
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
@@ -158,6 +192,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (pendingCameraPermissionRequest != null) { pendingCameraPermissionRequest.deny(); pendingCameraPermissionRequest = null; }
         if (fileChooserCallback != null) { fileChooserCallback.onReceiveValue(null); fileChooserCallback = null; }
         if (webView != null) webView.destroy();
         super.onDestroy();
