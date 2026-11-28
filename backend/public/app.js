@@ -470,7 +470,8 @@ async function customerView(){
   document.querySelectorAll('[data-customer-content]').forEach(panel=>panel.hidden=true);
   document.querySelectorAll('[data-customer-panel]').forEach(item=>item.classList.remove('active'));
  }));
- renderOrders($('#myOrders'),mine.orders,'mine');
+ const customerVisibleOrders=(mine.orders||[]).filter(order=>['OPEN','ACCEPTED','ARRIVED','IN_PROGRESS'].includes(order.status)||(order.status==='COMPLETED'&&order.driver&&!order.ratings?.length));
+ renderOrders($('#myOrders'),customerVisibleOrders,'mine');
  const activeCustomerOrders=(mine.orders||[]).filter(order=>['OPEN','ACCEPTED','ARRIVED','IN_PROGRESS'].includes(order.status)||(order.status==='COMPLETED'&&order.driver&&!order.ratings?.length)).slice(0,1);
  const activeSection=$('#customerCurrentOrderSection');if(activeSection){activeSection.hidden=!activeCustomerOrders.length;renderOrders($('#customerCurrentOrder'),activeCustomerOrders,'customer-current');}
  const customerProfileForm=$('#customerProfileForm');
