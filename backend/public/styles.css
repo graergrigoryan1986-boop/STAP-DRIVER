@@ -2465,3 +2465,14 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 @media(max-width:650px){.premium-delivery-fields{grid-template-columns:1fr}.brand-logo{width:min(205px,58vw);max-height:52px}}
 
 .driver-vehicle-panel,.driver-delivery-mode-panel{margin:16px 0;padding:16px;border:1px solid rgba(202,166,95,.35);border-radius:16px;background:linear-gradient(145deg,#111317,#1a1915);color:#f4f1ea}.driver-vehicle-panel summary{cursor:pointer;font-weight:900;color:#e8c77f;padding:8px}.vehicle-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.vehicle-data-grid label{display:grid;gap:6px;color:#e8d9b8}.vehicle-data-grid input,.driver-vehicle-panel select{width:100%;padding:12px;border:1px solid #67583d;border-radius:9px;background:#0b0d10;color:#fff}.driver-vehicle-panel video{width:100%;max-height:340px;object-fit:contain;background:#050607;border-radius:12px}.driver-vehicle-panel button{margin:6px}.driver-delivery-mode-panel{display:flex;align-items:center;justify-content:space-between;gap:12px}.driver-delivery-mode-panel .active{background:#087b39;color:#fff}.admin-vehicle-review{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;padding:14px;border:1px solid rgba(202,166,95,.35);border-radius:12px}.admin-vehicle-review h4{grid-column:1/-1}.admin-vehicle-review figure{margin:0}.admin-vehicle-review img{width:100%;max-height:240px;object-fit:contain;background:#090a0c;border-radius:8px}@media(max-width:620px){.vehicle-data-grid,.admin-vehicle-review{grid-template-columns:1fr}.driver-delivery-mode-panel{align-items:stretch;flex-direction:column}}
+
+
+/* Mandatory premium delivery information and consent */
+.delivery-consent-panel{display:grid;gap:10px;margin:16px 0;padding:18px;border:2px solid #c5a24b;border-radius:14px;background:linear-gradient(145deg,#211d13,#111);color:#fff;box-shadow:0 0 0 1px rgba(197,162,75,.18),0 10px 28px rgba(0,0,0,.2)}
+.delivery-consent-title{display:block;color:#f0cc70;font-size:15px;font-weight:900;letter-spacing:.045em}
+.delivery-consent-panel p{margin:0;color:#f5f1e7;font-size:14px;line-height:1.55}
+.delivery-consent-panel p b{color:#f0cc70}
+.delivery-consent-check{display:flex!important;align-items:flex-start;gap:12px;margin-top:5px;padding:13px;border:1px solid #d8b65c;border-radius:10px;background:rgba(197,162,75,.13);cursor:pointer}
+.delivery-consent-check input{flex:0 0 22px;width:22px;height:22px;margin:2px 0 0;accent-color:#d4ad4d}
+.delivery-consent-check span{color:#fff;font-size:14px;font-weight:700;line-height:1.5}
+.delivery-consent-check span b{display:block;margin-top:5px;color:#f0cc70;font-size:12px}
