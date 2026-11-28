@@ -1,7 +1,7 @@
 const $ = (s) => document.querySelector(s);
 const authPanel = $('#authPanel'), appPanel = $('#appPanel'), authForm = $('#authForm');
 let mode = 'login', token = localStorage.getItem('stap_token') || '', currentUser = null;
-let realtimeSocket = null, realtimeRefreshTimer = null;
+let realtimeSocket = null, realtimeRefreshTimer = null, realtimeFallbackTimer = null;
 
 let orderStatusAudioContext=null;
 let orderStatusAudioUnlocked=false;
@@ -41,13 +41,18 @@ function connectRealtime(){
   if(realtimeRefreshTimer)clearTimeout(realtimeRefreshTimer);
   realtimeRefreshTimer=setTimeout(async()=>{
    if(!currentUser)return;
-   try{if(currentUser.role==='ADMIN')await adminView();else if(currentUser.role==='DRIVER')await driverView();else await customerView();connectRealtime()}catch(error){console.warn('Live refresh failed',error)}
+   try{if(currentUser.role==='ADMIN')await adminView();else if(currentUser.role==='DRIVER')await driverView();else await customerView()}catch(error){console.warn('Live refresh failed',error)}
   },450);
  };
  realtimeSocket.on('driver:balance-updated',data=>{if(currentUser?.role==='DRIVER'&&data?.driverId===currentUser.id&&Number.isFinite(Number(data.balanceAmd))){currentUser.balanceAmd=Number(data.balanceAmd);const amount=$('#driverBalanceAmount');if(amount)amount.textContent=money(currentUser.balanceAmd);}});
   realtimeSocket.on('order:status-changed',data=>{announceOrderStatus(data);refresh()});
-  realtimeSocket.on('order:new',data=>{if(currentUser?.role==='DRIVER')announceOrderStatus({...data,status:'OPEN',message:'Նոր պատվեր է հասանելի։'});});
-  ['order:new','order:cancelled','order:accepted','order:eta-updated','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));  ['order:new','order:cancelled','order:accepted','order:eta-updated','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
+  realtimeSocket.on('order:eta-updated',data=>{announceOrderStatus({...data,status:'ETA_UPDATED',message:data?.message||('Վարորդի ժամանման առաջարկը՝ '+(data?.minutes||data?.requestedMinutes||'')+' րոպե։')});refresh()});
+  realtimeSocket.on('order:new',data=>{if(currentUser?.role==='DRIVER')announceOrderStatus({...data,status:'OPEN',message:'Նոր պատվեր է հասանելի։'});refresh()});
+  ['order:cancelled','order:accepted','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
+  if(realtimeFallbackTimer)clearInterval(realtimeFallbackTimer);
+  realtimeFallbackTimer=setInterval(()=>{if(!realtimeSocket?.connected)refresh()},5000);
+  realtimeSocket.on('connect',()=>refresh());
+
  realtimeSocket.on('rating:updated',()=>{if(currentUser?.role==='ADMIN'){if($('#adminCustomersPanel'))loadAdminCustomers();const ratingsTab=$('#dashboard [data-admin-tab="ratings"]');if(ratingsTab?.classList.contains('active'))ratingsTab.click();}});
  realtimeSocket.on('connect_error',error=>console.warn('STAP live connection:',error.message));
 }
