@@ -59,13 +59,17 @@ app.use('/api/drivers/documents', rateLimit({ windowMs: 60 * 60 * 1000, limit: 5
 const DOCUMENT_KEY = createHash('sha256').update(JWT_SECRET).digest();
 function encryptPrivate(value){if(value==null)return null;const nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',DOCUMENT_KEY,nonce),encrypted=Buffer.concat([cipher.update(Buffer.isBuffer(value)?value:Buffer.from(String(value),'utf8')),cipher.final()]);return Buffer.concat([Buffer.from('STAP1'),nonce,cipher.getAuthTag(),encrypted])}
 function decryptPrivate(value){if(!value)return null;const data=Buffer.from(value);if(data.subarray(0,5).toString()!=='STAP1')return data;const nonce=data.subarray(5,17),tag=data.subarray(17,33),body=data.subarray(33),decipher=createDecipheriv('aes-256-gcm',DOCUMENT_KEY,nonce);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(body),decipher.final()])}
+async function emitNetworkOrderToEligibleDrivers(event) {
+  const drivers = await prisma.user.findMany({where:{role:'DRIVER',isVerified:true},select:{id:true,isVerified:true,driverVerifiedAt:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationStatus:true}});
+  for (const driver of drivers) if (!periodicVerificationState(driver).required) io.to('user:'+driver.id).emit('order:new',event);
+}
 const publicUser = user => ({
   id: user.id, name: user.name, email: user.email, phone: user.phone,
   role: user.role, isBlocked: user.isBlocked, isVerified: user.isVerified, driverServiceCapabilities: user.driverServiceCapabilities || [],
   balanceAmd: user.balanceAmd, driverNegativeBalanceLimitAmd: user.driverNegativeBalanceLimitAmd ?? 0, rating: user.rating, driverLicense: user.driverLicense,
   driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
-  driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, vehicleMake:user.vehicleMake, vehicleModel:user.vehicleModel, vehicleYear:user.vehicleYear, vehiclePlate:user.vehiclePlate, vehicleColor:user.vehicleColor, vehicleDocumentsStatus:user.vehicleDocumentsStatus, vehicleVerificationMessage:user.vehicleVerificationMessage, driverDeliveryEnabled:user.driverDeliveryEnabled, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, driverExperienceMonths: user.driverExperienceMonths, dateOfBirth: user.dateOfBirth, createdAt: user.createdAt
+  driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, vehicleMake:user.vehicleMake, vehicleModel:user.vehicleModel, vehicleYear:user.vehicleYear, vehiclePlate:user.vehiclePlate, vehicleColor:user.vehicleColor, vehicleDocumentsStatus:user.vehicleDocumentsStatus, vehicleVerificationMessage:user.vehicleVerificationMessage, driverDeliveryEnabled:user.driverDeliveryEnabled, periodicVehicleVerificationStatus:user.periodicVehicleVerificationStatus||'NOT_DUE', periodicVehicleVerificationDueAt:periodicVerificationState(user).dueAt, periodicVehicleVerificationSubmittedAt:user.periodicVehicleVerificationSubmittedAt, periodicVehicleVerificationRequired:periodicVerificationState(user).required, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, driverExperienceMonths: user.driverExperienceMonths, dateOfBirth: user.dateOfBirth, createdAt: user.createdAt
 });
 const normalizePhone = value => { let digits=String(value||'').replace(/\D/g,''); if(digits.startsWith('00'))digits=digits.slice(2); if(digits.startsWith('374'))return '+374'+digits.slice(3); if(digits.startsWith('0')&&digits.length===9)return '+374'+digits.slice(1); return digits?'+'+digits:''; };
 const guestEmailForPhone = phone => 'guest+' + createHash('sha256').update(normalizePhone(phone)).digest('hex').slice(0,32) + '@guest.stap.invalid';
@@ -557,7 +561,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const fareAmd=(isPremiumDelivery?5000:route.baseFareAmd)+(isPremiumDelivery?0:input.extraChargeAmd)+(isPremiumDelivery?0:servicePriceAmd)+urgentExtraChargeAmd;
   const order=await prisma.order.create({data:{orderCode:await generateUniqueOrderCode(),customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,vehicleFuelType:input.vehicleFuelType,passengerCount:input.passengerCount,note:orderNote,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   const event={id:order.id,orderCode:order.orderCode,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
-  if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else io.to('drivers').emit('order:new',event);
+  if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else await emitNetworkOrderToEligibleDrivers(event);
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Պատվերը հրապարակվեց՝ ընտրված ծառայության և համապատասխան վարորդների պայմաններով։'});
 }));
 
@@ -607,7 +611,7 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
   transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
  }});
  const guestEvent={id:order.id,isTest:false,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,isUrgent:order.isUrgent,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
-  if(dispatchMode!=='NETWORK')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',guestEvent);else io.to('drivers').emit('order:new',guestEvent);
+  if(dispatchMode!=='NETWORK')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',guestEvent);else await emitNetworkOrderToEligibleDrivers(guestEvent);
  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
  const title='Նոր պատվեր՝ առանց գրանցման',notificationMessage='Հաճախորդ՝ '+input.name+' · '+input.phone+' · '+order.pickupAddress+' → '+order.destinationAddress;
  if(admins.length){await prisma.notification.createMany({data:admins.map(admin=>({userId:admin.id,title,message:notificationMessage,type:'NEW_GUEST_ORDER'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title,message:notificationMessage,type:'NEW_GUEST_ORDER',orderId:order.id,createdAt:new Date()});}
@@ -754,7 +758,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     throw error;
   }
   if(!scheduledAt){
-    if(input.dispatchMode==='NETWORK')io.to('drivers').emit('order:new',{id:order.id,isTest:order.isTest});
+    if(input.dispatchMode==='NETWORK')await emitNetworkOrderToEligibleDrivers({id:order.id,isTest:order.isTest});
     else for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',{id:order.id,isTest:order.isTest});
   }
   const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
@@ -800,6 +804,8 @@ function maskDriverOrderContacts(order,now=new Date()){
  return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:closedContactsExpired?order.pickupNote:null,destinationNote:closedContactsExpired?order.destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:closedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:closedContactsExpired?'CLOSED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
 }
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
+  const periodic = periodicVerificationState(req.user);
+  if (periodic.required) return res.json({orders:[],periodicVerificationRequired:true,periodicVerificationStatus:periodic.status,periodicVerificationDueAt:periodic.dueAt});
   const categories=req.user.driverLicenseCategories||[];
   const orders = await prisma.order.findMany({
     where: {
@@ -907,6 +913,7 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
 app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const requestedOrder = await prisma.order.findFirst({ where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] } });
   if (!requestedOrder) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
+  if (periodicVerificationState(req.user).required) return res.status(403).json({error:'72 ժամը լրացել է։ Պատվերները կբացվեն մեքենայի արտաքին լուսանկարների և դեմքի սելֆիի ստուգումից հետո։',periodicVerificationRequired:true});
   if(requestedOrder.serviceId==='premium-delivery'&&!req.user.driverDeliveryEnabled)return res.status(403).json({error:'Առաքման պատվեր ընդունելու համար նախ ակտիվացրեք «ԱՌԱՔԻՉ» ռեժիմը։'});
   // Legacy license/capability/transmission metadata must not block accepting an order.
   // Accepting an order must not be blocked by legacy license-category or transmission metadata.
@@ -1307,7 +1314,7 @@ app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (r
 }));
 
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
-  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverExperienceMonths: true, driverLicenseCategories: true, driverTransmission: true, vehicleMake:true, vehicleModel:true, vehicleYear:true, vehiclePlate:true, vehicleDocumentsStatus:true, vehicleVerificationMessage:true, driverDeliveryEnabled:true, driverDocumentsStatus: true, driverVerificationMessage: true, driverVerifiedAt: true, dateOfBirth:true, rating:true, driverNegativeBalanceLimitAmd:true, createdAt: true } });
+  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverExperienceMonths: true, driverLicenseCategories: true, driverTransmission: true, vehicleMake:true, vehicleModel:true, vehicleYear:true, vehiclePlate:true, vehicleDocumentsStatus:true, vehicleVerificationMessage:true, driverDeliveryEnabled:true, periodicVehicleVerificationStatus:true, periodicVehicleVerificationDueAt:true, periodicVehicleVerificationSubmittedAt:true, driverDocumentsStatus: true, driverVerificationMessage: true, driverVerifiedAt: true, dateOfBirth:true, rating:true, driverNegativeBalanceLimitAmd:true, createdAt: true } });
   res.json({ drivers });
 }));
 
@@ -1324,15 +1331,23 @@ app.post('/api/drivers/vehicle',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
  const input=z.object({make:z.string().trim().min(2).max(80),model:z.string().trim().min(1).max(80),color:z.string().trim().min(2).max(60),year:z.number().int().min(1980).max(new Date().getFullYear()+1),plate:z.string().trim().min(4).max(20),front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),left:z.string().min(100).max(3500000),right:z.string().min(100).max(3500000),registrationFront:z.string().min(100).max(3500000),registrationBack:z.string().min(100).max(3500000)}).parse(req.body);
  const decode=value=>{const m=value.startsWith('data:image/jpeg;base64,')?['',value.slice('data:image/jpeg;base64,'.length)]:null;if(!m)throw new Error('Լուսանկարները պետք է արվեն տեսախցիկով՝ JPEG ձևաչափով։');const b=Buffer.from(m[1],'base64');if(b[0]!==255||b[1]!==216||!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր լուսանկարը պետք է լինի JPEG՝ առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)};
  const p={front:decode(input.front),back:decode(input.back),left:decode(input.left),right:decode(input.right),registrationFront:decode(input.registrationFront),registrationBack:decode(input.registrationBack)};
- const user=await prisma.user.update({where:{id:req.user.id},data:{vehicleMake:input.make,vehicleModel:input.model,vehicleYear:input.year,vehiclePlate:input.plate,vehicleColor:input.color,vehiclePhotosFront:p.front,vehiclePhotosBack:p.back,vehiclePhotosLeft:p.left,vehiclePhotosRight:p.right,vehicleRegistrationFront:p.registrationFront,vehicleRegistrationBack:p.registrationBack,vehicleDocumentsStatus:'PENDING_REVIEW',vehicleVerificationMessage:'Մեքենայի տվյալներն ու փաստաթղթերը սպասում են ադմինի ստուգմանը։',driverDeliveryEnabled:false}});
- const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});const notificationMessage='Վարորդ '+req.user.name+' ('+req.user.phone+') ուղարկել է մեքենայի 4 կողմերի և տեխնիկական անձնագրի 2 լուսանկար՝ ստուգման և հաստատման համար։';if(admins.length){await prisma.notification.createMany({data:admins.map(a=>({userId:a.id,title:'ՖՈՏՈՍՏՈՒԳՄԱՆ ՀԱՍՏԱՏՄԱՆ ՊԱՀԱՆՋ',message:notificationMessage,type:'VEHICLE_PHOTO_REVIEW'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title:'ՖՈՏՈՍՏՈՒԳՄԱՆ ՀԱՍՏԱՏՄԱՆ ՊԱՀԱՆՋ',message:notificationMessage,type:'VEHICLE_PHOTO_REVIEW',createdAt:new Date()});}
- res.json({success:true,user:publicUser(user),message:'Բոլոր 6 լուսանկարներն ուղարկվել են ադմինին՝ ֆոտոստուգման։ Դրանք կհաստատվեն և կպահպանվեն վարորդի մեքենայի պրոֆիլում միայն ադմինի հաստատումից հետո։'});
+ const user=await prisma.user.update({where:{id:req.user.id},data:{vehicleMake:input.make,vehicleModel:input.model,vehicleYear:input.year,vehiclePlate:input.plate,vehicleColor:input.color,vehiclePhotosFront:p.front,vehiclePhotosBack:p.back,vehiclePhotosLeft:p.left,vehiclePhotosRight:p.right,vehicleRegistrationFront:p.registrationFront,vehicleRegistrationBack:p.registrationBack,vehicleDocumentsStatus:'NOT_REQUIRED',vehicleVerificationMessage:'Մեքենայի տվյալները պահպանվել են։ Պարտադիր պարբերական ստուգումը կպահանջվի 72 ժամից։'}});
+ res.json({success:true,user:publicUser(user),message:'Մեքենայի տվյալներն ու 6 լուսանկարները պահպանվեցին։ Նախնական ադմինյան մեքենայի հաստատում այլևս պետք չէ․ 72 ժամից կպահանջվի պարբերական լուսանկարային ստուգում։'});
 }));
 app.patch('/api/drivers/delivery-mode',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{
  const enabled=z.object({enabled:z.boolean()}).parse(req.body).enabled;
- if(enabled&&(!req.user.vehicleMake||req.user.vehicleDocumentsStatus!=='APPROVED'))return res.status(409).json({error:'Առաքիչ ռեժիմն ակտիվացնելու համար նախ պետք է ադմինը հաստատի մեքենան և փաստաթղթերը։'});
+ if(enabled&&(!req.user.vehicleMake||!req.user.vehicleModel||!req.user.vehiclePlate))return res.status(409).json({error:'Առաքիչ ռեժիմը միացնելու համար լրացրեք մեքենայի տվյալները։'});
  const user=await prisma.user.update({where:{id:req.user.id},data:{driverDeliveryEnabled:enabled}});
  res.json({success:true,user:publicUser(user),message:enabled?'Առաքիչ ռեժիմն ակտիվ է։':'Առաքիչ ռեժիմն անջատված է։'});
+}));
+app.patch('/api/admin/drivers/:id/delivery-mode',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const enabled=z.object({enabled:z.boolean()}).parse(req.body).enabled;
+ const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+ if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
+ if(enabled&&(!driver.vehicleMake||!driver.vehicleModel||!driver.vehiclePlate))return res.status(409).json({error:'Նախ լրացրեք վարորդի մեքենայի տվյալները։'});
+ const user=await prisma.user.update({where:{id:driver.id},data:{driverDeliveryEnabled:enabled}});
+ await prisma.notification.create({data:{userId:driver.id,title:enabled?'Առաքիչ ծառայությունն ակտիվացվել է':'Առաքիչ ծառայությունն անջատվել է',message:enabled?'Ադմինը միացրել է ձեր Առաքիչ ծառայությունը։':'Ադմինը անջատել է ձեր Առաքիչ ծառայությունը։',type:'DELIVERY_MODE'}});
+ res.json({success:true,driver:publicUser(user),message:enabled?'Առաքիչ ծառայությունը միացված է վարորդի համար։':'Առաքիչ ծառայությունն անջատված է։'});
 }));
 app.get('/api/admin/drivers/:id/vehicle',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{id:true,name:true,vehicleMake:true,vehicleModel:true,vehicleYear:true,vehiclePlate:true,vehicleColor:true,driverProfilePhotoStatus:true,vehicleDocumentsStatus:true,vehiclePhotosFront:true,vehiclePhotosBack:true,vehiclePhotosLeft:true,vehiclePhotosRight:true,vehicleRegistrationFront:true,vehicleRegistrationBack:true}});
@@ -1350,6 +1365,36 @@ app.patch('/api/admin/drivers/:id/vehicle/review',auth,only('ADMIN'),asyncRoute(
  const user=await prisma.user.update({where:{id:d.id},data:{vehicleDocumentsStatus:decision,vehicleVerificationMessage:note,driverDeliveryEnabled:decision==='APPROVED'?d.driverDeliveryEnabled:false}});
  await prisma.notification.create({data:{userId:d.id,title:decision==='APPROVED'?'Մեքենան հաստատված է':'Մեքենայի փաստաթղթերը մերժվել են',message:note,type:decision}});
  res.json({success:true,message:note,user:publicUser(user)});
+}));
+app.post('/api/drivers/periodic-verification',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{
+ const state=periodicVerificationState(req.user);
+ if(!state.required)return res.status(409).json({error:'Պարբերական ստուգման ժամկետը դեռ չի լրացել։'});
+ const input=z.object({front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),left:z.string().min(100).max(3500000),right:z.string().min(100).max(3500000),selfie:z.string().min(100).max(3500000)}).parse(req.body);
+ const decode=value=>{const m=value.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);if(!m)throw new Error('Բոլոր նկարները պետք է լինեն JPG, PNG կամ WEBP։');const b=Buffer.from(m[2],'base64');if(!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)};
+ const user=await prisma.user.update({where:{id:req.user.id},data:{periodicVehicleFront:decode(input.front),periodicVehicleBack:decode(input.back),periodicVehicleLeft:decode(input.left),periodicVehicleRight:decode(input.right),periodicFaceSelfie:decode(input.selfie),periodicVehicleVerificationStatus:'PENDING_REVIEW',periodicVehicleVerificationSubmittedAt:new Date()}});
+ const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
+ const message='Վարորդ '+req.user.name+' ('+req.user.phone+') ներկայացրել է 72-ժամյա մեքենայի արտաքին լուսանկարների և դեմքի սելֆիի ստուգումը։';
+ if(admins.length){await prisma.notification.createMany({data:admins.map(a=>({userId:a.id,title:'72-ԺԱՄՅԱ ՎԱՐՈՐԴԻ ՍՏՈՒԳՈՒՄ',message,type:'PERIODIC_VEHICLE_REVIEW'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title:'72-ԺԱՄՅԱ ՎԱՐՈՐԴԻ ՍՏՈՒԳՈՒՄ',message,type:'PERIODIC_VEHICLE_REVIEW',createdAt:new Date()});}
+ res.json({success:true,user:publicUser(user),message:'Լուսանկարներն ուղարկվեցին ադմինին։ Մինչև հաստատումը ցանցի պատվերները փակ են։'});
+}));
+app.get('/api/admin/drivers/:id/periodic-verification',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{id:true,name:true,periodicVehicleVerificationStatus:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationSubmittedAt:true,periodicVehicleFront:true,periodicVehicleBack:true,periodicVehicleLeft:true,periodicVehicleRight:true,periodicFaceSelfie:true}});
+ if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
+ const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
+ res.json({verification:{...d,photos:{front:image(d.periodicVehicleFront),back:image(d.periodicVehicleBack),left:image(d.periodicVehicleLeft),right:image(d.periodicVehicleRight),selfie:image(d.periodicFaceSelfie)}}});
+}));
+app.patch('/api/admin/drivers/:id/periodic-verification/review',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const {decision,reason}=z.object({decision:z.enum(['APPROVED','REJECTED']),reason:z.string().trim().max(500).optional()}).parse(req.body);
+ const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
+ if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
+ if(d.periodicVehicleVerificationStatus!=='PENDING_REVIEW')return res.status(409).json({error:'Պարբերական ստուգման սպասող հայտ չկա։'});
+ if(decision==='APPROVED'&&![d.periodicVehicleFront,d.periodicVehicleBack,d.periodicVehicleLeft,d.periodicVehicleRight,d.periodicFaceSelfie].every(Boolean))return res.status(409).json({error:'Բոլոր 4 արտաքին լուսանկարները և դեմքի սելֆին պարտադիր են։'});
+ if(decision==='REJECTED'&&!reason)return res.status(400).json({error:'Մերժման պատճառը պարտադիր է։'});
+ const dueAt=decision==='APPROVED'?new Date(Date.now()+DRIVER_PERIODIC_VERIFICATION_MS):d.periodicVehicleVerificationDueAt;
+ const note=decision==='APPROVED'?'72-ժամյա մեքենայի լուսանկարների և դեմքի սելֆիի ստուգումը հաստատվել է։ Պատվերների հասանելիությունը վերականգնվել է։':'72-ժամյա ստուգումը մերժվել է։ Պատճառ՝ '+reason+'։ Խնդրում ենք կրկին ուղարկել լուսանկարները։';
+ const user=await prisma.user.update({where:{id:d.id},data:{periodicVehicleVerificationStatus:decision,periodicVehicleVerificationDueAt:dueAt}});
+ await prisma.notification.create({data:{userId:d.id,title:decision==='APPROVED'?'Պարբերական ստուգումը հաստատված է':'Պարբերական ստուգումը մերժվել է',message:note,type:'PERIODIC_VEHICLE_REVIEW_RESULT'}});
+ res.json({success:true,user:publicUser(user),message:note});
 }));
 app.post('/api/drivers/profile-photo', auth, only('DRIVER'), asyncRoute(async(req,res)=>{
  const {photo}=z.object({photo:z.string().min(100).max(3500000)}).parse(req.body);
@@ -1478,7 +1523,7 @@ app.patch('/api/admin/drivers/:id/verify',auth,only('ADMIN'),asyncRoute(async(re
  const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'}});
  if(!driver)return res.status(404).json({error:'Վարորդը չի գտնվել'});
  if(verified&&(!driver.driverLicenseFront||!driver.driverLicenseBack||!driver.driverLicenseSelfie||!driver.passportFront||!driver.passportBack||!driver.driverProfilePhoto||!driver.passportNumberEncrypted||!driver.driverLicenseIssuedAt||!driver.driverLicenseExpiresAt||!driver.driverLicenseCategories.length))return res.status(409).json({error:'Հաստատման համար լրացրեք բոլոր փաստաթղթերը և լուսանկարները։'});
- const user=await prisma.user.update({where:{id:driver.id},data:{isVerified:verified,driverDocumentsStatus:verified?'APPROVED':'REJECTED',driverVerifiedAt:verified?new Date():null,driverVerificationMessage:verified?'Ադմինը հաստատել է փաստաթղթերը։':'Փաստաթղթերը մերժվել են․ պահանջվում է կրկին ուղարկել։'}});
+ const verifiedAt=verified?new Date():null;const user=await prisma.user.update({where:{id:driver.id},data:{isVerified:verified,driverDocumentsStatus:verified?'APPROVED':'REJECTED',driverVerifiedAt:verifiedAt,periodicVehicleVerificationDueAt:verified?new Date(verifiedAt.getTime()+DRIVER_PERIODIC_VERIFICATION_MS):null,periodicVehicleVerificationStatus:'NOT_DUE',driverVerificationMessage:verified?'Ադմինը հաստատել է փաստաթղթերը։':'Փաստաթղթերը մերժվել են․ պահանջվում է կրկին ուղարկել։'}});
  res.json({driver:publicUser(user)});
 }));
 
@@ -1542,7 +1587,7 @@ app.patch('/api/admin/drivers/:id/documents/review',auth,only('ADMIN'),asyncRout
  if(decision==='REJECTED'&&!reason)return res.status(400).json({error:'Մերժման պատճառը պարտադիր է։'});
  const approved=decision==='APPROVED',status=approved?'APPROVED':decision;
  const note=approved?'Ձեր փաստաթղթերի և լուսանկարների ստուգումը հաջողությամբ անցել է։ Ձեր վարորդի պրոֆիլը հաստատված է։':decision==='REJECTED'?'Փաստաթղթերը մերժվել են։ Պատճառ՝ '+reason+'։ Խնդրում ենք ուղղել և կրկին ուղարկել։':'Ստուգման հարցումը չեղարկվել է ադմինի կողմից։ Կարող եք կրկին ներբեռնել և ուղարկել փաստաթղթերը։';
- const user=await prisma.user.update({where:{id:driver.id},data:{driverDocumentsStatus:status,isVerified:approved,driverVerifiedAt:approved?new Date():null,driverVerificationMessage:note}});
+ const verifiedAt=approved?new Date():null;const user=await prisma.user.update({where:{id:driver.id},data:{driverDocumentsStatus:status,isVerified:approved,driverVerifiedAt:verifiedAt,periodicVehicleVerificationDueAt:approved?new Date(verifiedAt.getTime()+DRIVER_PERIODIC_VERIFICATION_MS):null,periodicVehicleVerificationStatus:'NOT_DUE',driverVerificationMessage:note}});
  await prisma.notification.create({data:{userId:driver.id,title:approved?'Վարորդի պրոֆիլը հաստատված է':decision==='REJECTED'?'Փաստաթղթերը մերժվել են':'Ստուգման հարցումը չեղարկվել է',message:note,type:decision}});
  res.json({driver:publicUser(user),message:approved?'Փաստաթղթերի ստուգումը հաջողությամբ ավարտվեց։':decision==='REJECTED'?'Մերժման ծանուցումն ուղարկվեց վարորդին։':'Չեղարկման ծանուցումն ուղարկվեց վարորդին։'});
 }));
@@ -1567,7 +1612,7 @@ io.use(async (socket, next) => {
 });
 io.on('connection', socket => {
   socket.join('user:'+socket.user.id);
-  if (socket.user.role === 'DRIVER' && socket.user.isVerified) socket.join('drivers');
+  if (socket.user.role === 'DRIVER' && socket.user.isVerified && !socket.user.periodicVehicleVerificationRequired) socket.join('drivers');
   socket.on('order:subscribe', async orderId => {
     const order = await prisma.order.findUnique({ where: { id: String(orderId) } });
     if (order && (order.customerId === socket.user.id || order.driverId === socket.user.id)) socket.join('order:' + order.id);
