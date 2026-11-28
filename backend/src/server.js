@@ -786,7 +786,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   if (req.user.role === 'DRIVER') {
     const [assigned, skipped] = await Promise.all([
       prisma.order.findMany({ where: { driverId: req.user.id }, orderBy: { createdAt: 'desc' }, include: { customer: { select: { id: true, name: true, phone: true, rating: true } } } }),
-      prisma.skippedOrder.findMany({ where: { driverId: req.user.id }, include: { order: true }, orderBy: { createdAt: 'desc' } })
+      prisma.skippedOrder.findMany({ where: { driverId: req.user.id }, include: { order: { include: { customer: { select: { id: true, name: true, phone: true, rating: true } } } } }, orderBy: { createdAt: 'desc' } })
     ]);
     const orders = [...assigned, ...skipped.map(x => ({ ...x.order, status: 'SKIPPED', skippedAt: x.createdAt }))].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
     return res.json({orders:await withCustomerOrderNumbers(orders.map(order=>maskDriverOrderContacts(order)))});
