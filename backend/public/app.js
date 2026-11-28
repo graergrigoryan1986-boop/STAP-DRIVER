@@ -432,7 +432,7 @@ function enhanceAdminBookingForm(form){
  const heading=form.querySelector('.booking-form-heading');
  if(heading){heading.querySelector('h3').textContent='Նոր պատվերի ձևակերպում';heading.querySelector('p').textContent='Ընտրեք պատվերի ժամը, մեքենան և երկու վարչական շրջանները․ հասցեները սակագնի վրա չեն ազդում։'}
  const groups=[
-  ['neon-schedule-group','01 · ՊԱՏՎԵՐԻ ԺԱՄԱՆԱԿԸ',['[name="scheduleType"]','[name="scheduledAtLocal"]','.urgent-order-toggle']],
+  ['neon-schedule-group','01 · ՊԱՏՎԵՐԻ ԺԱՄԱՆԱԿԸ',['[name="scheduleType"]','[name="scheduledAtLocal"]']],
   ['neon-vehicle-group','02 · ՄԵՔԵՆԱՅԻ ԵՎ ՓՈԽԱՆՑՄԱՆ ՏՈՒՓԻ ՏԵՍԱԿԸ',['[name="vehicleFuelType"]','[name="transmissionType"]']],
   ['neon-route-group','03 · ՄԵԿՆԱՐԿԻ ԵՎ ՆՊԱՏԱԿԱԿԵՏԻ ՎԱՐՉԱԿԱՆ ՇՐՋԱՆՆԵՐԸ',['.urgent-order-toggle','.district-picker-wrap']],
   ['neon-price-group','04 · ՎԵՐՋՆԱԿԱՆ ԱՐԺԵՔ',['[name="extraChargeAmd"]','[name="fareAmd"]','[data-fare-breakdown]','[data-route-preview]']],
