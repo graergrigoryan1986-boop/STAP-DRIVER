@@ -114,6 +114,20 @@ async function searchAdminOrderArchive(event){
  box.innerHTML='<div class="archive-result-heading"><strong>Գտնվել է '+data.total+' պատվեր</strong><span>'+(code?'Պատվերի կոդ՝ '+esc(code):phone?'Հեռախոս՝ '+esc(phone):'Ըստ ընտրված կարգավիճակի')+'</span></div>'+(data.orders.length?data.orders.map(o=>'<article class="archive-order-card"><div class="archive-order-card-top"><strong>#'+esc(String(o.orderCode||'----').padStart(4,'0'))+'</strong><span class="archive-status '+(o.status==='CANCELLED'?'cancelled':'completed')+'">'+esc(labels[o.status]||o.status)+'</span><b>'+money(o.fareAmd)+'</b></div><p><strong>Հաճախորդ՝</strong> '+esc(o.customer?.name||'—')+' · '+esc(o.customer?.phone||o.phonePrimary||'')+'<br><strong>Վարորդ՝</strong> '+esc(o.driver?.name||'Չի նշանակվել')+' · '+esc(o.driver?.phone||'—')+'<br><strong>Երթուղի՝</strong> '+esc(o.pickupAddress)+' → '+esc(o.destinationAddress)+'<br><strong>Պատվերի համար՝</strong> '+esc(o.phonePrimary||'—')+(o.phoneSecondary?' · '+esc(o.phoneSecondary):'')+'<br><strong>Ստեղծվել է՝</strong> '+new Date(o.createdAt).toLocaleString('hy-AM')+(o.completedAt?'<br><strong>Ավարտվել է՝</strong> '+new Date(o.completedAt).toLocaleString('hy-AM'):'')+'</p></article>').join(''):'<div class="admin-orders-empty">Այս որոնմամբ պատվեր չի գտնվել։</div>');
  }catch(error){box.innerHTML='<p class="archive-error">'+esc(error.message)+'</p>'}
 }
+function inspectionPhotoGroups(report,returnReport){
+ const groups=[];
+ const add=(title,source)=>{if(!source||typeof source!=='object')return;const seen=new Set();for(const [key,value] of Object.entries(source)){if(!Array.isArray(value))continue;const photos=value.filter(item=>typeof item==='string'&&item.startsWith('data:image/'));if(!photos.length)continue;const unique=photos.filter(src=>{if(seen.has(src))return false;seen.add(src);return true});if(unique.length)groups.push({title:title+' · '+({passportPhotos:'Տեխնիկական անձնագիր',damagePhotos:'Վնասվածքներ',photos:'Լրացուցիչ լուսանկարներ',images:'Լուսանկարներ',returnPhotos:'Վերադարձի լուսանկարներ'}[key]||'Լուսանկարներ'),photos:unique});}};
+ add('Մեքենայի ընդունում',report);add('Մեքենայի վերադարձ',returnReport);return groups;
+}
+function inspectionPhotoMarkup(groups){
+ if(!groups.length)return '<p class="inspection-no-photos">Այս պատվերի համար պահպանված լուսանկարներ չկան։</p>';
+ return groups.map(group=>'<h4>'+esc(group.title)+' ('+group.photos.length+')</h4><div class="admin-inspection-images">'+group.photos.map((src,i)=>'<figure><img loading="lazy" src="'+esc(src)+'" alt="'+esc(group.title)+' '+(i+1)+'"><figcaption><a href="'+esc(src)+'" target="_blank" rel="noopener">Մեծ չափով բացել</a> · <a href="'+esc(src)+'" download="stap-order-photo-'+(i+1)+'.jpg">Պահպանել</a></figcaption></figure>').join('')+'</div>').join('');
+}
+function bindInspectionPhotoControls(modal){
+ modal.querySelectorAll('.admin-inspection-images img').forEach(img=>img.addEventListener('click',()=>img.classList.toggle('is-zoomed')));
+ const panel=modal.querySelector('.admin-inspection-modal-panel'),full=document.createElement('button');full.type='button';full.className='action';full.textContent='⛶ ԱՄԲՈՂՋ ԷԿՐԱՆՈՎ';full.addEventListener('click',()=>{if(panel.requestFullscreen)panel.requestFullscreen().catch(()=>{});else panel.classList.toggle('inspection-fullscreen-fallback')});
+ modal.querySelector('[data-close-inspection]').insertAdjacentElement('afterend',full);
+}
 async function loadAdminOrderHistory(){
  const box=$('#adminOrdersHistory');if(!box)return;
  try{
@@ -128,10 +142,10 @@ async function loadAdminOrderHistory(){
    button.disabled=true;
    try{
     const data=await api('/api/admin/orders/'+button.dataset.adminInspection+'/inspection'),report=data.inspection||{};
-    const passport=Array.isArray(report.passportPhotos)?report.passportPhotos:[],damage=Array.isArray(report.damagePhotos)?report.damagePhotos:[];
+    const groups=inspectionPhotoGroups(report,data.returnInspection);
     const modal=document.createElement('div');modal.className='admin-inspection-modal';
-    modal.innerHTML='<section class="admin-inspection-modal-panel"><button type="button" class="action" data-close-inspection>ՓԱԿԵԼ ✕</button><h3>Պատվերի զննման արձանագրություն · #'+esc(String(data.order?.orderCode||'----'))+'</h3><p>Վարորդ՝ '+esc(report.driverName||'—')+' · Ամսաթիվ՝ '+esc(report.recordedAt?new Date(report.recordedAt).toLocaleString('hy-AM'):'—')+'</p><p>Արդյունք՝ '+(report.hasDamage?'Կան վնասվածքներ':'Թերություններ չեն նշվել')+'</p><h4>Տեխնիկական անձնագիր</h4><div class="admin-inspection-images">'+passport.map((src,i)=>'<figure><img src="'+esc(src)+'" alt="Տեխնիկական անձնագիր '+(i+1)+'"><figcaption>'+(i===0?'Առջևի կողմ':'Հետևի կողմ')+'</figcaption></figure>').join('')+'</div><h4>Վնասվածքների լուսանկարներ ('+damage.length+')</h4><div class="admin-inspection-images">'+damage.map((src,i)=>'<img src="'+esc(src)+'" alt="Վնասվածք '+(i+1)+'">').join('')+'</div></section>';
-    document.body.appendChild(modal);modal.querySelector('[data-close-inspection]').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove()});
+    modal.innerHTML='<section class="admin-inspection-modal-panel"><button type="button" class="action" data-close-inspection>ՓԱԿԵԼ ✕</button><h3>Պատվերի բոլոր զննման լուսանկարները · #'+esc(String(data.order?.orderCode||'----'))+'</h3><p>Վարորդ՝ '+esc(report.driverName||data.returnInspection?.driverName||'—')+' · Ավարտվել է՝ '+esc(data.order?.completedAt?new Date(data.order.completedAt).toLocaleString('hy-AM'):'—')+'</p><p class="inspection-view-hint">Սեղմեք նկարի վրա՝ մեծացնելու համար։ Կարող եք բացել առանձին պատուհանում, ամբողջ էկրանով դիտել կամ պահպանել։</p>'+inspectionPhotoMarkup(groups)+'</section>';
+    document.body.appendChild(modal);bindInspectionPhotoControls(modal);modal.querySelector('[data-close-inspection]').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove()});
    }catch(error){message('#appMessage',error.message,true)}finally{button.disabled=false}
   });
   box.querySelectorAll('[data-admin-cancel-order]').forEach(button=>button.onclick=async()=>{if(!confirm('Չեղարկե՞լ պատվերը ցանկացած ընթացիկ փուլում։ Ուղևորը և վարորդները ծանուցում կստանան։'))return;button.disabled=true;try{const result=await api('/api/admin/orders/'+button.dataset.adminCancelOrder+'/cancel',{method:'POST',body:'{}'});message('#appMessage',result.message||'Պատվերը չեղարկվեց։');await loadAdminOrderHistory()}catch(error){button.disabled=false;message('#appMessage',error.message,true)}});
@@ -652,10 +666,10 @@ function renderOrders(root,orders,kind){
   button.disabled=true;
   try{
    const data=await api('/api/orders/'+button.dataset.driverInspection+'/inspection'),report=data.inspection||{};
-   const passport=Array.isArray(report.passportPhotos)?report.passportPhotos:[],damage=Array.isArray(report.damagePhotos)?report.damagePhotos:[];
+   const groups=inspectionPhotoGroups(report,data.returnInspection);
    const modal=document.createElement('div');modal.className='admin-inspection-modal';
-   modal.innerHTML='<section class="admin-inspection-modal-panel"><button type="button" class="action" data-close-inspection>ՓԱԿԵԼ ✕</button><h3>Պատվերի զննման լուսանկարներ · #'+esc(String(data.order?.orderCode||'----'))+'</h3><p>Արդյունք՝ '+(report.hasDamage?'Կան վնասվածքներ':'Թերություններ չեն նշվել')+' · Ամսաթիվ՝ '+esc(report.recordedAt?new Date(report.recordedAt).toLocaleString('hy-AM'):'—')+'</p><h4>Տեխնիկական անձնագիր</h4><div class="admin-inspection-images">'+passport.map((src,i)=>'<figure><img src="'+esc(src)+'" alt="Տեխնիկական անձնագիր '+(i+1)+'"><figcaption>'+(i===0?'Առջևի կողմ':'Հետևի կողմ')+'</figcaption></figure>').join('')+'</div><h4>Վնասվածքների լուսանկարներ ('+damage.length+')</h4><div class="admin-inspection-images">'+damage.map((src,i)=>'<img src="'+esc(src)+'" alt="Վնասվածք '+(i+1)+'">').join('')+'</div></section>';
-   document.body.appendChild(modal);modal.querySelector('[data-close-inspection]').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove()});
+   modal.innerHTML='<section class="admin-inspection-modal-panel"><button type="button" class="action" data-close-inspection>ՓԱԿԵԼ ✕</button><h3>Պատվերի զննման լուսանկարներ · #'+esc(String(data.order?.orderCode||'----'))+'</h3><p>Արդյունք՝ '+(report.hasDamage?'Կան վնասվածքներ':'Թերություններ չեն նշվել')+' · Ամսաթիվ՝ '+esc(report.recordedAt?new Date(report.recordedAt).toLocaleString('hy-AM'):'—')+'</p>'+inspectionPhotoMarkup(groups)+'</section>';
+   document.body.appendChild(modal);bindInspectionPhotoControls(modal);modal.querySelector('[data-close-inspection]').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove()});
   }catch(error){message('#appMessage',error.message,true)}finally{button.disabled=false}
  });
  root.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>orderAction(b,'/api/orders/'+b.dataset.start+'/start'));
