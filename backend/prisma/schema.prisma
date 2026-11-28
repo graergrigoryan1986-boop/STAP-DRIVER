@@ -61,7 +61,8 @@ model User {
   vehiclePhotosRight Bytes?
   vehicleRegistrationFront Bytes?
   vehicleRegistrationBack Bytes?
-  driverDeliveryEnabled Boolean @default(false)  driverTransmission String @default("AUTOMATIC")
+  driverDeliveryEnabled Boolean @default(false)
+  driverTransmission String @default("AUTOMATIC")
   driverLicenseFront Bytes?
   driverLicenseBack Bytes?
   driverLicenseSelfie Bytes?
