@@ -416,9 +416,8 @@ async function customerView(){
  const publishedServices=serviceData.tariffs||[];
  $('#dashboard').innerHTML=`
   <section class="customer-current-order-section" id="customerCurrentOrderSection"><div class="customer-panel-head"><h3>ԸՆԹԱՑԻԿ ՊԱՏՎԵՐ</h3><span class="customer-live-indicator">● ԱԿՏԻՎ</span></div><div id="customerCurrentOrder" class="stack"></div></section>
-  <nav class="customer-quick-grid" aria-label="Հաճախորդի բաժիններ">
+  <nav class="customer-quick-grid" aria-label="Հաճախորդի գործողություններ">
    <button type="button" data-customer-panel="new">＋<span>Նոր պատվեր</span></button>
-   <button type="button" data-customer-panel="orders">▤<span>Իմ պատվերները</span></button>
   </nav>
   <section class="customer-panel" data-customer-content="new" hidden>
    <div class="customer-panel-head"><h3>Նոր պատվեր</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
@@ -442,6 +441,20 @@ async function customerView(){
    <div class="customer-panel-head"><h3>Իմ պատվերները</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
    <div id="myOrders" class="stack"></div>
   </section>
+  <section class="customer-panel customer-profile-panel" data-customer-content="profile" hidden>
+   <div class="customer-panel-head"><h3>Անձնական էջ</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
+   <form id="customerProfileForm" class="customer-profile-form">
+    <label>Անուն և ազգանուն<input name="name" required minlength="2" maxlength="120" value="${esc(currentUser.name||'')}"></label>
+    <label>Հեռախոսահամար<input name="phone" type="tel" required minlength="5" maxlength="30" value="${esc(currentUser.phone||'')}"></label>
+    <label>Ծննդյան ամսաթիվ<input name="dateOfBirth" type="date" value="${currentUser.dateOfBirth?String(currentUser.dateOfBirth).slice(0,10):''}"></label>
+    <button class="primary" type="submit">Պահպանել տվյալները</button>
+   </form>
+  </section>
+  <nav class="customer-bottom-nav" aria-label="Հաճախորդի հիմնական նավիգացիա">
+   <div class="customer-bottom-rating" aria-label="Հաճախորդի վարկանիշ"><span>★</span><strong>${Math.max(1,Math.min(5,Math.round(Number(currentUser.rating)||5)))}</strong></div>
+   <button type="button" data-customer-panel="orders">▤<span>Պատվերներ</span></button>
+   <button type="button" data-customer-panel="profile">♙<span>Անձնական էջ</span></button>
+  </nav>
  `;
  const toggleCustomerPanel=name=>{
   const panels=[...document.querySelectorAll('[data-customer-content]')];
@@ -460,6 +473,19 @@ async function customerView(){
  renderOrders($('#myOrders'),mine.orders,'mine');
  const activeCustomerOrders=(mine.orders||[]).filter(order=>['OPEN','ACCEPTED','ARRIVED','IN_PROGRESS'].includes(order.status)||(order.status==='COMPLETED'&&order.driver&&!order.ratings?.length)).slice(0,1);
  const activeSection=$('#customerCurrentOrderSection');if(activeSection){activeSection.hidden=!activeCustomerOrders.length;renderOrders($('#customerCurrentOrder'),activeCustomerOrders,'customer-current');}
+ const customerProfileForm=$('#customerProfileForm');
+ if(customerProfileForm)customerProfileForm.onsubmit=async e=>{
+  e.preventDefault();
+  const form=new FormData(customerProfileForm);
+  try{
+   const result=await api('/api/profile',{method:'PATCH',body:JSON.stringify({name:String(form.get('name')||'').trim(),phone:String(form.get('phone')||'').trim(),dateOfBirth:form.get('dateOfBirth')||''})});
+   currentUser=result.user;
+   $('#welcome').textContent='Բարի գալուստ, '+currentUser.name;
+   message('#appMessage',result.message||'Անձնական տվյալները պահպանվեցին։');
+   await customerView();
+   document.querySelector('[data-customer-panel="profile"]')?.click();
+  }catch(err){message('#appMessage',err.message,true)}
+ };
  bindFareCalculator($('#orderForm'));
  $('#orderForm').onsubmit=async e=>{
   e.preventDefault();
@@ -508,7 +534,7 @@ function renderOrders(root,orders,kind){
   else if((kind==='mine'||kind==='customer-current')&&currentUser.role==='CUSTOMER'&&o.status==='COMPLETED'&&o.ratings?.length)actions='<div class="rating-submitted-note">✓ Ձեր գնահատականը՝ '+o.ratings[0].score+'/5 · Պահպանված է։ Պատվերը տեղափոխվել է պատմություն։</div>';
   const when=o.createdAt?new Date(o.createdAt).toLocaleString('hy-AM'):'—';
   const customerPhone=o.phonePrimary||o.customer?.phone||'';const repeatOrderInfo=o.customerOrderNumber?'<div class="driver-customer-order-count">'+(o.customerOrderNumber===1?'🆕 Առաջին պատվեր':'🔁 Հաճախորդի պատվեր №'+o.customerOrderNumber)+' · Ընդամենը '+(o.customerOrderTotal||o.customerOrderNumber)+' պատվեր</div>':'';const contact='<div class="driver-order-fact"><span>👤 Ուղևոր</span><strong>'+esc(o.customer?.name||'Ադմինի պատվեր')+'</strong></div>'+(o.contactHidden?'<div class="driver-contact-locked"><strong>🔒 Կոնտակտային տվյալները փակ են</strong><span>'+(o.contactRevealAt?'Հեռախոսն ու նշումները կբացվեն՝ '+new Date(o.contactRevealAt).toLocaleString('hy-AM'):'Հեռախոսը հասանելի կլինի պատվերն ընդունելուց հետո։')+'</span></div>':'<div class="driver-order-fact"><span>📞 Հեռախոս 1</span><strong>'+(customerPhone?'<a class="driver-order-phone-link" href="tel:'+esc(customerPhone)+'">'+esc(customerPhone)+'</a>':'—')+'</strong></div>'+(o.phoneSecondary?'<div class="driver-order-fact"><span>📞 Հեռախոս 2</span><strong><a class="driver-order-phone-link" href="tel:'+esc(o.phoneSecondary)+'">'+esc(o.phoneSecondary)+'</a></strong></div>':'') )+repeatOrderInfo+'<div class="driver-order-fact"><span>👥 Ուղևորներ</span><strong>'+(o.passengerCount||1)+'</strong></div>';
-  const driverVerificationInfo=(kind==='mine'||kind==='customer-current')&&currentUser.role==='CUSTOMER'&&o.driver?'<div class="customer-driver-profile">'+(o.driver.profilePhoto?'<img src="'+o.driver.profilePhoto+'" alt="Լուսանկար" class="customer-driver-photo">':'<div class="customer-driver-photo customer-driver-photo-empty">👤</div>')+'<div class="customer-driver-profile-info"><strong>'+esc(o.driver.name||'Վարորդ')+(o.driver.isVerified?verifiedCheckMark():'')+'</strong><span>Տարիք՝ '+(o.driver.age??'—')+' տ. · Ստաժ՝ '+esc(o.driver.experienceLabel||'Նշված չէ')+'</span><span>⭐ '+Number(o.driver.rating||5).toFixed(2)+'/5</span></div></div>':'';
+  const driverVerificationInfo=(kind==='mine'||kind==='customer-current')&&currentUser.role==='CUSTOMER'&&o.driver?'<div class="customer-driver-profile">'+(o.driver.profilePhoto?'<img src="'+o.driver.profilePhoto+'" alt="Լուսանկար" class="customer-driver-photo">':'<div class="customer-driver-photo customer-driver-photo-empty">👤</div>')+'<div class="customer-driver-profile-info"><strong>'+esc(o.driver.name||'Վարորդ')+(o.driver.isVerified?verifiedCheckMark():'')+'</strong><span>Տարիք՝ '+(o.driver.age??'—')+' տ. · Ստաժ՝ '+esc(o.driver.experienceLabel||'Նշված չէ')+'</span><span class="customer-driver-transmission">⚙ '+(o.driver.driverTransmission==='MANUAL'?'Մեխանիկական + ավտոմատ':'Ավտոմատ')+'</span><span class="customer-driver-rating"><span>★</span> '+Math.max(1,Math.min(5,Math.round(Number(o.driver.rating)||5)))+'/5</span></div></div>':'';
   const routeDistrictInfo=(o.routeDistricts?.length?'<div class="driver-order-fact driver-order-note"><span>🗺️ Սակագնի հաշվարկ՝ վարչական շրջանների քարտեզով</span><strong>'+esc(o.routeDistricts.join(' → '))+'</strong><small>Երթուղին անցնում է '+new Set(o.routeDistricts).size+' տարբեր վարչական շրջանով</small></div>':'')+(o.routeDistanceMeters?'<div class="driver-order-fact"><span>Հեռավորություն</span><strong>'+(o.routeDistanceMeters/1000).toFixed(1)+' կմ</strong></div>':'');
   const districtMap=(kind==='mine'&&currentUser.role==='DRIVER'&&['ACCEPTED','ARRIVED','IN_PROGRESS'].includes(o.status)&&o.routeDistricts?.length)?'<section class="driver-district-mini-map"><div class="driver-district-map-heading"><strong>🗺️ ՊԱՏՎԵՐԻ ՎԱՐՉԱԿԱՆ ՇՐՋԱՆՆԵՐ</strong><small>Միայն այս պատվերի շրջանը / շրջանները</small></div><div class="driver-district-map-grid">'+[...new Set(o.routeDistricts)].map((district,i)=>'<span class="driver-district-map-tile active"><i>'+(i+1)+'</i>'+esc(district)+'</span>').join('')+'</div><div class="driver-district-map-route">'+esc([...new Set(o.routeDistricts)].join(' → '))+'</div></section>':'';
   const urgentInfo=o.isUrgent?'<div class="urgent-order-badge">⚡ ՇՏԱՊ · ՀԵՆՑ ՀԻՄԱ · Վարորդին հասանելի շտապ հավելավճար՝ '+money(o.urgentExtraChargeAmd||2500)+'</div>':'';
