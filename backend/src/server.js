@@ -1001,6 +1001,7 @@ app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asy
     keyCount:z.string().trim().max(20).optional().default(''),
     customerName:z.string().trim().min(2).max(120),
     customerConfirmed:z.literal(true),
+    customerSignature:z.string().max(1800000).regex(/^data:image\/png;base64,/),
     photos:z.array(z.string().max(1800000).regex(/^data:image\/(jpeg|png|webp);base64,/)).min(5).max(8)
   }).parse(req.body);
   const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id}});
