@@ -760,7 +760,7 @@ function maskDriverOrderContacts(order,now=new Date()){
  const completedContactsExpired=Boolean(completedAt)&&now.getTime()>=completedAt.getTime()+6*60*60*1000;
  const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt)||completedContactsExpired;
  if(!contactHidden)return order;
- return {...order,phonePrimary:null,phoneSecondary:null,note:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:completedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:completedContactsExpired?'COMPLETED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
+ return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:completedContactsExpired?order.pickupNote:null,destinationNote:completedContactsExpired?order.destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:completedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:completedContactsExpired?'COMPLETED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
 }
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const categories=req.user.driverLicenseCategories||[];
@@ -801,7 +801,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   });
   const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => ({
     ...o,
-    ...(o.status==='COMPLETED'&&o.completedAt&&Date.now()>=new Date(o.completedAt).getTime()+6*60*60*1000?{phonePrimary:null,phoneSecondary:null,note:null,contactHidden:true,contactHiddenReason:'COMPLETED_RETENTION_EXPIRED'}:{}),
+    ...(o.status==='COMPLETED'&&o.completedAt&&Date.now()>=new Date(o.completedAt).getTime()+6*60*60*1000?{phonePrimary:null,phoneSecondary:null,note:null,pickupNote:o.pickupNote,destinationNote:o.destinationNote,contactHidden:true,contactHiddenReason:'COMPLETED_RETENTION_EXPIRED'}:{}),
     driver: o.driver ? {
       id:o.driver.id,name:o.driver.name,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
       driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
