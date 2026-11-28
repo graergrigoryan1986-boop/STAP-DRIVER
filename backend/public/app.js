@@ -446,7 +446,7 @@ function bindFareCalculator(form){
   const from=districtFields.find(x=>x.field===pickup)?.select.value||'',to=districtFields.find(x=>x.field===destination)?.select.value||'';
   if(!from||!to){lastQuote=null;fare.value='';const totalDisplay=form.querySelector('[data-booking-total]');if(totalDisplay)totalDisplay.textContent='— ֏';if(preview)preview.textContent='Ընտրեք մեկնարկային և վերջնակետային վարչական շրջանները։';if(summary)summary.textContent='';return false}
   const scheduleField=form.querySelector('[name="scheduleType"]'),isUrgent=Boolean(urgent?.checked&&(!scheduleField||scheduleField.value==='NOW')),extraChargeAmd=Math.max(0,Math.round(Number(extra.value)||0));
-  const service=selectedService(),quoteExtra=extraChargeAmd+(service?.priceAmd||0),quoteKey=from+' → '+to+'|urgent:'+isUrgent+'|extra:'+quoteExtra+'|service:'+(service?.id||'');if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
+  const quoteExtra=extraChargeAmd+(service?.priceAmd||0),quoteKey=from+' → '+to+'|urgent:'+isUrgent+'|extra:'+quoteExtra+'|service:'+(service?.id||'');if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
   const id=++requestNo;const totalDisplay=form.querySelector('[data-booking-total]');if(totalDisplay)totalDisplay.textContent='Հաշվարկվում է…';if(preview)preview.textContent='Քարտեզի 12 վարչական շրջաններով որոշվում է միջանկյալ շրջանների քանակը…';fare.value='';
   try{
    const quote=await api('/api/routes/quote',{method:'POST',body:JSON.stringify({pickupDistrict:from,destinationDistrict:to,isUrgent,extraChargeAmd:quoteExtra})});
