@@ -1653,7 +1653,7 @@ io.use(async (socket, next) => {
 });
 io.on('connection', socket => {
   socket.join('user:'+socket.user.id);
-  if (socket.user.role === 'DRIVER' && socket.user.isVerified && !socket.user.periodicVehicleVerificationRequired) socket.join('drivers');
+  if (socket.user.role === 'DRIVER' && socket.user.isVerified && !periodicVerificationState(socket.user).required) socket.join('drivers');
   socket.on('order:subscribe', async orderId => {
     const order = await prisma.order.findUnique({ where: { id: String(orderId) } });
     if (order && (order.customerId === socket.user.id || order.driverId === socket.user.id)) socket.join('order:' + order.id);
