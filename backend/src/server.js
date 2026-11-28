@@ -1585,13 +1585,14 @@ setInterval(async()=>{
 
 async function purgeExpiredOrderInspectionPhotos(){
  const cutoff=new Date(Date.now()-72*60*60*1000);
- const orders=await prisma.order.findMany({where:{status:'COMPLETED',completedAt:{lt:cutoff},OR:[{vehicleInspectionReport:{not:null}},{vehicleReturnInspection:{not:null}}]},select:{id:true,vehicleInspectionReport:true,vehicleReturnInspection:true}});
+ const orders=await prisma.order.findMany({where:{status:'COMPLETED',completedAt:{lt:cutoff}},select:{id:true,vehicleInspectionReport:true,vehicleReturnInspection:true}});
  for(const order of orders){
   const strip=report=>{if(!report||typeof report!=='object')return report;const next={...report};for(const key of Object.keys(next)){if(Array.isArray(next[key])&&next[key].some(value=>typeof value==='string'&&value.startsWith('data:image/')))next[key]=[];}return next;};
   const handover=strip(order.vehicleInspectionReport),returned=strip(order.vehicleReturnInspection);
   if(JSON.stringify(handover)!==JSON.stringify(order.vehicleInspectionReport)||JSON.stringify(returned)!==JSON.stringify(order.vehicleReturnInspection))await prisma.order.update({where:{id:order.id},data:{vehicleInspectionReport:handover,vehicleReturnInspection:returned}});
  }
 }
+purgeExpiredOrderInspectionPhotos().catch(error=>console.error('Initial 72-hour order photo cleanup failed:',error));
 setInterval(()=>purgeExpiredOrderInspectionPhotos().catch(error=>console.error('72-hour order photo cleanup failed:',error)),10*60*1000).unref();
 
 server.listen(PORT, '0.0.0.0', () => {
