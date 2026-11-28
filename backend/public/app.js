@@ -143,7 +143,7 @@ function enhanceAdminBookingForm(form){
  if(vehicleLabel)vehicleLabel.textContent='Մեքենայի տեսակ / շարժիչ';
 }
 function setupAdminOrdersTabs(){
- const archiveForm=$('#adminOrderArchiveForm');if(archiveForm)archiveForm.addEventListener('submit',searchAdminOrderArchive);
+ const archiveForm=$('#adminOrderArchiveForm');if(archiveForm){if(!archiveForm.querySelector('[name="code"]')){const label=document.createElement('label');label.className='admin-form-field';label.innerHTML='<span>Պատվերի 4 նիշանոց կոդ</span><input name="code" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="Օրինակ՝ 0427">';const submit=archiveForm.querySelector('button[type="submit"],button:not([type])');archiveForm.insertBefore(label,submit||null)}archiveForm.addEventListener('submit',searchAdminOrderArchive);}
  const panel=$('#adminOrdersPanel'),box=$('#adminOrdersHistory'),create=$('#adminCreateOrderPanel');if(!panel||!box||!create)return;
  const nav=document.createElement('nav');nav.className='admin-order-subnav';nav.setAttribute('aria-label','Պատվերների բաժիններ');
  const tabs=[['FORM','📝 Նոր պատվերի ձևակերպում',null],['OPEN','🟡 Սպասվող / Առկա','OPEN'],['ACCEPTED','🔵 Ընդունված / Տեղում','ACCEPTED'],['IN_PROGRESS','🚦 Ընթացքի մեջ','IN_PROGRESS'],['COMPLETED','✅ Ավարտված','COMPLETED'],['CANCELLED','🔴 Չեղարկված','CANCELLED']];
