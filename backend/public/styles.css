@@ -2410,34 +2410,45 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 @media(max-width:600px){.inspection-photo-save{width:100%;min-height:48px;font-size:13px!important}.inspection-save-hint{font-size:12px}}
 
 
-/* Final contrast override for urgent option in every booking form, including admin's neon form. */
+/* Urgent booking control: dark red with white text; selected state flashes green. */
 .booking-form label.urgent-order-toggle,
 .neon-dispatch-form label.urgent-order-toggle,
 #adminCreateOrderPanel .neon-route-group label.urgent-order-toggle{
- background:#fff!important;color:#991b1b!important;border:3px solid #dc2626!important;
+ background:#7f1018!important;color:#fff!important;border:3px solid #b91c1c!important;
  opacity:1!important;text-shadow:none!important;filter:none!important;
+ box-shadow:0 0 0 1px rgba(127,16,24,.18),0 7px 20px rgba(90,0,0,.25)!important;
 }
 .booking-form label.urgent-order-toggle span,
 .neon-dispatch-form label.urgent-order-toggle span,
 #adminCreateOrderPanel .neon-route-group label.urgent-order-toggle span{
- display:inline-block!important;color:#991b1b!important;font-size:17px!important;font-weight:1000!important;
+ display:inline-block!important;color:#fff!important;font-size:17px!important;font-weight:1000!important;
  line-height:1.35!important;text-shadow:none!important;opacity:1!important;
 }
 .booking-form label.urgent-order-toggle small,
 .neon-dispatch-form label.urgent-order-toggle small,
 #adminCreateOrderPanel .neon-route-group label.urgent-order-toggle small{
  display:block!important;flex:1 1 240px!important;min-width:0!important;width:auto!important;
- color:#7f1d1d!important;font-size:15px!important;font-weight:900!important;
+ color:#fff!important;font-size:15px!important;font-weight:900!important;
  line-height:1.5!important;opacity:1!important;text-shadow:none!important;
+}
+@keyframes urgentSelectedGreenFlash{
+ 0%,100%{background:#166534!important;box-shadow:0 0 0 2px rgba(34,197,94,.24),0 0 13px rgba(34,197,94,.45)!important}
+ 50%{background:#22a447!important;box-shadow:0 0 0 4px rgba(74,222,128,.36),0 0 25px rgba(34,197,94,.85)!important}
 }
 .booking-form label.urgent-order-toggle:has(input:checked),
 .neon-dispatch-form label.urgent-order-toggle:has(input:checked),
 #adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked){
- background:#dcfce7!important;border-color:#15803d!important;
+ background:#166534!important;border-color:#4ade80!important;color:#fff!important;
+ animation:urgentSelectedGreenFlash .9s ease-in-out infinite!important;
 }
 .booking-form label.urgent-order-toggle:has(input:checked) span,
 .booking-form label.urgent-order-toggle:has(input:checked) small,
 .neon-dispatch-form label.urgent-order-toggle:has(input:checked) span,
 .neon-dispatch-form label.urgent-order-toggle:has(input:checked) small,
 #adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked) span,
-#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked) small{color:#14532d!important}
+#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked) small{color:#fff!important}
+@media(prefers-reduced-motion:reduce){
+ .booking-form label.urgent-order-toggle:has(input:checked),
+ .neon-dispatch-form label.urgent-order-toggle:has(input:checked),
+ #adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked){animation:none!important}
+}
