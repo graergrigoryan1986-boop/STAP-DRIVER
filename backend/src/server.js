@@ -616,7 +616,7 @@ app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     customer:{select:{id:true,name:true,phone:true,rating:true}},
     driver:{select:{id:true,name:true,phone:true,isVerified:true}}
   }});
-  res.json({orders:await withCustomerOrderNumbers(orders)});
+  res.json({orders:await withCustomerOrderNumbers(orders.map(order=>({...order,vehicleInspectionReport:order.vehicleInspectionReport?{hasReport:true,hasDamage:Boolean(order.vehicleInspectionReport.hasDamage),recordedAt:order.vehicleInspectionReport.recordedAt}:null,vehicleReturnInspection:undefined})))});
 }));
 
 app.get('/api/admin/customers',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
