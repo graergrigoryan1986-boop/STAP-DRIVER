@@ -1853,3 +1853,37 @@ body.driver-portal-mode #dashboard .driver-pending-toggle>small{font-size:12px}
 .customer-user-mode #orderForm label:has([name="requiredLicenseCategory"]),
 .customer-user-mode #orderForm label:has([name="transmissionType"]){display:none!important}
 .customer-user-mode #orderForm .customer-service-details:empty{display:none!important}
+
+/* Driver mobile ergonomics, vivid cards and safe areas */
+body.driver-portal-mode .booking-section{padding:calc(30px + env(safe-area-inset-top)) 0 calc(40px + env(safe-area-inset-bottom))}
+body.driver-portal-mode #authPanel{margin-top:12px!important}
+body.driver-portal-mode #authPanel .mode-switch{margin-top:28px!important}
+body.authenticated #account{padding-top:calc(18px + env(safe-area-inset-top))!important;padding-bottom:calc(110px + env(safe-area-inset-bottom))!important}
+#appPanel .logout-bottom{position:sticky;bottom:calc(82px + env(safe-area-inset-bottom));z-index:55;display:flex;justify-content:stretch;margin:18px 0 12px;padding:10px;border:1px solid rgba(211,177,112,.42);border-radius:14px;background:rgba(12,17,19,.97);box-shadow:0 8px 25px rgba(0,0,0,.35)}
+#appPanel .logout-bottom button{width:100%;min-height:48px;background:linear-gradient(120deg,#f1d59a,#c49a58);color:#17130d;border:0;border-radius:10px;font-size:14px;font-weight:900}
+body.driver-user-mode #dashboard .driver-pending-compact{background:linear-gradient(135deg,#1d2937,#17212b)!important;border-color:#54718b!important}
+body.driver-user-mode #dashboard .driver-compact-section{background:linear-gradient(145deg,#222b3b,#171f2c)!important;border-color:#50617c!important}
+body.driver-user-mode #dashboard .driver-compact-panel{background:linear-gradient(145deg,#242536,#191b29)!important;border-color:#665c83!important}
+body.driver-user-mode #dashboard .driver-onboarding{background:linear-gradient(135deg,#3a2b18,#241d17)!important;border-color:#bd8e45!important}
+body.driver-user-mode #dashboard .driver-order-fact:nth-child(4n+1){background:rgba(37,99,235,.13)!important;border-color:rgba(96,165,250,.28)!important}
+body.driver-user-mode #dashboard .driver-order-fact:nth-child(4n+2){background:rgba(16,185,129,.12)!important;border-color:rgba(52,211,153,.26)!important}
+body.driver-user-mode #dashboard .driver-order-fact:nth-child(4n+3){background:rgba(217,119,6,.13)!important;border-color:rgba(251,191,36,.27)!important}
+body.driver-user-mode #dashboard .driver-order-fact:nth-child(4n){background:rgba(139,92,246,.12)!important;border-color:rgba(167,139,250,.27)!important}
+.driver-district-mini-map{margin:12px 0;padding:12px;border:1px solid rgba(212,175,112,.48);border-radius:14px;background:linear-gradient(145deg,#172b32,#111b25)}
+.driver-district-map-heading{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.driver-district-map-heading strong{font-size:11px;letter-spacing:.07em;color:#f2d69f!important}
+.driver-district-map-heading small{font-size:10px;color:#b9cbd0!important}
+.driver-district-map-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.driver-district-map-tile{display:flex;align-items:center;gap:8px;min-height:34px;padding:6px 9px;border:1px solid rgba(93,167,177,.38);border-radius:8px;background:rgba(31,76,85,.42);font-size:11px;color:#e7f3f1!important}
+.driver-district-map-tile.active{background:linear-gradient(110deg,rgba(22,163,138,.35),rgba(45,91,135,.3));border-color:#62c5b2}
+.driver-district-map-tile i{display:grid;place-items:center;width:20px;height:20px;flex:0 0 20px;border-radius:50%;background:#d7b66f;color:#172126;font-size:10px;font-style:normal;font-weight:900}
+.driver-district-map-route{margin-top:9px;padding:8px;border-radius:8px;background:rgba(7,15,22,.55);color:#d7e5e7!important;font-size:11px;font-weight:700;text-align:center}
+.driver-bottom-dock{display:block;padding:7px}
+.driver-menu-toggle{width:100%;min-height:43px;border:1px solid rgba(213,183,125,.45);border-radius:10px;background:linear-gradient(120deg,#24313a,#182128);color:#f0d7a5;font-weight:900;letter-spacing:.08em}
+.driver-menu-toggle span{float:right;font-size:10px;color:#b9c9cc}
+.driver-bottom-menu{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:7px}
+.driver-bottom-menu[hidden]{display:none!important}
+.driver-bottom-menu button{min-width:0;min-height:49px;padding:5px 2px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#1b2524;color:#e9d7b5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.driver-bottom-menu button span{font-size:9px;line-height:1.1;white-space:nowrap}
+.driver-bottom-menu button b{max-width:100%;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:420px){.driver-bottom-menu{gap:3px}.driver-bottom-menu button span{font-size:8px}}
