@@ -1325,7 +1325,7 @@ app.delete('/api/admin/users/by-email', auth, only('ADMIN'), asyncRoute(async (r
 }));
 
 app.get('/api/admin/drivers', auth, only('ADMIN'), asyncRoute(async (_req, res) => {
-  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverExperienceMonths: true, driverLicenseCategories: true, driverTransmission: true, vehicleMake:true, vehicleModel:true, vehicleYear:true, vehiclePlate:true, vehicleDocumentsStatus:true, vehicleVerificationMessage:true, driverDeliveryEnabled:true, periodicVehicleVerificationStatus:true, periodicVehicleVerificationDueAt:true, periodicVehicleVerificationSubmittedAt:true, driverDocumentsStatus: true, driverVerificationMessage: true, driverVerifiedAt: true, dateOfBirth:true, rating:true, driverNegativeBalanceLimitAmd:true, createdAt: true } });
+  const drivers = await prisma.user.findMany({ where: { role: 'DRIVER' }, orderBy: { createdAt: 'desc' }, select: { id: true, name: true, email: true, phone: true, isBlocked: true, isVerified: true, balanceAmd: true, driverFirstNameLatin: true, driverLastNameLatin: true, driverPatronymicLatin: true, driverLicenseSeries: true, driverLicenseExpiresAt: true, driverLicenseIssuedAt: true, driverExperienceMonths: true, driverLicenseCategories: true, driverTransmission: true, vehicleMake:true, vehicleModel:true, vehicleYear:true, vehiclePlate:true, vehicleDocumentsStatus:true, vehicleVerificationMessage:true, driverDeliveryEnabled:true, driverProfilePhotoStatus:true, periodicVehicleVerificationStatus:true, periodicVehicleVerificationDueAt:true, periodicVehicleVerificationSubmittedAt:true, driverDocumentsStatus: true, driverVerificationMessage: true, driverVerifiedAt: true, dateOfBirth:true, rating:true, driverNegativeBalanceLimitAmd:true, createdAt: true } });
   res.json({ drivers });
 }));
 
@@ -1389,7 +1389,7 @@ app.post('/api/drivers/periodic-verification',auth,only('DRIVER'),verifiedDriver
  res.json({success:true,user:publicUser(user),message:'Լուսանկարներն ուղարկվեցին ադմինին։ Մինչև հաստատումը ցանցի պատվերները փակ են։'});
 }));
 app.get('/api/admin/drivers/:id/periodic-verification',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{id:true,name:true,periodicVehicleVerificationStatus:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationSubmittedAt:true,periodicVehicleFront:true,periodicVehicleBack:true,periodicVehicleLeft:true,periodicVehicleRight:true,periodicFaceSelfie:true}});
+ const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{id:true,name:true,periodicVehicleVerificationStatus:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationSubmittedAt:true,periodicVehicleFront:true,periodicVehicleBack:true,periodicVehicleLeft:true,periodicVehicleRight:true,periodicFaceSelfie:true,approvedPeriodicVehicleFront:true,approvedPeriodicVehicleBack:true,approvedPeriodicVehicleLeft:true,approvedPeriodicVehicleRight:true,approvedPeriodicFaceSelfie:true}});
  if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
  const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
  res.json({verification:{...d,photos:{front:image(d.periodicVehicleFront),back:image(d.periodicVehicleBack),left:image(d.periodicVehicleLeft),right:image(d.periodicVehicleRight),selfie:image(d.periodicFaceSelfie)}}});
@@ -1402,8 +1402,13 @@ app.patch('/api/admin/drivers/:id/periodic-verification/review',auth,only('ADMIN
  if(decision==='APPROVED'&&![d.periodicVehicleFront,d.periodicVehicleBack,d.periodicVehicleLeft,d.periodicVehicleRight,d.periodicFaceSelfie].every(Boolean))return res.status(409).json({error:'Բոլոր 4 արտաքին լուսանկարները և դեմքի սելֆին պարտադիր են։'});
  if(decision==='REJECTED'&&!reason)return res.status(400).json({error:'Մերժման պատճառը պարտադիր է։'});
  const dueAt=decision==='APPROVED'?new Date(Date.now()+DRIVER_PERIODIC_VERIFICATION_MS):d.periodicVehicleVerificationDueAt;
- const note=decision==='APPROVED'?'72-ժամյա մեքենայի լուսանկարների և դեմքի սելֆիի ստուգումը հաստատվել է։ Պատվերների հասանելիությունը վերականգնվել է։':'72-ժամյա ստուգումը մերժվել է։ Պատճառ՝ '+reason+'։ Խնդրում ենք կրկին ուղարկել լուսանկարները։';
- const user=await prisma.user.update({where:{id:d.id},data:{periodicVehicleVerificationStatus:decision,periodicVehicleVerificationDueAt:dueAt}});
+ const note=decision==='APPROVED'?'72-ժամյա մեքենայի լուսանկարների և դեմքի սելֆիի ստուգումը հաստատվել է։ Նոր լուսանկարները դարձել են գործող, իսկ նախորդ հաստատված տարբերակները ավտոմատ փոխարինվել են։ Պատվերների հասանելիությունը վերականգնվել է։':'72-ժամյա ստուգումը մերժվել է։ Պատճառ՝ '+reason+'։ Խնդրում ենք կրկին ուղարկել լուսանկարները։';
+ const updateData=decision==='APPROVED'?{
+  periodicVehicleVerificationStatus:'APPROVED',periodicVehicleVerificationDueAt:dueAt,
+  approvedPeriodicVehicleFront:d.periodicVehicleFront,approvedPeriodicVehicleBack:d.periodicVehicleBack,approvedPeriodicVehicleLeft:d.periodicVehicleLeft,approvedPeriodicVehicleRight:d.periodicVehicleRight,approvedPeriodicFaceSelfie:d.periodicFaceSelfie,
+  periodicVehicleFront:null,periodicVehicleBack:null,periodicVehicleLeft:null,periodicVehicleRight:null,periodicFaceSelfie:null
+ }:{periodicVehicleVerificationStatus:'REJECTED'};
+ const user=await prisma.user.update({where:{id:d.id},data:updateData});
  await prisma.notification.create({data:{userId:d.id,title:decision==='APPROVED'?'Պարբերական ստուգումը հաստատված է':'Պարբերական ստուգումը մերժվել է',message:note,type:'PERIODIC_VEHICLE_REVIEW_RESULT'}});
  res.json({success:true,user:publicUser(user),message:note});
 }));
@@ -1460,6 +1465,27 @@ app.delete('/api/drivers/gallery/:photoId',auth,only('DRIVER'),asyncRoute(async(
  await prisma.driverPhoto.delete({where:{id:p.id}});res.json({success:true});
 }));
 
+app.get('/api/admin/drivers/:id/verification-profile',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
+ const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{
+  id:true,name:true,email:true,phone:true,role:true,isVerified:true,isBlocked:true,createdAt:true,driverVerifiedAt:true,
+  driverFirstNameLatin:true,driverLastNameLatin:true,driverPatronymicLatin:true,driverLicenseSeries:true,driverLicenseIssuedAt:true,driverLicenseExpiresAt:true,driverLicenseCategories:true,driverExperienceMonths:true,driverDocumentsStatus:true,driverVerificationMessage:true,driverLicenseFront:true,driverLicenseBack:true,driverLicenseSelfie:true,
+  dateOfBirth:true,passportDocumentType:true,passportNumberEncrypted:true,passportIssuedByEncrypted:true,passportIssueDate:true,passportExpiryDate:true,passportFront:true,passportBack:true,
+  driverProfilePhoto:true,pendingDriverProfilePhoto:true,driverProfilePhotoStatus:true,driverPhotos:{orderBy:{createdAt:'asc'}},
+  vehicleMake:true,vehicleModel:true,vehicleYear:true,vehiclePlate:true,vehicleColor:true,vehicleDocumentsStatus:true,vehicleVerificationMessage:true,vehiclePhotosFront:true,vehiclePhotosBack:true,vehiclePhotosLeft:true,vehiclePhotosRight:true,vehicleRegistrationFront:true,vehicleRegistrationBack:true,
+  periodicVehicleVerificationStatus:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationSubmittedAt:true,periodicVehicleFront:true,periodicVehicleBack:true,periodicVehicleLeft:true,periodicVehicleRight:true,periodicFaceSelfie:true,approvedPeriodicVehicleFront:true,approvedPeriodicVehicleBack:true,approvedPeriodicVehicleLeft:true,approvedPeriodicVehicleRight:true,approvedPeriodicFaceSelfie:true
+ }});
+ if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
+ const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
+ const {passportNumberEncrypted,passportIssuedByEncrypted,...safe}=d;
+ res.json({profile:{
+  ...safe,passportNumber:decryptPrivate(passportNumberEncrypted)?.toString('utf8')||null,passportIssuedBy:decryptPrivate(passportIssuedByEncrypted)?.toString('utf8')||null,
+  documents:{license:{front:image(d.driverLicenseFront),back:image(d.driverLicenseBack),selfie:image(d.driverLicenseSelfie)},identity:{front:image(d.passportFront),back:image(d.passportBack)}},
+  profilePhotos:{approved:image(d.driverProfilePhoto),pending:image(d.pendingDriverProfilePhoto)},
+  gallery:(d.driverPhotos||[]).map(p=>({id:p.id,image:image(p.image)})),
+  vehicle:{make:d.vehicleMake,model:d.vehicleModel,year:d.vehicleYear,plate:d.vehiclePlate,color:d.vehicleColor,status:d.vehicleDocumentsStatus,message:d.vehicleVerificationMessage,photos:{front:image(d.vehiclePhotosFront),back:image(d.vehiclePhotosBack),left:image(d.vehiclePhotosLeft),right:image(d.vehiclePhotosRight)},registration:{front:image(d.vehicleRegistrationFront),back:image(d.vehicleRegistrationBack)}},
+  periodic:{status:d.periodicVehicleVerificationStatus,dueAt:d.periodicVehicleVerificationDueAt,submittedAt:d.periodicVehicleVerificationSubmittedAt,pending:{front:image(d.periodicVehicleFront),back:image(d.periodicVehicleBack),left:image(d.periodicVehicleLeft),right:image(d.periodicVehicleRight),selfie:image(d.periodicFaceSelfie)},approved:{front:image(d.approvedPeriodicVehicleFront),back:image(d.approvedPeriodicVehicleBack),left:image(d.approvedPeriodicVehicleLeft),right:image(d.approvedPeriodicVehicleRight),selfie:image(d.approvedPeriodicFaceSelfie)}}
+ }});
+}));
 app.get('/api/admin/drivers/:id/documents', auth, only('ADMIN'), asyncRoute(async(req,res)=>{
   const driver=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{
     id:true,name:true,email:true,phone:true,driverFirstNameLatin:true,driverLastNameLatin:true,driverPatronymicLatin:true,
