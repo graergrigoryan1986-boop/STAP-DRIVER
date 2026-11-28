@@ -48,7 +48,20 @@ model User {
   driverExperienceMonths Int?
   driverLicenseCategories String[] @default([])
   driverServiceCapabilities String[] @default([])
-  driverTransmission String @default("AUTOMATIC")
+
+  vehicleMake String?
+  vehicleModel String?
+  vehicleYear Int?
+  vehiclePlate String?
+  vehicleDocumentsStatus String @default("NOT_SUBMITTED")
+  vehicleVerificationMessage String?
+  vehiclePhotosFront Bytes?
+  vehiclePhotosBack Bytes?
+  vehiclePhotosLeft Bytes?
+  vehiclePhotosRight Bytes?
+  vehicleRegistrationFront Bytes?
+  vehicleRegistrationBack Bytes?
+  driverDeliveryEnabled Boolean @default(false)  driverTransmission String @default("AUTOMATIC")
   driverLicenseFront Bytes?
   driverLicenseBack Bytes?
   driverLicenseSelfie Bytes?
