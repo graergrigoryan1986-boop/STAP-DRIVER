@@ -2,7 +2,38 @@ const $ = (s) => document.querySelector(s);
 const authPanel = $('#authPanel'), appPanel = $('#appPanel'), authForm = $('#authForm');
 let mode = 'login', token = localStorage.getItem('stap_token') || '', currentUser = null;
 let realtimeSocket = null, realtimeRefreshTimer = null;
-function connectRealtime(){
+
+let orderStatusAudioContext=null;
+let orderStatusAudioUnlocked=false;
+function unlockOrderStatusAudio(){
+ try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;orderStatusAudioContext=orderStatusAudioContext||new AudioCtx();if(orderStatusAudioContext.state==='suspended')orderStatusAudioContext.resume();orderStatusAudioUnlocked=true;}catch(error){console.warn('Status audio unavailable',error)}
+}
+window.addEventListener('pointerdown',unlockOrderStatusAudio,{passive:true});
+window.addEventListener('keydown',unlockOrderStatusAudio);
+function playOrderStatusTone(){
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;
+  orderStatusAudioContext=orderStatusAudioContext||new AudioCtx();
+  if(orderStatusAudioContext.state==='suspended'&&orderStatusAudioUnlocked)orderStatusAudioContext.resume();
+  if(orderStatusAudioContext.state!=='running')return;
+  const ctx=orderStatusAudioContext,now=ctx.currentTime;
+  const notes=[660,784,988,784,880,1046];
+  notes.forEach((frequency,index)=>{const start=now+index*.62,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.12,start+.045);gain.gain.exponentialRampToValueAtTime(.0001,start+.42);osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+.45)});
+ }catch(error){console.warn('Status sound failed',error)}
+}
+function announceOrderStatus(data){
+ const labels={OPEN:'Նոր պատվեր',ACCEPTED:'Վարորդն ընդունել է պատվերը',ARRIVED:'Վարորդը տեղում է',IN_PROGRESS:'Ուղևորությունը սկսվել է',COMPLETED:'Պատվերն ավարտվել է',CANCELLED:'Պատվերը չեղարկվել է'};
+ const label=labels[data?.status]||'Պատվերի կարգավիճակը փոխվել է';
+ const detail=(data?.message||'')+(data?.id?' · Պատվեր №'+String(data.id).slice(-8):'');
+ let toast=document.getElementById('orderStatusLiveToast');
+ if(!toast){toast=document.createElement('aside');toast.id='orderStatusLiveToast';toast.className='order-status-live-toast';toast.setAttribute('role','status');toast.setAttribute('aria-live','assertive');document.body.appendChild(toast)}
+ toast.innerHTML='<strong></strong><span></span>';
+ toast.querySelector('strong').textContent=label;toast.querySelector('span').textContent=detail;
+ toast.classList.add('visible');clearTimeout(toast._hideTimer);toast._hideTimer=setTimeout(()=>toast.classList.remove('visible'),6500);
+ playOrderStatusTone();
+}
+
+function connectRealtime(){function connectRealtime(){
  if(!window.io||!token)return;
  if(realtimeSocket)realtimeSocket.disconnect();
  realtimeSocket=window.io({auth:{token},transports:['websocket','polling']});
@@ -14,7 +45,8 @@ function connectRealtime(){
   },450);
  };
  realtimeSocket.on('driver:balance-updated',data=>{if(currentUser?.role==='DRIVER'&&data?.driverId===currentUser.id&&Number.isFinite(Number(data.balanceAmd))){currentUser.balanceAmd=Number(data.balanceAmd);const amount=$('#driverBalanceAmount');if(amount)amount.textContent=money(currentUser.balanceAmd);}});
-  ['order:new','order:cancelled','order:accepted','order:eta-updated','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
+  realtimeSocket.on('order:status-changed',data=>{announceOrderStatus(data);refresh()});
+  ['order:new','order:cancelled','order:accepted','order:eta-updated','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));  ['order:new','order:cancelled','order:accepted','order:eta-updated','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
  realtimeSocket.on('rating:updated',()=>{if(currentUser?.role==='ADMIN'){if($('#adminCustomersPanel'))loadAdminCustomers();const ratingsTab=$('#dashboard [data-admin-tab="ratings"]');if(ratingsTab?.classList.contains('active'))ratingsTab.click();}});
  realtimeSocket.on('connect_error',error=>console.warn('STAP live connection:',error.message));
 }
