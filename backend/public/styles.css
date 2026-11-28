@@ -2352,3 +2352,10 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
  body.driver-user-mode #dashboard .driver-status-action-stack form>button[type=submit]{min-height:64px!important;font-size:16px!important}
  #orderForm .customer-choice-field .booking-choice-chip{min-height:48px!important;font-size:12px!important}
 }
+
+/* Inspection uses direct symbols, not checkbox/radio boxes. */
+.vehicle-inspection-choice{padding-left:54px!important}
+.vehicle-inspection-choice>span:before{content:"✓"!important;position:absolute;left:16px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:0!important;border-radius:0!important;background:transparent!important;color:#71e5a5!important;font-size:27px!important;font-weight:1000;line-height:1}
+.vehicle-inspection-choice:nth-child(2)>span:before{content:"⚠"!important;color:#f3c56b!important;font-size:25px!important}
+.vehicle-inspection-choice:has(input:checked)>span:before{background:transparent!important;color:#8fffb9!important;text-shadow:0 0 12px rgba(100,255,165,.42)}
+.vehicle-inspection-choice:nth-child(2):has(input:checked)>span:before{color:#ffd47b!important;text-shadow:0 0 12px rgba(255,190,80,.35)}
