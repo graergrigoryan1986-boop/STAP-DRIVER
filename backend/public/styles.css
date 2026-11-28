@@ -2307,3 +2307,48 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .admin-inspection-images{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .admin-inspection-images img{width:100%;max-height:260px;object-fit:contain;border:1px solid #53616f;border-radius:10px;background:#0a0e13}
 @media(max-width:600px){.vehicle-inspection-choice-group{grid-template-columns:1fr}.admin-inspection-modal-panel{padding:13px}}
+
+
+/* Driver order workflow: large full-width stage actions at the top of every order */
+body.driver-user-mode #dashboard .driver-status-action-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:11px;margin:13px 0 16px;width:100%}
+body.driver-user-mode #dashboard .driver-status-action-stack>.action,
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-arrive-btn,
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-start-btn,
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-complete-btn,
+body.driver-user-mode #dashboard .driver-status-action-stack form>button[type=submit]{
+ display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-height:66px!important;padding:17px 20px!important;border-radius:15px!important;font-size:clamp(16px,2.8vw,20px)!important;font-weight:1000!important;line-height:1.25!important;letter-spacing:.025em!important;white-space:normal!important;text-align:center!important;box-shadow:0 7px 20px rgba(0,0,0,.22)!important
+}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-arrive-btn{background:linear-gradient(135deg,#176b45,#159957)!important;color:#fff!important;border:1px solid #79e7a8!important}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-start-btn{background:linear-gradient(135deg,#b27a12,#e4b52e)!important;color:#171717!important;border:1px solid #ffe08a!important}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-complete-btn,
+body.driver-user-mode #dashboard .driver-status-action-stack form>button[type=submit]{background:linear-gradient(135deg,#176b45,#159957)!important;color:#fff!important;border:1px solid #79e7a8!important}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-arrival-estimate{margin:0 0 3px}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-arrival-estimate-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-arrival-estimate-buttons .action{min-height:43px!important;font-size:14px!important}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-feedback-form{display:grid;gap:12px;width:100%;padding:14px;border:1px solid rgba(205,174,112,.48);border-radius:14px;background:rgba(12,22,26,.76)}
+body.driver-user-mode #dashboard .driver-status-action-stack .driver-feedback-form h4{margin:0;font-size:17px}
+body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack:empty{display:none}
+body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+.driver-order-price{margin-top:4px}
+/* Engine and transmission must be represented by the tap buttons, not native dropdowns. */
+#orderForm .customer-choice-field select[name="transmissionType"].booking-native-select,
+#orderForm .customer-choice-field select[name="vehicleFuelType"].booking-native-select{
+ display:none!important;position:absolute!important;width:1px!important;height:1px!important;min-height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important
+}
+#orderForm .customer-choice-field .booking-choice-group[data-booking-choice-group="transmission"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;width:100%!important}
+#orderForm .customer-choice-field .booking-choice-group[data-booking-choice-group="engine"]{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;width:100%!important}
+#orderForm .customer-choice-field .booking-choice-chip{display:flex!important;align-items:center!important;justify-content:center!important;min-height:52px!important;border:1px solid #8299aa!important;border-radius:12px!important;background:linear-gradient(145deg,#30495c,#26384a)!important;color:#fff!important;font-weight:900!important;white-space:normal!important;text-align:center!important}
+#orderForm .customer-choice-field .booking-choice-chip.selected{border-color:#f3cf68!important;background:linear-gradient(145deg,#b88922,#e3bd4e)!important;color:#171717!important;box-shadow:0 0 0 2px rgba(243,207,104,.25),0 7px 16px rgba(0,0,0,.2)!important}
+/* Inspection choice is a large icon tile, not a checkbox. */
+.vehicle-inspection-choice{position:relative;display:flex!important;align-items:center;gap:12px;min-height:82px!important;padding:14px 16px 14px 58px!important}
+.vehicle-inspection-choice input[type=radio]{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;margin:0!important;pointer-events:none!important}
+.vehicle-inspection-choice>span:before{content:"○";position:absolute;left:17px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:2px solid #d5bd8b;border-radius:50%;color:#fff;font-size:21px;font-weight:1000;line-height:1}
+.vehicle-inspection-choice:has(input:checked)>span:before{content:"✓";border-color:#70e5a5;background:#176b45;color:#fff;font-size:19px}
+.vehicle-inspection-choice:has(input:checked){border-color:#68dfa0!important;background:linear-gradient(135deg,#174b37,#1e6546)!important}
+@media(max-width:600px){
+ body.driver-user-mode #dashboard .driver-status-action-stack>.action,
+ body.driver-user-mode #dashboard .driver-status-action-stack .driver-arrive-btn,
+ body.driver-user-mode #dashboard .driver-status-action-stack .driver-start-btn,
+ body.driver-user-mode #dashboard .driver-status-action-stack .driver-complete-btn,
+ body.driver-user-mode #dashboard .driver-status-action-stack form>button[type=submit]{min-height:64px!important;font-size:16px!important}
+ #orderForm .customer-choice-field .booking-choice-chip{min-height:48px!important;font-size:12px!important}
+}
