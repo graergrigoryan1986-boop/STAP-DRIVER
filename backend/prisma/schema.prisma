@@ -63,6 +63,14 @@ model User {
   vehicleRegistrationFront Bytes?
   vehicleRegistrationBack Bytes?
   driverDeliveryEnabled Boolean @default(false)
+  periodicVehicleVerificationStatus String @default("NOT_DUE")
+  periodicVehicleVerificationDueAt DateTime?
+  periodicVehicleVerificationSubmittedAt DateTime?
+  periodicVehicleFront Bytes?
+  periodicVehicleBack Bytes?
+  periodicVehicleLeft Bytes?
+  periodicVehicleRight Bytes?
+  periodicFaceSelfie Bytes?
   driverTransmission String @default("AUTOMATIC")
   driverLicenseFront Bytes?
   driverLicenseBack Bytes?
