@@ -132,6 +132,8 @@ model Order {
   customerRequestedEtaMinutes Int?
   arrivedAt          DateTime?
   vehicleInspectionPassed Boolean @default(false)
+  vehicleInspectionReport Json?
+  vehicleReturnInspection Json?
   driverCancellationReason String?
   driverFeedbackTags String[] @default([])
   intermediateCommunities String[] @default([])
