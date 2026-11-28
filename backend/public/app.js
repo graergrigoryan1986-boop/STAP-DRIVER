@@ -402,7 +402,7 @@ function bindFareCalculator(form){
  const fareLabel=fare.closest('label');
  if(fareLabel&&!form.querySelector('.booking-total-highlight')){const total=document.createElement('div');total.className='booking-total-highlight';total.innerHTML='<span>ՎԵՐՋՆԱԿԱՆ ԸՆԴՀԱՆՈՒՐ ԱՐԺԵՔ</span><strong data-booking-total>— ֏</strong><small>Գումարը թարմացվում է երթուղու և ընտրված ծառայության հիման վրա</small>';fareLabel.insertAdjacentElement('afterend',total)}
  const selectedService=()=>{const option=serviceSelect?.selectedOptions?.[0];return option?.value?{id:option.value,title:option.textContent.split(' · ')[0],priceAmd:Number(option.dataset.price||0),dispatchMode:option.dataset.dispatch||'NETWORK',requiredCapability:option.dataset.capability||'',requirements:option.dataset.requirement||'',extraInfo:option.dataset.extraInfo||''}:null};
- const updateServiceDetails=()=>{const service=selectedService(),delivery=service?.id==='premium-delivery',deliveryFields=form.querySelector('#premiumDeliveryFields');if(deliveryFields)deliveryFields.hidden=!delivery;form.classList.toggle('premium-delivery-mode',delivery);form.querySelectorAll('.route-note-field,.general-order-note,.customer-vehicle-options,.customer-passenger-picker,[name="requiredLicenseCategory"]').forEach(node=>{const wrap=node.matches('label')?node:node.closest('label');if(wrap)wrap.hidden=delivery;else node.hidden=delivery;});const extraLabel=extra.closest('label');if(extraLabel)extraLabel.hidden=delivery;['[data-fare-breakdown]','[data-route-preview]'].forEach(sel=>{const node=form.querySelector(sel);if(node)node.hidden=delivery;});[pickup,destination].forEach(field=>{const label=field.closest('label');if(label)label.hidden=true;field.disabled=delivery;field.required=!delivery;});districtFields.forEach(({field,select})=>{const wrap=select.closest('.district-picker-wrap'),label=field.closest('label');if(wrap)wrap.hidden=true;if(label)label.hidden=true;field.disabled=true;field.required=false;});const fareLabel=fare.closest('label');if(fareLabel)fareLabel.querySelector('span').textContent=delivery?'Ընդհանուր արժեք':'Վերջնական ուղեվարձ՝ դրամով';if(!serviceDetails)return;serviceDetails.hidden=!service;serviceDetails.innerHTML=service?'<strong>'+esc(service.title)+'</strong><span>Ծառայության արժեք՝ '+money(service.priceAmd)+'</span><p>'+esc(service.requirements||'Հատուկ պայմաններ նշված չեն։')+'</p>'+(service.extraInfo?'<p>'+esc(service.extraInfo)+'</p>':'')+(delivery?'<strong>Ուղարկող և ստացող՝ առանձին հասցեներով ու հեռախոսահամարներով։</strong>':'')+(service.dispatchMode==='CAPABILITY'?'<strong>Պահանջվող հմտություն՝ '+esc(({ACCESSIBILITY_ASSIST:'Հաշմանդամություն ունեցող անձանց աջակցություն',WHEELCHAIR_ASSIST:'Սայլակով ուղևորի աջակցություն',ELDERLY_ASSIST:'Տարեց ուղևորների աջակցություն',CHILD_ASSIST:'Երեխաների տեղափոխման աջակցություն',LUGGAGE_ASSIST:'Ուղեբեռի տեղափոխման աջակցություն'})[service.requiredCapability]||'')+'</strong>':'')+'<small>'+(service.dispatchMode==='CATEGORY'?'Պատվերը կուղարկվի միայն համապատասխան վարորդական կարգ ունեցող վարորդներին։':service.dispatchMode==='CAPABILITY'?'Պատվերը կուղարկվի միայն ընտրված հատուկ հմտությունն ունեցող վարորդներին։':'Պատվերը կհրապարակվի վարորդների ընդհանուր ցանցում։')+'</small>':''};
+ const updateServiceDetails=()=>{const service=selectedService(),delivery=service?.id==='premium-delivery',deliveryFields=form.querySelector('#premiumDeliveryFields');if(deliveryFields){deliveryFields.hidden=!delivery;deliveryFields.querySelectorAll('input,select,textarea,button').forEach(control=>{control.disabled=!delivery;if(control.name==='parcelAccepted')control.required=delivery;});}form.classList.toggle('premium-delivery-mode',delivery);form.querySelectorAll('.route-note-field,.general-order-note,.customer-vehicle-options,.customer-passenger-picker,[name="requiredLicenseCategory"]').forEach(node=>{const wrap=node.matches('label')?node:node.closest('label');if(wrap)wrap.hidden=delivery;else node.hidden=delivery;});const extraLabel=extra.closest('label');if(extraLabel)extraLabel.hidden=delivery;['[data-fare-breakdown]','[data-route-preview]'].forEach(sel=>{const node=form.querySelector(sel);if(node)node.hidden=delivery;});[pickup,destination].forEach(field=>{const label=field.closest('label');if(label)label.hidden=true;field.disabled=delivery;field.required=!delivery;});districtFields.forEach(({field,select})=>{const wrap=select.closest('.district-picker-wrap'),label=field.closest('label');if(wrap){wrap.hidden=delivery;select.disabled=delivery;select.required=!delivery;}if(label)label.hidden=true;field.disabled=true;field.required=false;});const fareLabel=fare.closest('label');if(fareLabel)fareLabel.querySelector('span').textContent=delivery?'Ընդհանուր արժեք':'Վերջնական ուղեվարձ՝ դրամով';if(!serviceDetails)return;serviceDetails.hidden=!service;serviceDetails.innerHTML=service?'<strong>'+esc(service.title)+'</strong><span>Ծառայության արժեք՝ '+money(service.priceAmd)+'</span><p>'+esc(service.requirements||'Հատուկ պայմաններ նշված չեն։')+'</p>'+(service.extraInfo?'<p>'+esc(service.extraInfo)+'</p>':'')+(delivery?'<strong>Ուղարկող և ստացող՝ առանձին հասցեներով ու հեռախոսահամարներով։</strong>':'')+(service.dispatchMode==='CAPABILITY'?'<strong>Պահանջվող հմտություն՝ '+esc(({ACCESSIBILITY_ASSIST:'Հաշմանդամություն ունեցող անձանց աջակցություն',WHEELCHAIR_ASSIST:'Սայլակով ուղևորի աջակցություն',ELDERLY_ASSIST:'Տարեց ուղևորների աջակցություն',CHILD_ASSIST:'Երեխաների տեղափոխման աջակցություն',LUGGAGE_ASSIST:'Ուղեբեռի տեղափոխման աջակցություն'})[service.requiredCapability]||'')+'</strong>':'')+'<small>'+(service.dispatchMode==='CATEGORY'?'Պատվերը կուղարկվի միայն համապատասխան վարորդական կարգ ունեցող վարորդներին։':service.dispatchMode==='CAPABILITY'?'Պատվերը կուղարկվի միայն ընտրված հատուկ հմտությունն ունեցող վարորդներին։':'Պատվերը կհրապարակվի վարորդների ընդհանուր ցանցում։')+'</small>':''};
  const options='<option value="">Ընտրեք վարչական շրջանը</option>'+YEREVAN_DISTRICTS.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');
  const districtFields=[];
  [[pickup,'Մեկնարկի վարչական շրջան','pickupDistrict'],[destination,'Նպատակակետի վարչական շրջան','destinationDistrict']].forEach(([field,label,name])=>{
@@ -517,12 +517,18 @@ async function customerView(){
     <label class="route-note-field general-order-note">Ընդհանուր լրացուցիչ նշումներ<textarea name="note" rows="2" maxlength="1000" placeholder="Օրինակ՝ X ռեստորանի հետին մուտք, զանգահարել ժամանելիս, հատուկ պայմաններ"></textarea></label>
     <section class="premium-delivery-fields" id="premiumDeliveryFields" hidden>
      <div class="premium-delivery-heading"><span>STAP DRIVER · DELIVERY</span><h4>ՊՐԵՄԻՈՒՄ ԱՌԱՔՈՒՄ</h4><strong>5,000 ֏ · ԱՄԲՈՂՋ ԵՐԵՎԱՆՈՒՄ</strong><p>Ապահով և վստահելի առաքում՝ ֆիքսված գործընկերների կողմից։</p></div>
-     <label>Ուղարկողի հասցե<input name="pickupAddress" required minlength="3" maxlength="300" placeholder="Փողոց, շենք, մուտք"></label>
-     <label>Ուղարկողի հեռախոս<input name="senderPhone" type="tel" inputmode="tel" required placeholder="+374 ..." autocomplete="tel"></label>
-     <label>Ուղարկողի անուն<input name="senderName" required maxlength="120" placeholder="Անուն Ազգանուն"></label>
-     <label>Ստացողի հասցե<input name="destinationAddress" required minlength="3" maxlength="300" placeholder="Փողոց, շենք, մուտք"></label>
-     <label>Ստացողի հեռախոս<input name="recipientPhone" type="tel" inputmode="tel" required placeholder="+374 ..." autocomplete="tel"></label>
-     <label>Ստացողի անուն<input name="recipientName" required maxlength="120" placeholder="Անուն Ազգանուն"></label>
+     <div class="delivery-contact-pair">
+      <section class="delivery-contact-card"><h5>ՈՒՂԱՐԿՈՂ</h5>
+       <label>Հասցե<input name="pickupAddress" required minlength="3" maxlength="300" placeholder="Փողոց, շենք, մուտք"></label>
+       <label>Հեռախոս<input name="senderPhone" type="tel" inputmode="tel" required placeholder="+374 ..." autocomplete="tel"></label>
+       <label>Անուն<input name="senderName" required maxlength="120" placeholder="Անուն Ազգանուն"></label>
+      </section>
+      <section class="delivery-contact-card"><h5>ՍՏԱՑՈՂ</h5>
+       <label>Հասցե<input name="destinationAddress" required minlength="3" maxlength="300" placeholder="Փողոց, շենք, մուտք"></label>
+       <label>Հեռախոս<input name="recipientPhone" type="tel" inputmode="tel" required placeholder="+374 ..." autocomplete="tel"></label>
+       <label>Անուն<input name="recipientName" required maxlength="120" placeholder="Անուն Ազգանուն"></label>
+      </section>
+     </div>
      <div class="delivery-consent-panel"><strong class="delivery-consent-title">ՊԱՐՏԱԴԻՐ ՏԵՂԵԿԱՏՎՈՒԹՅՈՒՆ ԵՎ ՀԱՄԱՁԱՅՆՈՒԹՅՈՒՆ</strong><p><b>Ծառայության արժեք՝ 5,000 ֏</b> (շտապ պատվերի դեպքում՝ լրացուցիչ 2,500 ֏)։</p><p>Առաքանին չպետք է գերազանցի 10 կգ-ը։ Այն պետք է լինի բաց, տեսանելի և ստուգելի, թափանցիկ, չկոտրվող ու չփչացող։</p><p>Առաքումն իրականացվում է STAP DRIVER-ի ֆիքսված գործընկերների կողմից։ Ուղարկողի և ստացողի հասցեներն ու հեռախոսահամարները լրացվում են առանձին։ Պատվերը հրապարակվում է վարորդների ընդհանուր ցանցում։</p><label class="parcel-acceptance delivery-consent-check"><input type="checkbox" name="parcelAccepted" required><span>Կարդացել և հասկացել եմ վերոնշյալ տեղեկությունը, հաստատում եմ, որ առաքանին չի գերազանցում 10 կգ-ը և համապատասխանում է նշված պայմաններին և համաձայն եմ առաքման պայմաններին։ <b>(Պարտադիր է պատվերը ուղարկելու համար)</b></span></label></div>
     </section>
     <label class="fare-field"><span>Լրացուցիչ հավելավճար՝ դրամով</span><input name="extraChargeAmd" type="number" min="0" max="1000000" step="100" value="0"></label>
@@ -591,24 +597,26 @@ async function customerView(){
  bindFareCalculator($('#orderForm'));
  $('#orderForm').onsubmit=async e=>{
   e.preventDefault();
+  const bookingForm=e.currentTarget,submitButton=bookingForm.querySelector('button[type="submit"]'),originalButtonText=submitButton?.textContent||'';
+  if(submitButton){submitButton.disabled=true;submitButton.textContent='ՊԱՏՎԵՐԸ ՈՒՂԱՐԿՎՈՒՄ Է…'}
   try{
-   const f=new FormData(e.currentTarget),isDelivery=f.get('serviceId')==='premium-delivery';
+   const f=new FormData(bookingForm),isDelivery=f.get('serviceId')==='premium-delivery';
    if(isDelivery){if(!f.get('parcelAccepted'))throw new Error('Նախ հաստատեք առաքանու պայմանները։');if(!f.get('senderName')||!f.get('senderPhone')||!f.get('recipientName')||!f.get('recipientPhone'))throw new Error('Լրացրեք ուղարկողի և ստացողի անուններն ու հեռախոսահամարները։');if(!([...e.currentTarget.querySelectorAll('[name="pickupAddress"]')].find(field=>!field.disabled)?.value||'').trim()||!([...e.currentTarget.querySelectorAll('[name="destinationAddress"]')].find(field=>!field.disabled)?.value||'').trim())throw new Error('Լրացրեք երկու ամբողջական հասցեները։');}
    else if(!await e.currentTarget._refreshRouteQuote?.())throw new Error('Նախ պետք է ճիշտ հաշվարկել երթուղին։');
    await api('/api/orders',{method:'POST',body:JSON.stringify({
     pickupDistrict:isDelivery?undefined:e.currentTarget._getDistrict(e.currentTarget.querySelector('[name="pickupAddress"]')),
     destinationDistrict:isDelivery?undefined:e.currentTarget._getDistrict(e.currentTarget.querySelector('[name="destinationAddress"]')),
-    pickupAddress:isDelivery?f.get('pickupAddress'):undefined,destinationAddress:isDelivery?f.get('destinationAddress'):undefined,
+    pickupAddress:f.get('pickupAddress'),destinationAddress:f.get('destinationAddress'),
     senderName:isDelivery?f.get('senderName'):undefined,senderPhone:isDelivery?f.get('senderPhone'):undefined,recipientPhone:isDelivery?f.get('recipientPhone'):undefined,recipientName:isDelivery?f.get('recipientName'):undefined,parcelAccepted:isDelivery?f.get('parcelAccepted')==='on':undefined,
     serviceId:f.get('serviceId')||undefined,
-    fareAmd:Number(f.get('fareAmd')),extraChargeAmd:Number(f.get('extraChargeAmd')||0),
-    isUrgent:f.get('isUrgent')==='on',requiredLicenseCategory:f.get('requiredLicenseCategory'),
-    transmissionType:f.get('transmissionType'),vehicleFuelType:f.get('vehicleFuelType'),passengerCount:Number(f.get('passengerCount')||1),
-    pickupNote:f.get('pickupNote')||undefined,destinationNote:f.get('destinationNote')||undefined,note:f.get('note')||undefined,
+    fareAmd:Number(f.get('fareAmd')),extraChargeAmd:isDelivery?0:Number(f.get('extraChargeAmd')||0),
+    isUrgent:f.get('isUrgent')==='on',requiredLicenseCategory:isDelivery?undefined:f.get('requiredLicenseCategory'),
+    transmissionType:isDelivery?undefined:f.get('transmissionType'),vehicleFuelType:isDelivery?undefined:f.get('vehicleFuelType'),passengerCount:isDelivery?undefined:Number(f.get('passengerCount')||1),
+    pickupNote:isDelivery?undefined:f.get('pickupNote')||undefined,destinationNote:isDelivery?undefined:f.get('destinationNote')||undefined,note:isDelivery?undefined:f.get('note')||undefined,
     isTest:f.get('isTest')==='on'
    })});
    message('#appMessage','Պատվերը ստեղծվեց։');await customerView();
-  }catch(err){message('#appMessage',err.message,true)}
+  }catch(err){message('#appMessage',err.message,true)}finally{if(submitButton){submitButton.disabled=false;submitButton.textContent=originalButtonText}}
  };
 }
 let knownDriverOpenOrderIds=null;
