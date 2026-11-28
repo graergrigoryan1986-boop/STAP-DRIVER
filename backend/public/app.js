@@ -347,7 +347,7 @@ async function driverView(){
  const vehicleCatalog={
  Toyota:['4Runner','Auris','Avalon','Avensis','C-HR','Camry','Corolla','Corolla Cross','Highlander','Hilux','Land Cruiser','Land Cruiser Prado','Prius','RAV4','Yaris'],
  Lexus:['ES','GS','GX','IS','LX','LS','NX','RC','RX','UX'],
- Mercedes-Benz:['A-Class','B-Class','C-Class','CLA','CLS','E-Class','G-Class','GLA','GLB','GLC','GLE','GLS','S-Class','Sprinter','Vito'],
+ 'Mercedes-Benz':['A-Class','B-Class','C-Class','CLA','CLS','E-Class','G-Class','GLA','GLB','GLC','GLE','GLS','S-Class','Sprinter','Vito'],
  BMW:['1 Series','2 Series','3 Series','4 Series','5 Series','6 Series','7 Series','8 Series','X1','X2','X3','X4','X5','X6','X7','i3','i4','i5','i7','iX'],
  Audi:['A1','A3','A4','A5','A6','A7','A8','Q2','Q3','Q5','Q7','Q8','e-tron'],
  Volkswagen:['Golf','Jetta','Passat','Polo','Tiguan','Touareg','T-Roc','ID.4'],
@@ -367,7 +367,7 @@ async function driverView(){
  Skoda:['Fabia','Karoq','Kodiaq','Octavia','Rapid','Superb'],
  Volvo:['S60','S90','V40','V60','XC40','XC60','XC90'],
  Porsche:['911','Cayenne','Macan','Panamera','Taycan'],
- Land Rover:['Defender','Discovery','Discovery Sport','Freelander','Range Rover','Range Rover Evoque','Range Rover Sport'],
+ 'Land Rover':['Defender','Discovery','Discovery Sport','Freelander','Range Rover','Range Rover Evoque','Range Rover Sport'],
  Jaguar:['E-Pace','F-Pace','F-Type','XE','XF'],
  Jeep:['Cherokee','Compass','Grand Cherokee','Renegade','Wrangler'],
  Tesla:['Model 3','Model S','Model X','Model Y'],
@@ -375,7 +375,7 @@ async function driverView(){
  Geely:['Atlas','Coolray','Emgrand','Monjaro','Tugella'],
  Chery:['Arrizo 5','Tiggo 4','Tiggo 7','Tiggo 8'],
  Haval:['Dargo','H6','Jolion'],
- Renault Samsung:['SM3','SM5','SM6','QM6'],
+ 'Renault Samsung':['SM3','SM5','SM6','QM6'],
  Suzuki:['Grand Vitara','Jimny','Swift','SX4','Vitara'],
  Infiniti:['EX','FX','G','JX','Q50','QX50','QX60','QX70'],
  Acura:['MDX','RDX','TL','TLX'],
@@ -390,12 +390,12 @@ async function driverView(){
  Genesis:['G70','G80','G90','GV70','GV80'],
  Mini:['Clubman','Cooper','Countryman'],
  Fiat:['500','Doblo','Panda','Tipo'],
- Alfa Romeo:['Giulia','Stelvio'],
+ 'Alfa Romeo':['Giulia','Stelvio'],
  Bentley:['Bentayga','Continental GT','Flying Spur'],
  Maserati:['Ghibli','Grecale','Levante','Quattroporte'],
  Ferrari:['296','488','F8','Roma'],
  Lamborghini:['Huracan','Urus'],
- Rolls-Royce:['Cullinan','Ghost','Phantom','Wraith']
+ 'Rolls-Royce':['Cullinan','Ghost','Phantom','Wraith']
 };
 const makeInput=$('#vehicleMakeInput'),modelInput=$('#vehicleModelInput'),makeList=$('#vehicleMakesList'),modelList=$('#vehicleModelsList');
 makeList.innerHTML=Object.keys(vehicleCatalog).sort().map(make=>'<option value="'+make+'"></option>').join('');
