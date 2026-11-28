@@ -2000,3 +2000,9 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .customer-driver-rating{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800}
 .customer-driver-rating>span:first-child{color:#d3b170}
 @media(min-width:761px){.customer-bottom-nav{bottom:12px;border:1px solid rgba(211,177,112,.48);border-radius:18px;padding-bottom:10px}}
+
+
+/* Order identity and customer score on driver tickets */
+.driver-customer-rating{display:inline-flex;align-items:center;gap:4px;width:max-content;margin-top:4px;padding:3px 8px;border:1px solid rgba(211,177,112,.42);border-radius:999px;background:rgba(211,177,112,.10);color:#e6c27c;font-size:12px;font-weight:800;line-height:1.2}
+.driver-customer-rating::first-letter{color:#d3b170}
+.driver-order-number,.driver-pending-card-id,.driver-completed-id{font-variant-numeric:tabular-nums;letter-spacing:.08em}
