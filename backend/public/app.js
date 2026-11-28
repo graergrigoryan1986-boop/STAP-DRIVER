@@ -72,7 +72,7 @@ function connectRealtime(){
   realtimeFallbackTimer=setInterval(()=>{if(!realtimeSocket?.connected)refresh()},5000);
   // Socket reconnects must not reset the user's current screen.
 
- realtimeSocket.on('notification:new',data=>{if(currentUser?.role==='ADMIN'&&['VEHICLE_PHOTO_REVIEW','PROFILE_PHOTO_REVIEW','PERIODIC_VEHICLE_REVIEW'].includes(data?.type))refreshAdminPhotoReviewNotifications()});
+ realtimeSocket.on('notification:new',data=>{if(currentUser?.role==='ADMIN'&&['VEHICLE_PHOTO_REVIEW','PROFILE_PHOTO_REVIEW','PERIODIC_VEHICLE_REVIEW','DRIVER_DOCUMENTS_REVIEW'].includes(data?.type))refreshAdminPhotoReviewNotifications()});
  realtimeSocket.on('rating:updated',()=>{if(currentUser?.role==='ADMIN'){if($('#adminCustomersPanel'))loadAdminCustomers();const ratingsTab=$('#dashboard [data-admin-tab="ratings"]');if(ratingsTab?.classList.contains('active'))ratingsTab.click();}});
  realtimeSocket.on('connect_error',error=>console.warn('STAP live connection:',error.message));
 }
