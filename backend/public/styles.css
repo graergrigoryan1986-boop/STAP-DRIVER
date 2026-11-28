@@ -2269,3 +2269,12 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .booking-choice-group[data-booking-choice-group="transmission"] .booking-choice-chip{min-height:48px;padding:10px 8px;border:1px solid #8299aa;border-radius:12px;background:linear-gradient(145deg,#30495c,#26384a);color:#f7fbff;font-weight:850;white-space:normal;overflow-wrap:anywhere}
 .booking-choice-group[data-booking-choice-group="transmission"] .booking-choice-chip.selected{border-color:#69e29a;background:linear-gradient(145deg,#176b45,#19834f);color:#fff;box-shadow:0 0 0 2px rgba(105,226,154,.24),0 8px 20px rgba(0,0,0,.2)}
 @media(max-width:600px){.driver-photo-upload-form{grid-template-columns:1fr}.route-preview,.fare-breakdown{padding:12px;font-size:12px}}
+
+/* Driver order progression: arrival -> inspection -> trip */
+.driver-arrive-btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;margin:14px 0;padding:14px 18px;border:1px solid rgba(255,205,80,.65);border-radius:14px;background:linear-gradient(135deg,#b88624,#f4d477 52%,#a87518);color:#17130a;font-weight:900;letter-spacing:.045em;box-shadow:0 8px 24px rgba(184,134,36,.22)}
+.driver-inspection-stage{display:grid;gap:14px;margin:14px 0;padding:14px;border:1px solid rgba(205,163,70,.5);border-radius:16px;background:linear-gradient(145deg,rgba(18,25,43,.98),rgba(34,42,61,.98));color:#f7f2e6}
+.driver-stage-step{display:grid;gap:6px;padding:12px;border-radius:12px;background:rgba(210,166,69,.13);border-left:4px solid #d6ad50}
+.driver-stage-step strong{color:#f2cf7a;font-size:13px;letter-spacing:.035em}
+.driver-stage-step span{color:#f3eee2;font-size:13px;line-height:1.5}
+.driver-inspection-stage .vehicle-inspection-form{margin:0}
+.driver-inspection-stage .vehicle-inspection-submit{width:100%;min-height:52px}
