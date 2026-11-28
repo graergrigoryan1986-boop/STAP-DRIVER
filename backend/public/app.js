@@ -544,7 +544,7 @@ function bindFareCalculator(form){
   if(!select||form.querySelector('[data-booking-choice-group="'+kind+'"]'))return;
   const group=document.createElement('div');group.className='booking-choice-group '+(kind==='service'?'booking-service-carousel':'');group.dataset.bookingChoiceGroup=kind;
   if(kind==='service'){
-   [...select.options].filter(o=>o.value).forEach(option=>{const button=document.createElement('button');button.type='button';button.className='booking-choice-chip booking-service-chip';button.dataset.value=option.value;button.innerHTML='<strong>'+esc(option.textContent.split(' · ')[0])+'</strong><small>'+money(Number(option.dataset.price||0))+'</small>';group.appendChild(button)});
+   [...select.options].filter(option=>option.value||form.id==='orderForm').forEach(option=>{const button=document.createElement('button');button.type='button';button.className='booking-choice-chip booking-service-chip';button.dataset.value=option.value;const title=option.value?option.textContent.split(' · ')[0]:'Ստանդարտ ուղևորափոխադրում';button.innerHTML='<strong>'+esc(title)+'</strong><small>'+money(Number(option.dataset.price||0))+'</small>';group.appendChild(button)});
    const label=select.closest('label');if(label)label.insertAdjacentElement('afterend',group);
   }else{
    labels.forEach(([value,title])=>{const button=document.createElement('button');button.type='button';button.className='booking-choice-chip';button.dataset.value=value;button.textContent=title;group.appendChild(button)});
@@ -554,6 +554,7 @@ function bindFareCalculator(form){
   group.addEventListener('click',event=>{const button=event.target.closest('button[data-value]');if(!button)return;select.value=button.dataset.value;select.dispatchEvent(new Event('change',{bubbles:true}));sync()});
   select.classList.add('booking-native-select');sync();
  };
+ if(form.id==='orderForm'&&serviceSelect)serviceSelect.required=false;
  addChoiceButtons(serviceSelect,'service');
  // Engine selection is rendered as tappable chips; selected chip turns green.
  const engineSelect=form.querySelector('[name="vehicleFuelType"]');
