@@ -5,6 +5,9 @@ import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.webkit.PermissionRequest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.provider.Settings;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.content.Intent;
 import android.content.ClipData;
@@ -38,6 +41,8 @@ public class MainActivity extends Activity {
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 1002;
     private PermissionRequest pendingCameraPermissionRequest;
     private Uri pendingCameraCaptureUri;
+    private WebChromeClient.FileChooserParams pendingFileChooserParams;
+    private boolean cameraPermissionRequestInFlight = false;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -67,13 +72,13 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     boolean wantsCamera = false;
                     for (String resource : request.getResources()) if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) wantsCamera = true;
-                    if (!wantsCamera) { request.deny(); return; }
+                    if (!wantsCamera || !isTrustedCameraOrigin(request.getOrigin())) { request.deny(); return; }
                     if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
                         request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
                     } else {
                         if (pendingCameraPermissionRequest != null) pendingCameraPermissionRequest.deny();
                         pendingCameraPermissionRequest = request;
-                        requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+                        requestCameraPermissionIfNeeded();
                     }
                 });
             }
@@ -82,31 +87,13 @@ public class MainActivity extends Activity {
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
                 fileChooserCallback = callback;
-                try {
-                    Intent contentIntent = params.createIntent();
-                    Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
-                    chooserIntent.putExtra(Intent.EXTRA_INTENT, contentIntent);
-                    if (params.isCaptureEnabled()) {
-                        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        if (cameraIntent.resolveActivity(getPackageManager()) != null) {
-                            File pictures = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
-                            if (pictures != null) {
-                                File photo = File.createTempFile("stap_camera_", ".jpg", pictures);
-                                pendingCameraCaptureUri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", photo);
-                                cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, pendingCameraCaptureUri);
-                                cameraIntent.setClipData(ClipData.newRawUri("STAP camera photo", pendingCameraCaptureUri));
-                                cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cameraIntent});
-                            }
-                        }
-                    }
-                    startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
+                if (params.isCaptureEnabled() && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    pendingFileChooserParams = params;
+                    requestCameraPermissionIfNeeded();
                     return true;
-                } catch (Exception error) {
-                    fileChooserCallback = null;
-                    callback.onReceiveValue(null);
-                    return false;
                 }
+                launchFileChooser(params);
+                return true;
             }
         });
         webView.setWebViewClient(new WebViewClient() {
@@ -170,6 +157,79 @@ public class MainActivity extends Activity {
         root.addView(errorPanel, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
         loadPlatform();
+        if (BuildConfig.APP_ROLE.equals("DRIVER")) requestCameraPermissionIfNeeded();
+    }
+
+    private boolean isTrustedCameraOrigin(Uri origin) {
+        return origin != null && "https".equalsIgnoreCase(origin.getScheme())
+                && "stap-driver-api.onrender.com".equalsIgnoreCase(origin.getHost());
+    }
+
+    private void requestCameraPermissionIfNeeded() {
+        if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            cameraPermissionRequestInFlight = false;
+            if (pendingCameraPermissionRequest != null) {
+                pendingCameraPermissionRequest.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                pendingCameraPermissionRequest = null;
+            }
+            if (pendingFileChooserParams != null) {
+                WebChromeClient.FileChooserParams params = pendingFileChooserParams;
+                pendingFileChooserParams = null;
+                launchFileChooser(params);
+            }
+            return;
+        }
+        if (cameraPermissionRequestInFlight) return;
+        android.content.SharedPreferences prefs = getSharedPreferences("stap_permissions", MODE_PRIVATE);
+        boolean requestedBefore = prefs.getBoolean("camera_requested", false);
+        if (requestedBefore && !shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+            showCameraSettingsDialog();
+            return;
+        }
+        prefs.edit().putBoolean("camera_requested", true).apply();
+        cameraPermissionRequestInFlight = true;
+        requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+    }
+
+    private void showCameraSettingsDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Տեսախցիկի թույլտվություն")
+                .setMessage("Տեսախցիկը մերժված է։ Նկարահանման համար միացրեք Camera թույլտվությունը հավելվածի կարգավորումներում։")
+                .setNegativeButton("Փակել", null)
+                .setPositiveButton("Բացել կարգավորումները", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                }).show();
+    }
+
+    private void launchFileChooser(WebChromeClient.FileChooserParams params) {
+        try {
+            Intent contentIntent = params.createIntent();
+            Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+            chooserIntent.putExtra(Intent.EXTRA_INTENT, contentIntent);
+            if (params.isCaptureEnabled()) {
+                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                if (cameraIntent.resolveActivity(getPackageManager()) != null) {
+                    File pictures = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
+                    if (pictures != null) {
+                        File photo = File.createTempFile("stap_camera_", ".jpg", pictures);
+                        pendingCameraCaptureUri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", photo);
+                        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, pendingCameraCaptureUri);
+                        cameraIntent.setClipData(ClipData.newRawUri("STAP camera photo", pendingCameraCaptureUri));
+                        cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cameraIntent});
+                    }
+                }
+            }
+            startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
+        } catch (Exception error) {
+            if (fileChooserCallback != null) {
+                fileChooserCallback.onReceiveValue(null);
+                fileChooserCallback = null;
+            }
+            pendingCameraCaptureUri = null;
+        }
     }
 
     private void loadPlatform() {
@@ -181,13 +241,26 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE && pendingCameraPermissionRequest != null) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                pendingCameraPermissionRequest.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
-            } else {
-                pendingCameraPermissionRequest.deny();
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            cameraPermissionRequestInFlight = false;
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (pendingCameraPermissionRequest != null) {
+                if (granted) pendingCameraPermissionRequest.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                else pendingCameraPermissionRequest.deny();
+                pendingCameraPermissionRequest = null;
             }
-            pendingCameraPermissionRequest = null;
+            if (granted && pendingFileChooserParams != null) {
+                WebChromeClient.FileChooserParams params = pendingFileChooserParams;
+                pendingFileChooserParams = null;
+                launchFileChooser(params);
+            } else if (!granted && pendingFileChooserParams != null) {
+                pendingFileChooserParams = null;
+                if (fileChooserCallback != null) {
+                    fileChooserCallback.onReceiveValue(null);
+                    fileChooserCallback = null;
+                }
+                if (!shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) showCameraSettingsDialog();
+            }
         }
     }
 
@@ -219,6 +292,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         if (pendingCameraPermissionRequest != null) { pendingCameraPermissionRequest.deny(); pendingCameraPermissionRequest = null; }
         if (fileChooserCallback != null) { fileChooserCallback.onReceiveValue(null); fileChooserCallback = null; }
+        pendingFileChooserParams = null;
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
