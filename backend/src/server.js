@@ -590,7 +590,7 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
   if(!customer)customer=await prisma.user.create({data:{name:input.name,email,phone:input.phone,passwordHash:await bcrypt.hash(randomBytes(32).toString('hex'),12),role:'CUSTOMER'}});
  }
  const order=await prisma.order.create({data:{
-  customerId:customer.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,phonePrimary:input.phone,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,requiredLicenseCategory,
+  orderCode:await generateUniqueOrderCode(),customerId:customer.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,phonePrimary:input.phone,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,requiredLicenseCategory,
   pickupAddress:route.pickupDistrict+' վարչական շրջան',destinationAddress:route.destinationDistrict+' վարչական շրջան',
   routeDistricts:route.routeDistricts,routeNeighborhoods:[],fareAmd,requiredLicenseCategory:input.requiredLicenseCategory,
   transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
@@ -600,12 +600,12 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
  const title='Նոր պատվեր՝ առանց գրանցման',notificationMessage='Հաճախորդ՝ '+input.name+' · '+input.phone+' · '+order.pickupAddress+' → '+order.destinationAddress;
  if(admins.length){await prisma.notification.createMany({data:admins.map(admin=>({userId:admin.id,title,message:notificationMessage,type:'NEW_GUEST_ORDER'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title,message:notificationMessage,type:'NEW_GUEST_ORDER',orderId:order.id,createdAt:new Date()});}
- res.status(201).json({success:true,order:{id:order.id,fareAmd:order.fareAmd},routeDistricts:route.routeDistricts,demandCoefficientPercent:demand.demandCoefficientPercent,message:'Պատվերն ուղարկվեց վարորդներին և ադմինին։ Հեռախոսահամարի պատվերներն ու գնահատականները պահվում են մեկ հաճախորդային պատմության մեջ։'});
+ res.status(201).json({success:true,order:{id:order.id,orderCode:order.orderCode,fareAmd:order.fareAmd},routeDistricts:route.routeDistricts,demandCoefficientPercent:demand.demandCoefficientPercent,message:'Պատվերն ուղարկվեց վարորդներին և ադմինին։ Հեռախոսահամարի պատվերներն ու գնահատականները պահվում են մեկ հաճախորդային պատմության մեջ։'});
 }));
 
 app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const orders=await prisma.order.findMany({where:{isTest:true},orderBy:{createdAt:'desc'},include:{
-    customer:{select:{id:true,name:true,phone:true}},
+    customer:{select:{id:true,name:true,phone:true,rating:true}},
     driver:{select:{id:true,name:true,phone:true,isVerified:true}}
   }});
   res.json({orders:await withCustomerOrderNumbers(orders)});
@@ -613,7 +613,7 @@ app.get('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
 
 app.get('/api/admin/customers',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const users=await prisma.user.findMany({where:{role:'CUSTOMER'},orderBy:{createdAt:'desc'},select:{id:true,name:true,email:true,phone:true,rating:true,isBlocked:true,createdAt:true}});
- const orders=await prisma.order.findMany({orderBy:{createdAt:'desc'},include:{customer:{select:{id:true,name:true,email:true,phone:true,rating:true}},driver:{select:{id:true,name:true,phone:true,rating:true}},ratings:{orderBy:{createdAt:'desc'},include:{fromUser:{select:{id:true,name:true,phone:true,role:true}},toUser:{select:{id:true,name:true,phone:true,role:true}}}}}});
+ const orders=await ensureOrderCodes(await prisma.order.findMany({orderBy:{createdAt:'desc'},include:{customer:{select:{id:true,name:true,email:true,phone:true,rating:true}},driver:{select:{id:true,name:true,phone:true,rating:true}},ratings:{orderBy:{createdAt:'desc'},include:{fromUser:{select:{id:true,name:true,phone:true,role:true}},toUser:{select:{id:true,name:true,phone:true,role:true}}}}}}));
  const groups=new Map(),accountGroups=new Map(),keyFor=value=>normalizePhone(value)||null;
  for(const user of users){const key=keyFor(user.phone)||('account:'+user.id);let group=groups.get(key);if(!group){group={id:user.id,name:user.name,email:user.email,phone:user.phone,rating:user.rating,isBlocked:user.isBlocked,createdAt:user.createdAt,orders:[],accounts:[]};groups.set(key,group)}else if(group.email?.endsWith('@guest.stap.invalid')&&!user.email?.endsWith('@guest.stap.invalid'))Object.assign(group,{id:user.id,name:user.name,email:user.email,phone:user.phone,rating:user.rating,isBlocked:user.isBlocked,createdAt:user.createdAt});group.accounts.push(user.id);accountGroups.set(user.id,group)}
  for(const order of orders){const customer=order.customer,customerPhone=keyFor(customer?.phone),orderPhone=keyFor(order.phonePrimary);let group=(customer&&accountGroups.get(customer.id))||groups.get(customerPhone)||groups.get(orderPhone);if(!group){const key=customerPhone||orderPhone||('order:'+order.id);group={id:customer?.id||order.id,name:customer?.name||'Անանուն պատվիրատու',email:customer?.email||'',phone:customer?.phone||order.phonePrimary||'',rating:customer?.rating??5,isBlocked:customer?.isBlocked||false,createdAt:order.createdAt,orders:[],accounts:[]};groups.set(key,group)}
@@ -624,7 +624,7 @@ app.get('/api/admin/customers',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
 }));
 app.get('/api/admin/orders/history', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const orders=await prisma.order.findMany({orderBy:{createdAt:'desc'},include:{
-    customer:{select:{id:true,name:true,phone:true}},
+    customer:{select:{id:true,name:true,phone:true,rating:true}},
     driver:{select:{id:true,name:true,phone:true,isVerified:true}}
   }});
   res.json({orders:await withCustomerOrderNumbers(orders)});
@@ -638,7 +638,7 @@ app.get('/api/admin/orders/archive',auth,only('ADMIN'),asyncRoute(async(req,res)
  if(phoneDigits&&phoneDigits.length<3)return res.status(400).json({error:'Հեռախոսահամարի որոնման համար մուտքագրեք առնվազն 3 թվանշան։'});
  const where=status==='ARCHIVE'?{status:{in:['COMPLETED','CANCELLED']}}:status==='ALL'?{}:{status};
  const orders=await prisma.order.findMany({where,orderBy:{createdAt:'desc'},take:500,include:{
-  customer:{select:{id:true,name:true,phone:true}},
+  customer:{select:{id:true,name:true,phone:true,rating:true}},
   driver:{select:{id:true,name:true,phone:true,isVerified:true}}
  }});
  const orderCodeDigits=String(req.query.code||'').replace(/\\D/g,'');const filtered=orderCodeDigits.length===4?orders.filter(order=>String(order.orderCode||'')===orderCodeDigits):phoneDigits?orders.filter(order=>[order.phonePrimary,order.phoneSecondary,order.customer?.phone,order.driver?.phone].some(value=>String(value||'').replace(/\\D/g,'').includes(phoneDigits))):orders;
@@ -654,14 +654,14 @@ app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (
   });
   if(!changed.count)return res.status(409).json({error:'Պատվերի կարգավիճակն արդեն փոխվել է։ Թարմացրեք ցանկը։'});
   const order=await prisma.order.findUnique({where:{id:existing.id},include:{
-    customer:{select:{id:true,name:true,phone:true}},
+    customer:{select:{id:true,name:true,phone:true,rating:true}},
     driver:{select:{id:true,name:true,phone:true}}
   }});
   const drivers=await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false},select:{id:true}});
   const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
   const recipients=[...new Set([order.customerId,order.driverId,...drivers.map(x=>x.id),...admins.map(x=>x.id)].filter(Boolean))];
   const title='Պատվերը չեղարկվել է';
-  const message='Պատվեր #'+order.id.slice(-8)+' չեղարկվել է ադմինի կողմից։ '+order.pickupAddress+' → '+order.destinationAddress;
+  const message='Պատվեր #'+String(order.orderCode||'----').padStart(4,'0')+' չեղարկվել է ադմինի կողմից։ '+order.pickupAddress+' → '+order.destinationAddress;
   if(recipients.length){
     await prisma.notification.createMany({data:recipients.map(userId=>({userId,title,message,type:'ORDER_CANCELLED'}))});
     for(const userId of recipients)io.to('user:'+userId).emit('notification:new',{title,message,type:'ORDER_CANCELLED',orderId:order.id,createdAt:new Date()});
@@ -731,7 +731,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   let order;
   try {
     order=await prisma.order.create({data:{
-      customerId:customer.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
+      orderCode:await generateUniqueOrderCode(),customerId:customer.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
       destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:customerPhone,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
       vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
@@ -750,7 +750,8 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message});
 }));
 async function generateUniqueOrderCode(){for(let attempt=0;attempt<40;attempt++){const code=1000+(randomBytes(4).readUInt32BE(0)%9000);const exists=await prisma.order.findUnique({where:{orderCode:code},select:{id:true}});if(!exists)return code;}throw new Error('Չհաջողվեց ստեղծել պատվերի եզակի քառանիշ կոդ։');}
-async function withCustomerOrderNumbers(orders){if(!orders?.length)return orders||[];const customerIds=[...new Set(orders.map(order=>order.customerId).filter(Boolean))];if(!customerIds.length)return orders;const history=await prisma.order.findMany({where:{customerId:{in:customerIds}},select:{id:true,customerId:true,createdAt:true},orderBy:[{createdAt:'asc'},{id:'asc'}]});const stats=new Map();for(const item of history){const current=stats.get(item.customerId)||{total:0,numbers:new Map()};current.total++;current.numbers.set(item.id,current.total);stats.set(item.customerId,current)}return orders.map(order=>{const current=stats.get(order.customerId);return current?{...order,customerOrderNumber:current.numbers.get(order.id)||current.total,customerOrderTotal:current.total}:order})}
+async function ensureOrderCodes(orders){if(!orders?.length)return orders||[];const result=[];for(const order of orders){if(order.orderCode){result.push(order);continue;}const orderCode=await generateUniqueOrderCode();const updated=await prisma.order.update({where:{id:order.id},data:{orderCode},select:{orderCode:true}});result.push({...order,...updated});}return result;}
+async function withCustomerOrderNumbers(orders){if(!orders?.length)return orders||[];orders=await ensureOrderCodes(orders);const customerIds=[...new Set(orders.map(order=>order.customerId).filter(Boolean))];if(!customerIds.length)return orders;const history=await prisma.order.findMany({where:{customerId:{in:customerIds}},select:{id:true,customerId:true,createdAt:true},orderBy:[{createdAt:'asc'},{id:'asc'}]});const stats=new Map();for(const item of history){const current=stats.get(item.customerId)||{total:0,numbers:new Map()};current.total++;current.numbers.set(item.id,current.total);stats.set(item.customerId,current)}return orders.map(order=>{const current=stats.get(order.customerId);return current?{...order,customerOrderNumber:current.numbers.get(order.id)||current.total,customerOrderTotal:current.total}:order})}
 function maskDriverOrderContacts(order,now=new Date()){
  if(!order)return order;
  const scheduled=order.scheduleType!=='NOW'&&order.scheduledAt?new Date(order.scheduledAt):null;
@@ -777,14 +778,14 @@ app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(asy
       ...(req.user.driverTransmission==='MANUAL'?{}:{transmissionType:'AUTOMATIC'})
     },
     orderBy:[{scheduleType:'asc'},{scheduledAt:'asc'},{createdAt:'desc'}],
-    include:{customer:{select:{id:true,name:true,phone:true}}}
+    include:{customer:{select:{id:true,name:true,phone:true,rating:true}}}
   });
   res.json({orders:await withCustomerOrderNumbers(orders.map(order=>maskDriverOrderContacts(order)))});
 }));
 app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   if (req.user.role === 'DRIVER') {
     const [assigned, skipped] = await Promise.all([
-      prisma.order.findMany({ where: { driverId: req.user.id }, orderBy: { createdAt: 'desc' }, include: { customer: { select: { id: true, name: true, phone: true } } } }),
+      prisma.order.findMany({ where: { driverId: req.user.id }, orderBy: { createdAt: 'desc' }, include: { customer: { select: { id: true, name: true, phone: true, rating: true } } } }),
       prisma.skippedOrder.findMany({ where: { driverId: req.user.id }, include: { order: true }, orderBy: { createdAt: 'desc' } })
     ]);
     const orders = [...assigned, ...skipped.map(x => ({ ...x.order, status: 'SKIPPED', skippedAt: x.createdAt }))].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
@@ -985,7 +986,7 @@ app.post('/api/orders/:id/driver-cancel', auth, only('DRIVER'), verifiedDriver, 
   const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
   const recipients = [...new Set([order.customerId, ...admins.map(x => x.id)])];
   const title = 'Վարորդը չեղարկել է պատվերը';
-  const message = 'Պատվեր #' + order.id.slice(-8) + ' չեղարկվել է վարորդի կողմից։ Պատճառ՝ ' + reason;
+  const message = 'Պատվեր #' + String(order.orderCode||'----').padStart(4,'0') + ' չեղարկվել է վարորդի կողմից։ Պատճառ՝ ' + reason;
   if (recipients.length) {
     await prisma.notification.createMany({ data: recipients.map(userId => ({ userId, title, message, type: 'ORDER_CANCELLED' })) });
     for (const userId of recipients) io.to('user:' + userId).emit('notification:new', { title, message, type: 'ORDER_CANCELLED', orderId: order.id, createdAt: new Date() });
