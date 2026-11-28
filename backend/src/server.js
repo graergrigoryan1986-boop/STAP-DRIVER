@@ -790,11 +790,11 @@ function maskDriverOrderContacts(order,now=new Date()){
  const scheduled=order.scheduleType!=='NOW'&&order.scheduledAt?new Date(order.scheduledAt):null;
  const revealAt=scheduled?new Date(scheduled.getTime()-3*60*60*1000):null;
  const isOpen=order.status==='OPEN'||order.status==='SKIPPED';
- const completedAt=order.status==='COMPLETED'&&order.completedAt?new Date(order.completedAt):null;
- const completedContactsExpired=Boolean(completedAt)&&now.getTime()>=completedAt.getTime()+6*60*60*1000;
- const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt)||completedContactsExpired;
+ const closedAt=order.status==='COMPLETED'&&order.completedAt?new Date(order.completedAt):order.status==='CANCELLED'?new Date(order.updatedAt||order.createdAt):null;
+ const closedContactsExpired=Boolean(closedAt)&&now.getTime()>=closedAt.getTime()+6*60*60*1000;
+ const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt)||closedContactsExpired;
  if(!contactHidden)return order;
- return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:completedContactsExpired?order.pickupNote:null,destinationNote:completedContactsExpired?order.destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:completedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:completedContactsExpired?'COMPLETED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
+ return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:closedContactsExpired?order.pickupNote:null,destinationNote:closedContactsExpired?order.destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:closedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:closedContactsExpired?'CLOSED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
 }
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const categories=req.user.driverLicenseCategories||[];
@@ -830,20 +830,25 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
     include: req.user.role === 'CUSTOMER' ? { driver: { select: {
       id:true,name:true,rating:true,driverFirstNameLatin:true,driverLastNameLatin:true,
       driverLicenseIssuedAt:true,driverExperienceMonths:true,driverLicenseCategories:true,driverTransmission:true,dateOfBirth:true,
-      isVerified:true,driverProfilePhoto:true
+      isVerified:true,driverProfilePhoto:true,phone:true
     }},ratings:{where:{fromUserId:req.user.id},select:{id:true,score:true,reasonTags:true,comment:true}}} : undefined
   });
-  const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => ({
+  const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => {
+    const closedAt=o.status==='COMPLETED'&&o.completedAt?new Date(o.completedAt):o.status==='CANCELLED'?new Date(o.updatedAt||o.createdAt):null;
+    const contactExpired=Boolean(closedAt)&&Date.now()>=closedAt.getTime()+6*60*60*1000;
+    return ({
     ...o,
-    ...(o.status==='COMPLETED'&&o.completedAt&&Date.now()>=new Date(o.completedAt).getTime()+6*60*60*1000?{phonePrimary:null,phoneSecondary:null,note:null,pickupNote:o.pickupNote,destinationNote:o.destinationNote,contactHidden:true,contactHiddenReason:'COMPLETED_RETENTION_EXPIRED'}:{}),
+    ...(contactExpired?{phonePrimary:null,phoneSecondary:null,note:null,contactHidden:true,contactHiddenReason:'CLOSED_RETENTION_EXPIRED'}:{}),
     driver: o.driver ? {
-      id:o.driver.id,name:o.driver.name,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
+      id:o.driver.id,name:o.driver.name,phone:contactExpired?null:o.driver.phone,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
       driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
       driverLicenseIssuedAt:o.driver.driverLicenseIssuedAt,driverExperienceMonths:o.driver.driverExperienceMonths,driverLicenseCategories:o.driver.driverLicenseCategories,
       driverTransmission:o.driver.driverTransmission,isVerified:o.driver.isVerified,
       experienceLabel:(()=>{const m=Number.isInteger(o.driver.driverExperienceMonths)?o.driver.driverExperienceMonths:(o.driver.driverLicenseIssuedAt?Math.max(0,Math.floor((Date.now()-new Date(o.driver.driverLicenseIssuedAt).getTime())/(30.4375*86400000))):null);return m===null?'Նշված չէ':(Math.floor(m/12)?Math.floor(m/12)+' տարի ':'')+(m%12?m%12+' ամիս':'')||'0 ամիս'})(),profilePhoto:o.driver.driverProfilePhoto ? 'data:image/jpeg;base64,'+decryptPrivate(o.driver.driverProfilePhoto).toString('base64') : null
-    } : null
-  })) : orders;
+    } : null,
+    ...(contactExpired?{contactHidden:true}: {})
+    });
+   }) : orders;
   res.json({ orders: await withCustomerOrderNumbers(safeOrders) });
 }));
 
