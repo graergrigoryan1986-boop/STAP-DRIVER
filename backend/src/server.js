@@ -725,6 +725,17 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     driverId:z.string().optional().or(z.literal('')),
     isTest:z.boolean().default(false)
   }).parse(req.body);
+  const contentRow=await prisma.siteContent.findUnique({where:{id:'main'}});
+  const catalogue=Array.isArray(contentRow?.content?.tariffs)?contentRow.content.tariffs:[];
+  const service=input.serviceId?catalogue.find(item=>item?.id===input.serviceId&&item.active!==false):null;
+  if(input.serviceId&&!service)return res.status(400).json({error:'Ընտրված ծառայությունն այլևս հասանելի չէ։ Թարմացրեք էջը։'});
+  const isPremiumDelivery=service?.id==='premium-delivery';
+  if(isPremiumDelivery){
+    if(!input.senderName?.trim()||!input.recipientName?.trim())return res.status(400).json({error:'Լրացրեք ուղարկողի և ստացողի անունները։'});
+    if(!input.parcelAccepted)return res.status(400).json({error:'Հաստատեք առաքանու պայմանները։'});
+    if(!input.senderPhone||!input.recipientPhone||normalizePhone(input.senderPhone).replace(/\D/g,'').length<7||normalizePhone(input.recipientPhone).replace(/\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք ուղարկողի և ստացողի ճիշտ հեռախոսահամարները։'});
+    if(!input.pickupAddress||!input.destinationAddress)return res.status(400).json({error:'Լրացրեք ուղարկողի և ստացողի հասցեները։'});
+  }
   if(input.scheduleType!=='NOW'&&!input.scheduledAt)return res.status(400).json({error:'Ընտրեք պատվերի ամսաթիվն ու ժամը։'});
   const scheduledAt=input.scheduleType==='NOW'?null:new Date(input.scheduledAt);
    const isUrgent=input.scheduleType==='NOW'?input.isUrgent:(scheduledAt.getTime()>Date.now()+60*60*1000&&input.isUrgent);
