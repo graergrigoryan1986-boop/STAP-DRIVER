@@ -71,7 +71,7 @@ async function emitOrderToEligibleDrivers(drivers,event) {
   for(const driver of current)if(!periodicVerificationState(driver).required)io.to('user:'+driver.id).emit('order:new',event);
 }
 async function emitNetworkOrderToEligibleDrivers(event) {
-  const drivers = await prisma.user.findMany({where:{role:'DRIVER',isVerified:true},select:{id:true,isVerified:true,driverVerifiedAt:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationStatus:true}});
+  const drivers = await prisma.user.findMany({where:{role:'DRIVER',isVerified:true,isBlocked:false},select:{id:true,isVerified:true,driverVerifiedAt:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationStatus:true}});
   for (const driver of drivers) if (!periodicVerificationState(driver).required) io.to('user:'+driver.id).emit('order:new',event);
 }
 const publicUser = user => ({
