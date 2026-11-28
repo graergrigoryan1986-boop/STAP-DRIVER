@@ -9,6 +9,7 @@ services:
     name: stap-driver-api
     runtime: docker
     plan: free
+    autoDeployTrigger: checksPass
     rootDir: backend
     healthCheckPath: /api/health
     envVars:
