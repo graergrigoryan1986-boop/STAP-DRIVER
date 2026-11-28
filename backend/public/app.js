@@ -341,6 +341,13 @@ async function driverView(){
  const latinName=[u.driverFirstNameLatin,u.driverLastNameLatin,u.driverPatronymicLatin].filter(Boolean).join(' ');
  $('#dashboard').innerHTML=`
   ${!u.isVerified?'<section class="driver-onboarding"><strong>ՎԱՐՈՐԴԻ ՀԱՇՎԻ ՀԱՍՏԱՏՈՒՄ</strong><p>'+(u.driverDocumentsStatus==='PENDING_REVIEW'?'Փաստաթղթերն ուղարկված են։ Սպասեք ադմինի հաստատմանը։':u.driverDocumentsStatus==='REJECTED'?'Փաստաթղթերը մերժվել են։ Ուղղեք և կրկին ուղարկեք։':'Լրացրեք վարորդական և անձը հաստատող փաստաթղթերը։')+'</p><small>Հաստատումից հետո կբացվեն պատվերները։</small></section>':''}
+  <section class="driver-profile-summary" aria-label="Վարորդի պրոֆիլ">
+   <div class="driver-profile-summary-heading"><span>ԻՄ ՊՐՈՖԻԼԸ</span><strong>${esc(u.name||'Վարորդ')}</strong></div>
+   <div class="driver-profile-summary-stats">
+    <article><small>★ ՎԱՐԿԱՆԻՇ</small><strong>${Number(u.rating??u.averageRating??5).toFixed(2)} / 5</strong><button type="button" id="driverRatingHistoryButton" aria-expanded="false">Վարկանիշի պատմություն</button></article>
+    <article><small>₽ ՀԱՇՎԵԿՇԻՌ</small><strong id="driverBalanceAmount">${money(u.balanceAmd||0)}</strong><button type="button" id="driverBalanceMenuButton">Հաշվեկշռի պատմություն</button></article>
+   </div>
+  </section>
   <section class="driver-pending-compact">
    <button type="button" id="driverPendingToggle" class="driver-pending-toggle ${open.orders.length?'active':''}" aria-expanded="${open.orders.length>0}"><span>ՍՊԱՍՎՈՂ ՊԱՏՎԵՐՆԵՐ</span><b id="openOrderCount">${open.orders.length}</b><small>${open.orders.length?'Շտապները՝ առաջինը · սեղմեք պատվերն ընդունելու կամ մանրամասները բացելու համար':'Նոր պատվերների դեպքում այստեղ կհայտնվեն ամրագրումները'}</small></button>
    <div id="driverPendingPanel" ${open.orders.length?'':'hidden'}><div class="driver-pending-tools"><button type="button" id="refreshOpenOrders" class="action secondary">Թարմացնել ↻</button><button type="button" class="action" data-driver-close="driverPendingPanel">Փակել ×</button></div><div id="openOrders" class="driver-open-orders-list stack"></div></div>
@@ -352,7 +359,7 @@ async function driverView(){
    <div id="driverBalanceHistoryPanel" class="driver-compact-panel" hidden><div class="driver-panel-title"><h3>Հաշվեկշռի պատմություն</h3><button type="button" class="action" data-driver-close="driverBalanceHistoryPanel">Փակել ×</button></div><div class="ledger-list">${wallet.transactions.length?wallet.transactions.map(t=>'<article class="ledger-row"><div><strong>'+esc(t.description)+'</strong><small>'+new Date(t.createdAt).toLocaleString('hy-AM')+' · '+esc(t.type)+'</small>'+(t.orderDetails?'<div class="wallet-order-breakdown"><span>Պատվերի իրական արժեք՝ <b>'+money(t.orderDetails.actualFareAmd)+'</b></span><span>Հիմնական արժեքի 25%՝ <b>'+money(t.orderDetails.commissionBaseAmd||Math.max(0,(t.orderDetails.commissionAmd||Math.abs(t.amountAmd))-(t.orderDetails.commissionSurchargeAmd||0)))+'</b></span>'+(t.orderDetails.commissionSurchargeAmd>0?'<span>Հավելավճարի 1%՝ <b>'+money(t.orderDetails.commissionSurchargeAmd)+'</b></span>':'')+'<span>Ընդհանուր գանձում՝ <b>'+money(t.orderDetails.commissionAmd||Math.abs(t.amountAmd))+'</b></span></div>':'')+'</div><b class="'+(t.amountAmd>=0?'positive':'negative')+'">'+(t.amountAmd>0?'+':'')+money(t.amountAmd)+'</b></article>').join(''):'<p class="empty-state">Գործարքներ դեռ չկան։</p>'}</div></div>
    <div id="driverRatingHistoryPanel" class="driver-compact-panel" hidden><div class="driver-panel-title"><h3>Վարկանիշի պատմություն</h3><button type="button" class="action" data-driver-close="driverRatingHistoryPanel">Փակել ×</button></div></div>
    <div id="myOrders" class="driver-compact-panel" hidden><div class="driver-panel-title"><h3 id="driverOrdersPanelTitle">Պատվերների պատմություն</h3><button type="button" class="action" data-driver-close="myOrders">Փակել ×</button></div><div class="order-filters"><button class="action" data-filter="ALL">Բոլորը</button><button class="action active" data-filter="COMPLETED">Կատարված</button><button class="action" data-filter="REJECTED">Չեղարկված</button></div><div id="driverOrderHistoryList" class="stack"></div></div>
-   ${u.isVerified?'':`<section class="driver-docs-compact"><details><summary>Գրանցման փաստաթղթեր</summary>
+   ${u.isVerified||u.driverDocumentsStatus==='PENDING_REVIEW'?'':`<section class="driver-docs-compact"><details><summary>Գրանցման փաստաթղթեր</summary>
     <p class="driver-admin-data"><strong>Վարորդական կարգեր՝</strong> ${esc((u.driverLicenseCategories||[]).join(', ')||'Դեռ նշված չէ')}<br><strong>Փոխանցման տուփ՝</strong> ${u.driverTransmission==='MANUAL'?'Ավտոմատ / մեխանիկական':'Ավտոմատ'}</p>
     <form id="driverDocsForm" class="docs-form">
      <h4>Վարորդական իրավունք</h4><div class="docs-upload-grid">
@@ -369,7 +376,16 @@ async function driverView(){
     </form>
    </details></section>`}
   </section>
-  <section class="driver-vehicle-panel">
+  <nav class="driver-bottom-dock" aria-label="Վարորդի հիմնական մենյու">
+   <button type="button" id="driverMenuToggle" class="driver-menu-toggle" aria-expanded="false"><span>Բացել</span> ☰ ԳԼԽԱՎՈՐ ՄԵՆՅՈՒ</button>
+   <div id="driverBottomMenu" class="driver-bottom-menu" hidden>
+    <button type="button" data-driver-home><b>⌂</b><span>Գլխավոր</span></button>
+    <button type="button" id="driverRatingMenuButton"><b>★</b><span>Վարկանիշ</span></button>
+    <button type="button" id="driverBalanceMenuButtonAlt"><b>₽</b><span>Հաշվեկշիռ</span></button>
+    <button type="button" data-driver-history="ALL"><b>▤</b><span>Պատվերներ</span></button>
+   </div>
+  </nav>
+  ${['PENDING_REVIEW','APPROVED'].includes(u.vehicleDocumentsStatus)?'':`<section class="driver-vehicle-panel">
    <details open><summary>🚘 ԻՄ ՄԵՔԵՆԱՆ ԵՎ ՓԱՍՏԱԹՂԹԵՐԸ</summary>
     <p>Ընտրեք մակնիշն ու մոդելը կամ սկսեք գրել՝ ցանկը համապատասխան կառաջարկի։</p>
     <form id="driverVehicleForm">
@@ -394,14 +410,14 @@ async function driverView(){
      <button type="submit" class="action" id="vehicleSubmitButton" disabled>ՊԱՀՊԱՆԵԼ ՄԵՔԵՆԱՅԻ ՏՎՅԱԼՆԵՐԸ</button>
     </form>
    </details>
-  </section>
+  </section>`}
   <section class="driver-delivery-toggle-panel">
    <h3>📦 ԱՌԱՔԻՉ ԾԱՌԱՅՈՒԹՅՈՒՆ</h3>
    <p>Միացրեք կամ անջատեք առաքման պատվերների հասանելիությունը։</p>
    <button type="button" class="action" id="driverDeliveryToggle">${u.driverDeliveryEnabled?'ԱՆՋԱՏԵԼ ԱՌԱՔԻՉ ԾԱՌԱՅՈՒԹՅՈՒՆԸ':'ՄԻԱՑՆԵԼ ԱՌԱՔԻՉ ԾԱՌԱՅՈՒԹՅՈՒՆԸ'}</button>
    <small>${u.driverDeliveryEnabled?'Առաքիչ ծառայությունը միացված է։':'Առաքիչ ծառայությունը անջատված է։'}</small>
   </section>
-  ${periodicRequired?('<section class="driver-periodic-verification"><h3>⏱ 72-ԺԱՄՅԱ ՊԱՐՏԱԴԻՐ ՍՏՈՒԳՈՒՄ</h3><p>Ժամկետը լրացել է։ Մինչև ադմինի հաստատումը ցանցի նոր պատվերները հասանելի չեն։ Ներկայացրեք մեքենայի 4 արտաքին լուսանկար և ձեր դեմքի նոր սելֆի։</p>'+(periodicStatus==='PENDING_REVIEW'?'<strong>Լուսանկարներն ուղարկված են․ սպասում են ադմինի հաստատմանը։</strong>':'<form id="driverPeriodicVerificationForm"><div class="docs-upload-grid"><label class="doc-upload-tile">Մեքենայի առջև<input type="file" name="front" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Մեքենայի հետև<input type="file" name="back" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Մեքենայի ձախ կողմ<input type="file" name="left" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Մեքենայի աջ կողմ<input type="file" name="right" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Դեմքի սելֆի<input type="file" name="selfie" accept="image/jpeg" capture="user" required><span class="doc-file-name">Նկար ընտրեք</span></label></div><button type="submit" class="action">ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ</button></form>')+'</section>'):' '}
+  ${periodicRequired&&periodicStatus!=='PENDING_REVIEW'?('<section class="driver-periodic-verification"><h3>⏱ 72-ԺԱՄՅԱ ՊԱՐՏԱԴԻՐ ՍՏՈՒԳՈՒՄ</h3><p>Ժամկետը լրացել է։ Մինչև ադմինի հաստատումը ցանցի նոր պատվերները հասանելի չեն։ Ներկայացրեք մեքենայի 4 արտաքին լուսանկար և ձեր դեմքի նոր սելֆի։</p>'+(periodicStatus==='PENDING_REVIEW'?'<strong>Լուսանկարներն ուղարկված են․ սպասում են ադմինի հաստատմանը։</strong>':'<form id="driverPeriodicVerificationForm"><div class="docs-upload-grid"><label class="doc-upload-tile">Մեքենայի առջև<input type="file" name="front" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Մեքենայի հետև<input type="file" name="back" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Մեքենայի ձախ կողմ<input type="file" name="left" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Մեքենայի աջ կողմ<input type="file" name="right" accept="image/jpeg" capture="environment" required><span class="doc-file-name">Նկար ընտրեք</span></label><label class="doc-upload-tile">Դեմքի սելֆի<input type="file" name="selfie" accept="image/jpeg" capture="user" required><span class="doc-file-name">Նկար ընտրեք</span></label></div><button type="submit" class="action">ՈՒՂԱՐԿԵԼ ՍՏՈՒԳՄԱՆ</button></form>')+'</section>'):' '}
 `;
  const idD=$('#driverDocsForm')?.closest('details');if(idD&&u.driverDocumentsStatus==='PENDING_REVIEW'){idD.open=false;$('#driverDocsForm').hidden=true;let n=idD.querySelector('.driver-review-waiting');if(!n){n=document.createElement('p');n.className='driver-review-waiting';idD.append(n)}n.textContent='Փաստաթղթերը ուղարկված են ադմինին։ Սպասեք ստուգմանը։'}if(idD&&u.driverDocumentsStatus==='REJECTED'){idD.open=true;$('#driverDocsForm').hidden=false;let n=idD.querySelector('.driver-review-rejected');if(!n){n=document.createElement('p');n.className='driver-review-rejected';idD.insertBefore(n,$('#driverDocsForm'))}n.textContent=u.driverVerificationMessage||'Փաստաթղթերը մերժվել են։ Ուղղեք և կրկին ուղարկեք։'}const vD=$('#driverVehicleForm')?.closest('details');if(vD&&u.vehicleDocumentsStatus==='PENDING_REVIEW'){vD.open=false;$('#driverVehicleForm').hidden=true;let n=vD.querySelector('.driver-review-waiting');if(!n){n=document.createElement('p');n.className='driver-review-waiting';vD.append(n)}n.textContent='Մեքենայի 6 լուսանկարներն ուղարկված են ադմինին։ Սպասեք մեքենայի հաստատմանը։'}if(vD&&u.vehicleDocumentsStatus==='REJECTED'){vD.open=true;$('#driverVehicleForm').hidden=false;let n=vD.querySelector('.driver-review-rejected');if(!n){n=document.createElement('p');n.className='driver-review-rejected';vD.insertBefore(n,$('#driverVehicleForm'))}n.textContent=u.vehicleVerificationMessage||'Մեքենայի լուսանկարները մերժվել են։ Ուղղեք և կրկին ուղարկեք։'}if(vD&&u.vehicleDocumentsStatus==='APPROVED'){vD.open=false;$('#driverVehicleForm').hidden=true;let n=vD.querySelector('.driver-review-approved');if(!n){n=document.createElement('p');n.className='driver-review-approved';vD.append(n)}n.textContent='✓ Մեքենան հաստատված է։ Հաջորդ ստուգումը՝ 72 ժամ անց.'}
 
@@ -469,6 +485,9 @@ const periodicForm=$('#driverPeriodicVerificationForm');if(periodicForm)periodic
 
 $('#driverMenuToggle')?.addEventListener('click',()=>{const menu=$('#driverBottomMenu'),toggle=$('#driverMenuToggle');if(!menu||!toggle)return;menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden));toggle.querySelector('span').textContent=menu.hidden?'Բացել':'Փակել'});
  document.querySelectorAll('[data-driver-close]').forEach(button=>button.addEventListener('click',()=>{const panel=$('#'+button.dataset.driverClose);if(panel)panel.hidden=true}));
+ $('#driverRatingMenuButton')?.addEventListener('click',()=>$('#driverRatingHistoryButton')?.click());
+ $('#driverBalanceMenuButtonAlt')?.addEventListener('click',()=>$('#driverBalanceMenuButton')?.click());
+ document.querySelector('[data-driver-home]')?.addEventListener('click',()=>{['driverBalanceHistoryPanel','driverRatingHistoryPanel','myOrders','driverPendingPanel'].forEach(id=>{const panel=$('#'+id);if(panel)panel.hidden=true});$('#dashboard')?.scrollIntoView({behavior:'smooth',block:'start'})});
  $('#driverPendingToggle')?.addEventListener('click',()=>{const panel=$('#driverPendingPanel');panel.hidden=!panel.hidden;$('#driverPendingToggle').classList.toggle('active',!panel.hidden);$('#driverPendingToggle').setAttribute('aria-expanded',String(!panel.hidden))});
  document.querySelectorAll('[data-driver-history]').forEach(button=>button.addEventListener('click',()=>{const panel=$('#myOrders');panel.hidden=false;drawOrders(button.dataset.driverHistory);$('#driverOrdersPanelTitle').textContent=button.dataset.driverHistory==='REJECTED'?'Չեղարկված պատվերներ':'Կատարված պատվերներ';panel.scrollIntoView({behavior:'smooth',block:'nearest'})}));
 
