@@ -462,6 +462,10 @@ async function customerView(){
   </section>
   <section class="customer-panel customer-profile-panel" data-customer-content="profile" hidden>
    <div class="customer-panel-head"><h3>Անձնական էջ</h3><button type="button" class="customer-close" data-customer-close>Փակել ×</button></div>
+   <div class="customer-own-rating" aria-label="Ձեր վարկանիշը">
+    <div class="customer-own-rating-stars" aria-hidden="true">★★★★★</div>
+    <div><span>ՁԵՐ ՎԱՐԿԱՆԻՇԸ</span><strong>${Number.isFinite(Number(currentUser.rating))?Number(currentUser.rating).toFixed(1):'5.0'} <small>/ 5</small></strong></div>
+   </div>
    <form id="customerProfileForm" class="customer-profile-form">
     <label>Անուն և ազգանուն<input name="name" required minlength="2" maxlength="120" value="${esc(currentUser.name||'')}"></label>
     <label>Հեռախոսահամար<input name="phone" type="tel" required minlength="5" maxlength="30" value="${esc(currentUser.phone||'')}"></label>
