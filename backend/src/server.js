@@ -1381,7 +1381,7 @@ app.post('/api/drivers/periodic-verification',auth,only('DRIVER'),verifiedDriver
  const state=periodicVerificationState(req.user);
  if(!state.required)return res.status(409).json({error:'Պարբերական ստուգման ժամկետը դեռ չի լրացել։'});
  const input=z.object({front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),left:z.string().min(100).max(3500000),right:z.string().min(100).max(3500000),selfie:z.string().min(100).max(3500000)}).parse(req.body);
- const decode=value=>{const m=value.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);if(!m)throw new Error('Բոլոր նկարները պետք է լինեն JPG, PNG կամ WEBP։');const b=Buffer.from(m[1],'base64');if(!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)};
+ const decode=value=>{const m=value.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/i);if(!m)throw new Error('Բոլոր նկարները պետք է լինեն JPEG ձևաչափով։');const b=Buffer.from(m[1],'base64');if(!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)};
  const user=await prisma.user.update({where:{id:req.user.id},data:{periodicVehicleFront:decode(input.front),periodicVehicleBack:decode(input.back),periodicVehicleLeft:decode(input.left),periodicVehicleRight:decode(input.right),periodicFaceSelfie:decode(input.selfie),periodicVehicleVerificationStatus:'PENDING_REVIEW',periodicVehicleVerificationSubmittedAt:new Date()}});
  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
  const message='Վարորդ '+req.user.name+' ('+req.user.phone+') ներկայացրել է 72-ժամյա մեքենայի արտաքին լուսանկարների և դեմքի սելֆիի ստուգումը։';
