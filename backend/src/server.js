@@ -740,27 +740,34 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const scheduledAt=input.scheduleType==='NOW'?null:new Date(input.scheduledAt);
    const isUrgent=input.scheduleType==='NOW'?input.isUrgent:(scheduledAt.getTime()>Date.now()+60*60*1000&&input.isUrgent);
   if(scheduledAt&&scheduledAt.getTime()<=Date.now())return res.status(400).json({error:'Պատվերի նախատեսված ժամը պետք է լինի ապագայում։'});
-  const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
-  const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
+  const route=isPremiumDelivery?{baseFareAmd:0,pickupDistrict:'Առաքում',destinationDistrict:'Երևան',routeDistricts:[],districtCount:0}:await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
+  const servicePriceAmd=Number.isInteger(service?.priceAmd)?service.priceAmd:0;
+  const effectiveDispatchMode=input.dispatchMode==='DIRECT'?'DIRECT':(service?.dispatchMode||input.dispatchMode);
+  const requiredLicenseCategory=effectiveDispatchMode==='CATEGORY'?(service?.requiredLicenseCategory||'B'):'';
+  const requiredCapability=effectiveDispatchMode==='CAPABILITY'?(service?.requiredCapability||''):'';
+  const pickupAddress=isPremiumDelivery?input.pickupAddress.trim():route.pickupDistrict+' վարչական շրջան',destinationAddress=isPremiumDelivery?input.destinationAddress.trim():route.destinationDistrict+' վարչական շրջան';
   const demandEligibleUrgent=isUrgent&&input.scheduleType==='NOW';
   const demand=await getUrgentDemandCoefficient(demandEligibleUrgent);
-  const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,demandEligibleUrgent,demand.demandCoefficientPercent);
+  const demandExtraChargeAmd=isPremiumDelivery?0:calculateUrgentDemandCharge(route.baseFareAmd,input.extraChargeAmd,demandEligibleUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=isUrgent?2500+demandExtraChargeAmd:0;
-  const fareAmd=route.baseFareAmd+input.extraChargeAmd+urgentExtraChargeAmd;
+  const fareAmd=(isPremiumDelivery?servicePriceAmd:route.baseFareAmd+servicePriceAmd+input.extraChargeAmd)+urgentExtraChargeAmd;
   let driverId=null, eligibleDrivers=[];
   const driverWhere={role:'DRIVER',isVerified:true,isBlocked:false};
-  if(input.dispatchMode==='DIRECT'){
+  if(effectiveDispatchMode==='DIRECT'){
     if(!input.driverId)return res.status(400).json({error:'Ընտրեք կոնկրետ վարորդ։'});
     const driver=await prisma.user.findFirst({where:{id:input.driverId,...driverWhere}});
     if(!driver)return res.status(400).json({error:'Ընտրված վարորդը հաստատված կամ ակտիվ չէ։'});
     if(input.transmissionType==='MANUAL'&&driver.driverTransmission!=='MANUAL')return res.status(400).json({error:'Ընտրված վարորդը չի վարում մեխանիկական փոխանցման տուփով մեքենա։'});
     driverId=driver.id;
     eligibleDrivers=[driver];
-  } else if(input.dispatchMode==='CATEGORY'){
-    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
-    if(!eligibleDrivers.length)return res.status(400).json({error:'Այս կարգով և փոխանցման տուփով ակտիվ հաստատված վարորդներ չկան։'});
+  } else if(effectiveDispatchMode==='CATEGORY'){
+    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverLicenseCategories:{has:requiredLicenseCategory},...(input.transmissionType==='MANUAL'?{driverTransmission:'MANUAL'}:{})},select:{id:true}});
+    if(!eligibleDrivers.length)return res.status(400).json({error:'Այս ծառայության համար անհրաժեշտ վարորդական կարգով ակտիվ վարորդներ չկան։'});
+  } else if(effectiveDispatchMode==='CAPABILITY'){
+    eligibleDrivers=await prisma.user.findMany({where:{...driverWhere,driverServiceCapabilities:{has:requiredCapability}},select:{id:true}});
+    if(!eligibleDrivers.length)return res.status(400).json({error:'Այս ծառայության համար պահանջվող հմտությամբ վարորդներ չկան։'});
   }
-  const customerPhone=normalizePhone(input.phonePrimary);
+  const customerPhone=normalizePhone(isPremiumDelivery?input.senderPhone:input.phonePrimary);
   if(customerPhone.replace(/\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք պատվիրատուի ճիշտ հեռախոսահամարը։'});
   // Resolve the customer by the phone entered by the administrator.
   let customer=(await prisma.user.findMany({where:{role:'CUSTOMER'},select:{id:true,phone:true}}))
@@ -776,10 +783,10 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   let order;
   try {
     order=await prisma.order.create({data:{
-      orderCode:await generateUniqueOrderCode(),customerId:customer.id,driverId,dispatchMode:input.dispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,requiredLicenseCategory:'',pickupAddress,
-      destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:customerPhone,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
+      orderCode:await generateUniqueOrderCode(),customerId:customer.id,driverId,dispatchMode:effectiveDispatchMode,isTest:input.isTest,isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,requiredLicenseCategory,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,
+      destinationAddress,routeDistricts:route.routeDistricts||[],routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,phonePrimary:customerPhone,phoneSecondary:input.phoneSecondary||null,passengerCount:input.passengerCount,
       transmissionType:input.transmissionType,
-      vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
+      vehicleFuelType:input.vehicleFuelType,scheduleType:input.scheduleType,scheduledAt,note:isPremiumDelivery?['ՊՐԵՄԻՈՒՄ ԱՌԱՔՈՒՄ','Ուղարկող՝ '+input.senderName,'Ուղարկողի հեռախոս՝ '+input.senderPhone,'Ստացող՝ '+input.recipientName,'Ստացողի հեռախոս՝ '+input.recipientPhone,'Առաքանին մինչև 10 կգ է, բաց և ստուգելի'].join(' | ').slice(0,1000):input.note,pickupNote:isPremiumDelivery?null:input.pickupNote||null,destinationNote:isPremiumDelivery?null:input.destinationNote||null
     }});
   } catch(error) {
     console.error('Admin order creation failed:',{code:error.code,message:error.message,meta:error.meta});
@@ -788,10 +795,10 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
     throw error;
   }
   if(!scheduledAt){
-    if(input.dispatchMode==='NETWORK')await emitNetworkOrderToEligibleDrivers({id:order.id,isTest:order.isTest});
+    if(effectiveDispatchMode==='NETWORK')await emitNetworkOrderToEligibleDrivers({id:order.id,isTest:order.isTest});
     else await emitOrderToEligibleDrivers(eligibleDrivers,{id:order.id,isTest:order.isTest});
   }
-  const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
+  const message=effectiveDispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':effectiveDispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց համապատասխան վարորդական կարգով։':effectiveDispatchMode==='CAPABILITY'?'Պատվերը տեղադրվեց համապատասխան հմտություն ունեցող վարորդներին։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message});
 }));
 async function generateUniqueOrderCode(){for(let attempt=0;attempt<40;attempt++){const code=1000+(randomBytes(4).readUInt32BE(0)%9000);const exists=await prisma.order.findUnique({where:{orderCode:code},select:{id:true}});if(!exists)return code;}throw new Error('Չհաջողվեց ստեղծել պատվերի եզակի քառանիշ կոդ։');}
