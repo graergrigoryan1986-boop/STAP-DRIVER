@@ -1,0 +1,34 @@
+name: Validate STAP backend and frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://stap_driver:stap_driver@localhost:5432/stap_driver
+      JWT_SECRET: 01234567890123456789012345678901
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install backend dependencies
+        run: npm ci
+      - name: Validate Prisma schema
+        run: npx prisma validate
+      - name: Check backend JavaScript syntax
+        run: node --check src/server.js
+      - name: Check browser JavaScript syntax
+        run: node --check public/app.js
