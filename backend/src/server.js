@@ -59,6 +59,11 @@ app.use('/api/drivers/documents', rateLimit({ windowMs: 60 * 60 * 1000, limit: 5
 const DOCUMENT_KEY = createHash('sha256').update(JWT_SECRET).digest();
 function encryptPrivate(value){if(value==null)return null;const nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',DOCUMENT_KEY,nonce),encrypted=Buffer.concat([cipher.update(Buffer.isBuffer(value)?value:Buffer.from(String(value),'utf8')),cipher.final()]);return Buffer.concat([Buffer.from('STAP1'),nonce,cipher.getAuthTag(),encrypted])}
 function decryptPrivate(value){if(!value)return null;const data=Buffer.from(value);if(data.subarray(0,5).toString()!=='STAP1')return data;const nonce=data.subarray(5,17),tag=data.subarray(17,33),body=data.subarray(33),decipher=createDecipheriv('aes-256-gcm',DOCUMENT_KEY,nonce);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(body),decipher.final()])}
+const DRIVER_PERIODIC_VERIFICATION_MS = 72 * 60 * 60 * 1000;
+function periodicVerificationState(user, now = new Date()) {
+  const dueAt = user?.periodicVehicleVerificationDueAt || (user?.driverVerifiedAt ? new Date(new Date(user.driverVerifiedAt).getTime() + DRIVER_PERIODIC_VERIFICATION_MS) : null);
+  return { required:Boolean(user?.isVerified && dueAt && now.getTime() >= new Date(dueAt).getTime()), dueAt, status:user?.periodicVehicleVerificationStatus||'NOT_DUE' };
+}
 async function emitOrderToEligibleDrivers(drivers,event) {
   const ids=(drivers||[]).map(driver=>driver.id).filter(Boolean);
   if(!ids.length)return;
@@ -1376,7 +1381,7 @@ app.post('/api/drivers/periodic-verification',auth,only('DRIVER'),verifiedDriver
  const state=periodicVerificationState(req.user);
  if(!state.required)return res.status(409).json({error:'Պարբերական ստուգման ժամկետը դեռ չի լրացել։'});
  const input=z.object({front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),left:z.string().min(100).max(3500000),right:z.string().min(100).max(3500000),selfie:z.string().min(100).max(3500000)}).parse(req.body);
- const decode=value=>{const m=value.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);if(!m)throw new Error('Բոլոր նկարները պետք է լինեն JPG, PNG կամ WEBP։');const b=Buffer.from(m[2],'base64');if(!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)};
+ const decode=value=>{const m=value.match(/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/i);if(!m)throw new Error('Բոլոր նկարները պետք է լինեն JPG, PNG կամ WEBP։');const b=Buffer.from(m[1],'base64');if(!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր նկարը պետք է լինի առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)};
  const user=await prisma.user.update({where:{id:req.user.id},data:{periodicVehicleFront:decode(input.front),periodicVehicleBack:decode(input.back),periodicVehicleLeft:decode(input.left),periodicVehicleRight:decode(input.right),periodicFaceSelfie:decode(input.selfie),periodicVehicleVerificationStatus:'PENDING_REVIEW',periodicVehicleVerificationSubmittedAt:new Date()}});
  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
  const message='Վարորդ '+req.user.name+' ('+req.user.phone+') ներկայացրել է 72-ժամյա մեքենայի արտաքին լուսանկարների և դեմքի սելֆիի ստուգումը։';
