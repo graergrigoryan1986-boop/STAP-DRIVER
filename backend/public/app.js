@@ -33,7 +33,7 @@ function announceOrderStatus(data){
  playOrderStatusTone();
 }
 
-function connectRealtime(){function connectRealtime(){
+function connectRealtime(){
  if(!window.io||!token)return;
  if(realtimeSocket)realtimeSocket.disconnect();
  realtimeSocket=window.io({auth:{token},transports:['websocket','polling']});
