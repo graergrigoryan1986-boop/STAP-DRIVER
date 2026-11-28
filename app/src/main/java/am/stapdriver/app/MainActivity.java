@@ -3,6 +3,8 @@ package am.stapdriver.app;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.Color;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -11,6 +13,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.ValueCallback;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -23,6 +26,8 @@ public class MainActivity extends Activity {
     private WebView webView;
     private ProgressBar progress;
     private LinearLayout errorPanel;
+    private ValueCallback<Uri[]> fileChooserCallback;
+    private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -46,7 +51,22 @@ public class MainActivity extends Activity {
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setLoadsImagesAutomatically(true);
         webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
+                fileChooserCallback = callback;
+                try {
+                    Intent chooserIntent = params.createIntent();
+                    startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
+                    return true;
+                } catch (Exception error) {
+                    fileChooserCallback = null;
+                    callback.onReceiveValue(null);
+                    return false;
+                }
+            }
+        });
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
@@ -115,6 +135,18 @@ public class MainActivity extends Activity {
         webView.loadUrl(PLATFORM_URL + "?app=" + role);
     }
 
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            if (fileChooserCallback == null) return;
+            Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            fileChooserCallback.onReceiveValue(results);
+            fileChooserCallback = null;
+        }
+    }
+
     @Override
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
@@ -126,6 +158,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (fileChooserCallback != null) { fileChooserCallback.onReceiveValue(null); fileChooserCallback = null; }
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
