@@ -126,6 +126,9 @@ model Order {
   destinationNote    String?
   createdAt          DateTime    @default(now())
   acceptedAt         DateTime?
+  arrivalEstimateMinutes Int?
+  arrivalEstimateStatus String @default("NONE")
+  customerRequestedEtaMinutes Int?
   arrivedAt          DateTime?
   vehicleInspectionPassed Boolean @default(false)
   driverCancellationReason String?
