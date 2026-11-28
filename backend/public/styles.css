@@ -2008,3 +2008,25 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .driver-order-number,.driver-pending-card-id,.driver-completed-id{font-variant-numeric:tabular-nums;letter-spacing:.08em}
 
 .admin-order-code{display:inline-flex;align-items:center;justify-content:center;min-width:54px;padding:5px 8px;border:1px solid rgba(211,177,112,.42);border-radius:8px;color:#e6c27c;font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:.08em}
+
+
+/* Customer booking: compact tap-first option carousels and high-visibility total */
+#orderForm .booking-native-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#orderForm .booking-choice-group{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:5px 2px 9px;margin:2px 0 7px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(185,148,86,.55) transparent}
+#orderForm .booking-choice-chip{flex:0 0 auto;min-width:112px;min-height:42px;padding:9px 13px;border:1px solid rgba(185,148,86,.4);border-radius:12px;background:linear-gradient(145deg,#fff,#f3eee4);color:#343b43;font-size:12px;font-weight:800;cursor:pointer;scroll-snap-align:start;transition:all .16s ease}
+#orderForm .booking-choice-chip.selected{border-color:#b58c48;background:linear-gradient(135deg,#e4cd9e,#bd9858);color:#171b20;box-shadow:0 4px 12px rgba(151,116,56,.2);transform:translateY(-1px)}
+#orderForm .booking-choice-chip:active{transform:scale(.97)}
+#orderForm .booking-service-carousel{margin-top:5px;padding-bottom:11px}
+#orderForm .booking-service-chip{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;min-width:138px;min-height:65px;text-align:left}
+#orderForm .booking-service-chip strong{font-size:12px;line-height:1.25}
+#orderForm .booking-service-chip small{font-size:11px;font-weight:900;color:#98733a}
+#orderForm .booking-service-chip.selected small{color:#282116}
+#orderForm .customer-choice-field{position:relative}
+#orderForm .customer-choice-field .booking-choice-group{margin:0;padding:3px 0 5px}
+#orderForm .customer-choice-field .booking-choice-chip{min-width:0;flex:1 1 0;padding:9px 7px;white-space:nowrap}
+#orderForm .customer-vehicle-options{grid-template-columns:1fr 1fr;gap:8px}
+#orderForm .booking-total-highlight{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;margin:8px 0 13px;padding:15px 12px;border:1px solid #c6a15f;border-radius:16px;background:linear-gradient(135deg,#252a30,#11161b);color:#f8f0df;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.08)}
+#orderForm .booking-total-highlight>span{font-size:10px;font-weight:900;letter-spacing:1.15px;color:#dfc38b}
+#orderForm .booking-total-highlight>strong{font-size:clamp(27px,8vw,36px);line-height:1.12;font-weight:950;letter-spacing:.2px;color:#f1d69c;text-shadow:0 2px 12px rgba(226,190,116,.16);font-variant-numeric:tabular-nums}
+#orderForm .booking-total-highlight>small{font-size:10px;line-height:1.4;color:#c7c0b2}
+@media(max-width:480px){#orderForm .booking-choice-group{gap:6px}#orderForm .booking-service-chip{min-width:126px;min-height:60px}#orderForm .customer-choice-field .booking-choice-chip{font-size:11px;padding:9px 5px}#orderForm .booking-total-highlight{margin:6px 0 11px;padding:13px 9px}}
