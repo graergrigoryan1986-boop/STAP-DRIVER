@@ -71,6 +71,11 @@ model User {
   periodicVehicleLeft Bytes?
   periodicVehicleRight Bytes?
   periodicFaceSelfie Bytes?
+  approvedPeriodicVehicleFront Bytes?
+  approvedPeriodicVehicleBack Bytes?
+  approvedPeriodicVehicleLeft Bytes?
+  approvedPeriodicVehicleRight Bytes?
+  approvedPeriodicFaceSelfie Bytes?
   driverTransmission String @default("AUTOMATIC")
   driverLicenseFront Bytes?
   driverLicenseBack Bytes?
