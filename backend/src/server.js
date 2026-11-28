@@ -994,6 +994,7 @@ app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asy
     mode:z.enum(['HANDOVER','RETURN']).default('HANDOVER'),
     checks:z.record(z.string(),z.boolean()).refine(value=>Object.keys(value).length>=8,{message:'Լրացրեք ստուգման բոլոր կետերը։'}),
     damageNotes:z.string().trim().max(2000).optional().default(''),
+    damageAreas:z.array(z.string().trim().min(1).max(80)).max(20).optional().default([]),
     odometer:z.string().trim().max(40).optional().default(''),
     fuelLevel:z.string().trim().max(40).optional().default(''),
     belongings:z.string().trim().max(1000).optional().default(''),
@@ -1006,7 +1007,7 @@ app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asy
   if(!order)return res.status(404).json({error:'Պատվերը կապված չէ ձեր վարորդական հաշվի հետ։'});
   if(input.mode==='HANDOVER'){
     if(order.status!=='ACCEPTED')return res.status(409).json({error:'Մեքենայի ընդունման ստուգումը հասանելի է միայն ընդունված պատվերի համար։'});
-    const required=['registrationViewed','ownerIdentityVerified','ownerOrAuthorized','mtplChecked','vehicleMatches','exteriorChecked','interiorChecked','safetyChecked'];
+    const required=['registrationViewed','ownerIdentityVerified','ownerOrAuthorized','mtplChecked','vehicleMatches','exteriorChecked','interiorChecked','safetyChecked','tiresChecked','lightsChecked','dashboardWarningsChecked','visibleSafetyIssuesChecked'];
     if(required.some(key=>input.checks[key]!==true))return res.status(400).json({error:'Մեքենայի ընդունման բոլոր պարտադիր ստուգումները պետք է հաստատվեն։'});
     const report={...input,driverId:req.user.id,driverName:req.user.name,orderId:order.id,orderCode:order.orderCode,recordedAt:new Date().toISOString(),ip:req.ip};
     const changed=await prisma.order.updateMany({where:{id:order.id,driverId:req.user.id,status:'ACCEPTED',vehicleInspectionPassed:false},data:{status:'ARRIVED',arrivedAt:new Date(),vehicleInspectionPassed:true,vehicleInspectionReport:report}});
