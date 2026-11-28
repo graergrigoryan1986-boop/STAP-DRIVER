@@ -1013,7 +1013,7 @@ app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asy
   if(!order)return res.status(404).json({error:'Պատվերը կապված չէ ձեր վարորդական հաշվի հետ։'});
   if(input.mode==='HANDOVER'){
     if(order.status!=='ACCEPTED')return res.status(409).json({error:'Մեքենայի ընդունման ստուգումը հասանելի է միայն ընդունված պատվերի համար։'});
-    const required=['registrationViewed','ownerIdentityVerified','ownerOrAuthorized','mtplChecked','vehicleMatches','exteriorChecked','interiorChecked','safetyChecked','tiresChecked','lightsChecked','dashboardWarningsChecked','visibleSafetyIssuesChecked'];
+    const required=['registrationViewed','ownerIdentityVerified','ownerOrAuthorized','mtplChecked','vehicleMatches','exteriorChecked','interiorChecked','safetyChecked','tiresChecked','lightsChecked','dashboardWarningsChecked','visibleSafetyIssuesChecked','vehicleSafe'];
     if(required.some(key=>input.checks[key]!==true))return res.status(400).json({error:'Մեքենայի ընդունման բոլոր պարտադիր ստուգումները պետք է հաստատվեն։'});
     const report={...input,driverId:req.user.id,driverName:req.user.name,orderId:order.id,orderCode:order.orderCode,recordedAt:new Date().toISOString(),ip:req.ip};
     const changed=await prisma.order.updateMany({where:{id:order.id,driverId:req.user.id,status:'ACCEPTED',vehicleInspectionPassed:false},data:{status:'ARRIVED',arrivedAt:new Date(),vehicleInspectionPassed:true,vehicleInspectionReport:report}});
