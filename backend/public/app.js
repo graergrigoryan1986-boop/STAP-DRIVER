@@ -333,6 +333,25 @@ function bindFareCalculator(form){
  form.classList.add('booking-form');
  if(!form.querySelector('.booking-form-heading'))form.insertAdjacentHTML('afterbegin','<div class="booking-form-heading"><span class="booking-kicker">STAP DRIVER · ԱՄՐԱԳՐՈՒՄ</span><h3>Կազմակերպեք ձեր ուղևորությունը</h3><p>Ընտրեք միայն մեկնարկային և վերջնակետային վարչական շրջանները։ Փողոցը և շենքի համարը սակագնի վրա չեն ազդում։</p></div>');
  const pickup=form.querySelector('[name="pickupAddress"]'),destination=form.querySelector('[name="destinationAddress"]'),extra=form.querySelector('[name="extraChargeAmd"]'),fare=form.querySelector('[name="fareAmd"]'),summary=form.querySelector('[data-fare-breakdown]'),preview=form.querySelector('[data-route-preview]'),serviceSelect=form.querySelector('[name="serviceId"]'),serviceDetails=form.querySelector('#customerServiceDetails');
+ const addChoiceButtons=(select,kind,labels)=>{
+  if(!select||form.querySelector('[data-booking-choice-group="'+kind+'"]'))return;
+  const group=document.createElement('div');group.className='booking-choice-group '+(kind==='service'?'booking-service-carousel':'');group.dataset.bookingChoiceGroup=kind;
+  if(kind==='service'){
+   [...select.options].filter(o=>o.value).forEach(option=>{const button=document.createElement('button');button.type='button';button.className='booking-choice-chip booking-service-chip';button.dataset.value=option.value;button.innerHTML='<strong>'+esc(option.textContent.split(' · ')[0])+'</strong><small>'+money(Number(option.dataset.price||0))+'</small>';group.appendChild(button)});
+   const label=select.closest('label');if(label)label.insertAdjacentElement('afterend',group);
+  }else{
+   labels.forEach(([value,title])=>{const button=document.createElement('button');button.type='button';button.className='booking-choice-chip';button.dataset.value=value;button.textContent=title;group.appendChild(button)});
+   const field=select.closest('.customer-choice-field');if(field)field.appendChild(group);
+  }
+  const sync=()=>group.querySelectorAll('button').forEach(button=>button.classList.toggle('selected',button.dataset.value===select.value));
+  group.addEventListener('click',event=>{const button=event.target.closest('button[data-value]');if(!button)return;select.value=button.dataset.value;select.dispatchEvent(new Event('change',{bubbles:true}));sync()});
+  select.classList.add('booking-native-select');sync();
+ };
+ addChoiceButtons(serviceSelect,'service');
+ addChoiceButtons(form.querySelector('[name="transmissionType"]'),'transmission',[['MANUAL','Մեխանիկական'],['AUTOMATIC','Ավտոմատ']]);
+ addChoiceButtons(form.querySelector('[name="vehicleFuelType"]'),'fuel',[['PETROL','Բենզին'],['ELECTRIC','Էլեկտրական'],['HYBRID','Հիբրիդ']]);
+ const fareLabel=fare.closest('label');
+ if(fareLabel&&!form.querySelector('.booking-total-highlight')){const total=document.createElement('div');total.className='booking-total-highlight';total.innerHTML='<span>ՎԵՐՋՆԱԿԱՆ ԸՆԴՀԱՆՈՒՐ ԱՐԺԵՔ</span><strong data-booking-total>— ֏</strong><small>Գումարը թարմացվում է երթուղու և ընտրված ծառայության հիման վրա</small>';fareLabel.insertAdjacentElement('afterend',total)}
  const selectedService=()=>{const option=serviceSelect?.selectedOptions?.[0];return option?.value?{id:option.value,title:option.textContent.split(' · ')[0],priceAmd:Number(option.dataset.price||0),dispatchMode:option.dataset.dispatch||'NETWORK',requiredCapability:option.dataset.capability||'',requirements:option.dataset.requirement||'',extraInfo:option.dataset.extraInfo||''}:null};
  const updateServiceDetails=()=>{const service=selectedService();if(!serviceDetails)return;serviceDetails.hidden=!service;serviceDetails.innerHTML=service?'<strong>'+esc(service.title)+'</strong><span>Ծառայության արժեք՝ '+money(service.priceAmd)+'</span><p>'+esc(service.requirements||'Հատուկ պայմաններ նշված չեն։')+'</p>'+(service.extraInfo?'<p>'+esc(service.extraInfo)+'</p>':'')+(service.dispatchMode==='CAPABILITY'?'<strong>Պահանջվող հմտություն՝ '+esc(({ACCESSIBILITY_ASSIST:'Հաշմանդամություն ունեցող անձանց աջակցություն',WHEELCHAIR_ASSIST:'Սայլակով ուղևորի աջակցություն',ELDERLY_ASSIST:'Տարեց ուղևորների աջակցություն',CHILD_ASSIST:'Երեխաների տեղափոխման աջակցություն',LUGGAGE_ASSIST:'Ուղեբեռի տեղափոխման աջակցություն'})[service.requiredCapability]||'')+'</strong>':'')+'<small>'+(service.dispatchMode==='CATEGORY'?'Պատվերը կուղարկվի միայն համապատասխան վարորդական կարգ ունեցող վարորդներին։':service.dispatchMode==='CAPABILITY'?'Պատվերը կուղարկվի միայն ընտրված հատուկ հմտությունն ունեցող վարորդներին։':'Պատվերը կհրապարակվի վարորդների ընդհանուր ցանցում։')+'</small>':''};
  const options='<option value="">Ընտրեք վարչական շրջանը</option>'+YEREVAN_DISTRICTS.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');
@@ -356,19 +375,19 @@ function bindFareCalculator(form){
  if(preview&&form.id!=='adminTestOrderForm')preview.insertAdjacentElement('afterend',fareGuide);
  if(!pickup||!destination||!extra||!fare)return;
  let timer=null,requestNo=0,lastQuote=null,lastQuoteKey='';
- const updateTotal=()=>{if(!lastQuote)return;const service=selectedService(),surcharge=Math.max(0,Math.round(Number(extra.value)||0))+(service?.priceAmd||0)+(urgent?.checked?2500:0)+(urgent?.checked?Number(lastQuote.demandExtraChargeAmd||0):0),total=lastQuote.baseFareAmd+surcharge;fare.value=String(total);if(summary)summary.textContent='Մեկնարկ՝ '+lastQuote.pickupDistrict+' · Ավարտ՝ '+lastQuote.destinationDistrict+' · Միջանկյալ՝ '+(lastQuote.intermediateDistricts.length?lastQuote.intermediateDistricts.join(', '):'չկա')+' · Հավելավճար՝ '+money(surcharge)+(urgent?.checked&&lastQuote.demandCoefficientPercent?' · Պահանջարկի գործակից՝ +'+String(lastQuote.demandCoefficientPercent).replace('.',',')+'%':'')+' · Վերջնական արժեք՝ '+money(total)};
+ const updateTotal=()=>{if(!lastQuote)return;const service=selectedService(),surcharge=Math.max(0,Math.round(Number(extra.value)||0))+(service?.priceAmd||0)+(urgent?.checked?2500:0)+(urgent?.checked?Number(lastQuote.demandExtraChargeAmd||0):0),total=lastQuote.baseFareAmd+surcharge;fare.value=String(total);const totalDisplay=form.querySelector('[data-booking-total]');if(totalDisplay)totalDisplay.textContent=money(total);if(summary)summary.textContent='Մեկնարկ՝ '+lastQuote.pickupDistrict+' · Ավարտ՝ '+lastQuote.destinationDistrict+' · Միջանկյալ՝ '+(lastQuote.intermediateDistricts.length?lastQuote.intermediateDistricts.join(', '):'չկա')+' · Հավելավճար՝ '+money(surcharge)+(urgent?.checked&&lastQuote.demandCoefficientPercent?' · Պահանջարկի գործակից՝ +'+String(lastQuote.demandCoefficientPercent).replace('.',',')+'%':'')+' · Վերջնական արժեք՝ '+money(total)};
  const refresh=async()=>{
   const from=districtFields.find(x=>x.field===pickup)?.select.value||'',to=districtFields.find(x=>x.field===destination)?.select.value||'';
-  if(!from||!to){lastQuote=null;fare.value='';if(preview)preview.textContent='Ընտրեք մեկնարկային և վերջնակետային վարչական շրջանները։';if(summary)summary.textContent='';return false}
+  if(!from||!to){lastQuote=null;fare.value='';const totalDisplay=form.querySelector('[data-booking-total]');if(totalDisplay)totalDisplay.textContent='— ֏';if(preview)preview.textContent='Ընտրեք մեկնարկային և վերջնակետային վարչական շրջանները։';if(summary)summary.textContent='';return false}
   const scheduleField=form.querySelector('[name="scheduleType"]'),isUrgent=Boolean(urgent?.checked&&(!scheduleField||scheduleField.value==='NOW')),extraChargeAmd=Math.max(0,Math.round(Number(extra.value)||0));
   const service=selectedService(),quoteExtra=extraChargeAmd+(service?.priceAmd||0),quoteKey=from+' → '+to+'|urgent:'+isUrgent+'|extra:'+quoteExtra+'|service:'+(service?.id||'');if(lastQuote&&lastQuoteKey===quoteKey&&form.dataset.routeQuoteReady==='true'){updateTotal();return true}
-  const id=++requestNo;if(preview)preview.textContent='Քարտեզի 12 վարչական շրջաններով որոշվում է միջանկյալ շրջանների քանակը…';fare.value='';
+  const id=++requestNo;const totalDisplay=form.querySelector('[data-booking-total]');if(totalDisplay)totalDisplay.textContent='Հաշվարկվում է…';if(preview)preview.textContent='Քարտեզի 12 վարչական շրջաններով որոշվում է միջանկյալ շրջանների քանակը…';fare.value='';
   try{
    const quote=await api('/api/routes/quote',{method:'POST',body:JSON.stringify({pickupDistrict:from,destinationDistrict:to,isUrgent,extraChargeAmd:quoteExtra})});
    if(id!==requestNo)return false;lastQuote=quote;lastQuoteKey=quoteKey;updateTotal();
    if(preview)preview.innerHTML='<strong>🗺️ Վարչական շրջանների սակագին</strong><span>Մեկնարկ՝ <b>'+esc(quote.pickupDistrict)+'</b></span><span>Ավարտ՝ <b>'+esc(quote.destinationDistrict)+'</b></span><span>Քարտեզային հաջորդականություն՝ <b>'+esc(quote.routeDistricts.join(' → '))+'</b></span><span>Միջանկյալ շրջաններ՝ <b>'+quote.intermediateDistricts.length+'</b></span><strong>Հիմնական արժեք՝ '+money(quote.baseFareAmd)+'</strong>';
    form.dataset.routeQuoteReady='true';return true;
-  }catch(error){if(id!==requestNo)return false;lastQuote=null;fare.value='';form.dataset.routeQuoteReady='false';if(preview)preview.textContent='⚠ '+error.message;if(summary)summary.textContent='Գինը չի հաշվարկվել․ ընտրեք Երևանի քարտեզի երկու վարչական շրջան։';return false}
+  }catch(error){if(id!==requestNo)return false;lastQuote=null;fare.value='';const totalDisplay=form.querySelector('[data-booking-total]');if(totalDisplay)totalDisplay.textContent='— ֏';form.dataset.routeQuoteReady='false';if(preview)preview.textContent='⚠ '+error.message;if(summary)summary.textContent='Գինը չի հաշվարկվել․ ընտրեք Երևանի քարտեզի երկու վարչական շրջան։';return false}
  };
  const schedule=()=>{clearTimeout(timer);form.dataset.routeQuoteReady='false';lastQuote=null;lastQuoteKey='';fare.value='';if(summary)summary.textContent='';timer=setTimeout(refresh,250)};
  districtFields.forEach(x=>x.select.addEventListener('change',schedule));
