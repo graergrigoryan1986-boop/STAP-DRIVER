@@ -61,7 +61,8 @@ function encryptPrivate(value){if(value==null)return null;const nonce=randomByte
 function decryptPrivate(value){if(!value)return null;const data=Buffer.from(value);if(data.subarray(0,5).toString()!=='STAP1')return data;const nonce=data.subarray(5,17),tag=data.subarray(17,33),body=data.subarray(33),decipher=createDecipheriv('aes-256-gcm',DOCUMENT_KEY,nonce);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(body),decipher.final()])}
 const DRIVER_PERIODIC_VERIFICATION_MS = 72 * 60 * 60 * 1000;
 function periodicVerificationState(user, now = new Date()) {
-  const dueAt = user?.periodicVehicleVerificationDueAt || (user?.driverVerifiedAt ? new Date(new Date(user.driverVerifiedAt).getTime() + DRIVER_PERIODIC_VERIFICATION_MS) : null);
+  const verificationStart = user?.driverVerifiedAt || user?.createdAt;
+  const dueAt = user?.periodicVehicleVerificationDueAt || (verificationStart ? new Date(new Date(verificationStart).getTime() + DRIVER_PERIODIC_VERIFICATION_MS) : null);
   return { required:Boolean(user?.isVerified && dueAt && now.getTime() >= new Date(dueAt).getTime()), dueAt, status:user?.periodicVehicleVerificationStatus||'NOT_DUE' };
 }
 async function emitOrderToEligibleDrivers(drivers,event) {
