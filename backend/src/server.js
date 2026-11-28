@@ -28,6 +28,13 @@ const allowedOrigins = [...new Set([
 const io = new SocketServer(server, {
   cors: { origin: allowedOrigins.length ? allowedOrigins : false, methods: ['GET', 'POST'] }
 });
+function emitOrderStatusChange(order,status,message){
+  if(!order)return;
+  const payload={id:order.id,status,message,changedAt:new Date().toISOString()};
+  const recipients=[order.customerId,order.driverId].filter(Boolean);
+  for(const userId of new Set(recipients))io.to('user:'+userId).emit('order:status-changed',payload);
+}
+
 
 app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', "'wasm-unsafe-eval'"], workerSrc: ["'self'", 'blob:'], connectSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://tessdata.projectnaptha.com'], imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com'], styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'], fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'] } } }));
 app.use(express.static('public'));
@@ -661,7 +668,7 @@ app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (
   }
   io.to('drivers').emit('order:cancelled',{id:order.id,status:'CANCELLED',title,message});
   io.to('order:'+order.id).emit('order:cancelled',{id:order.id,status:'CANCELLED',title,message});
-  io.emit('order:status-changed',{id:order.id,status:'CANCELLED',message,changedAt:new Date().toISOString()});
+  emitOrderStatusChange(order,'CANCELLED',message);
   res.json({success:true,order,message:'Պատվերը չեղարկվեց։ Ուղևորը, վարորդները և ադմինը ծանուցվեցին։'});
 }));
 
@@ -840,7 +847,7 @@ app.post('/api/orders/:id/cancel', auth, only('CUSTOMER'), asyncRoute(async (req
     data: { status: 'CANCELLED' }
   });
   if (!result.count) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ չեղարկել այս կարգավիճակում' });
-  io.emit('order:status-changed',{id:req.params.id,status:'CANCELLED',message:'Պատվիրատուն չեղարկել է պատվերը։',changedAt:new Date().toISOString()});
+  emitOrderStatusChange(existing,'CANCELLED','Պատվիրատուն չեղարկել է պատվերը։');
   res.json({ success: true, message: 'Պատվերը չեղարկվեց։' });
 }));
 
@@ -905,7 +912,7 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   if (!result) return res.status(409).json({ error: 'Պատվերն արդեն ընդունվել է կամ հասանելի չէ' });
   io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
   io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
-  io.emit('order:status-changed',{id:result.order.id,status:'ACCEPTED',message:'Վարորդը ընդունել է պատվերը։',changedAt:new Date().toISOString()});
+  emitOrderStatusChange(result.order,'ACCEPTED','Վարորդը ընդունել է պատվերը։');
   res.json({...result,order:maskDriverOrderContacts(result.order)});
 }));
 
@@ -942,7 +949,7 @@ app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRo
   });
   const order = await prisma.order.findUnique({ where: { id: existing.id } });
   if (!changed.count && order?.status !== 'ARRIVED') return res.status(409).json({ error: 'Պատվերի կարգավիճակը փոխվել է։ Թարմացրեք էջը։' });
-  io.emit('order:status-changed',{id:order.id,status:'ARRIVED',message:'Վարորդը տեղում է։',changedAt:new Date().toISOString()});
+  emitOrderStatusChange(order,'ARRIVED','Վարորդը տեղում է։');
   return res.json({order:maskDriverOrderContacts(order),message:'Ժամանումը և մեքենայի համապատասխանության ստուգումը հաստատվեց։'});
 }));
 
@@ -953,7 +960,7 @@ app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRou
   if (existing.status !== 'ARRIVED' || !existing.vehicleInspectionPassed) return res.status(409).json({ error: 'Նախ նշեք՝ տեղում եք և մեքենան ստուգվել է ու համապատասխանում է ծառայության պահանջներին։' });
   const changed = await prisma.order.updateMany({ where: { id: req.params.id, driverId: req.user.id, status: 'ARRIVED', vehicleInspectionPassed: true }, data: { status: 'IN_PROGRESS' } });
   const order = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
-  if(order?.status==='IN_PROGRESS')return res.json({order:maskDriverOrderContacts(order),message:changed.count?'Ուղևորությունը սկսվեց։':'Ուղևորությունն արդեն սկսված է։'});if(order?.status==='IN_PROGRESS'){if(changed.count)io.emit('order:status-changed',{id:order.id,status:'IN_PROGRESS',message:'Ուղևորությունը սկսվել է։',changedAt:new Date().toISOString()});return res.json({order:maskDriverOrderContacts(order),message:changed.count?'Ուղևորությունը սկսվեց։':'Ուղևորությունն արդեն սկսված է։'});}
+  if(order?.status==='IN_PROGRESS'){if(changed.count)emitOrderStatusChange(order,'IN_PROGRESS','Ուղևորությունը սկսվել է։');return res.json({order:maskDriverOrderContacts(order),message:changed.count?'Ուղևորությունը սկսվեց։':'Ուղևորությունն արդեն սկսված է։'});}
   return res.status(409).json({ error: 'Պատվերի կարգավիճակը փոխվել է։ Թարմացրեք էջը և կրկին փորձեք։' });
 }));
 
@@ -977,7 +984,7 @@ app.post('/api/orders/:id/driver-cancel', auth, only('DRIVER'), verifiedDriver, 
     for (const userId of recipients) io.to('user:' + userId).emit('notification:new', { title, message, type: 'ORDER_CANCELLED', orderId: order.id, createdAt: new Date() });
   }
   io.to('order:' + order.id).emit('order:cancelled', { id: order.id, status: 'CANCELLED', title, message });
-  io.emit('order:status-changed',{id:order.id,status:'CANCELLED',message,changedAt:new Date().toISOString()});
+  emitOrderStatusChange(order,'CANCELLED',message);
   res.json({ success: true, message: 'Պատվերը չեղարկվեց։ Ուղևորը և ադմինը ծանուցվեցին։' });
 }));
 
@@ -1049,7 +1056,7 @@ app.post('/api/orders/:id/complete', auth, only('DRIVER'), verifiedDriver, async
   if (!result) return res.status(409).json({ error: 'Պատվերը հնարավոր չէ ավարտել' });
   io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
   io.emit('order:completed', { id: req.params.id });
-  io.emit('order:status-changed',{id:req.params.id,status:'COMPLETED',message:'Ուղևորությունն ավարտվել է։',changedAt:new Date().toISOString()});
+  emitOrderStatusChange({id:req.params.id,customerId:result.customerId,driverId:req.user.id},'COMPLETED','Ուղևորությունն ավարտվել է։');
   io.emit('rating:updated', { ratedUserId: result.customerId, fromUserId: req.user.id, updatedAt: new Date().toISOString() });
   res.json({ success: true, settlement: result, balanceAmd: result.balanceAmd, message: 'Պատվերն ավարտվեց, պատվիրատուի գնահատականը պահպանվեց։' });
 }));
