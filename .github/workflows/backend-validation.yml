@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install backend dependencies
-        run: npm ci
+        run: npm install
       - name: Validate Prisma schema
         run: npx prisma validate
       - name: Check backend JavaScript syntax
