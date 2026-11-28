@@ -46,7 +46,7 @@ function connectRealtime(){
  };
  realtimeSocket.on('driver:balance-updated',data=>{if(currentUser?.role==='DRIVER'&&data?.driverId===currentUser.id&&Number.isFinite(Number(data.balanceAmd))){currentUser.balanceAmd=Number(data.balanceAmd);const amount=$('#driverBalanceAmount');if(amount)amount.textContent=money(currentUser.balanceAmd);}});
   realtimeSocket.on('order:status-changed',data=>{announceOrderStatus(data);refresh()});
-  realtimeSocket.on('order:eta-updated',data=>{announceOrderStatus({...data,status:'ETA_UPDATED',message:data?.message||('Վարորդի ժամանման առաջարկը՝ '+(data?.minutes||data?.requestedMinutes||'')+' րոպե։')});refresh()});
+  realtimeSocket.on('order:eta-updated',()=>refresh());
   realtimeSocket.on('order:new',data=>{if(currentUser?.role==='DRIVER')announceOrderStatus({...data,status:'OPEN',message:'Նոր պատվեր է հասանելի։'});refresh()});
   ['order:cancelled','order:accepted','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
   if(realtimeFallbackTimer)clearInterval(realtimeFallbackTimer);
