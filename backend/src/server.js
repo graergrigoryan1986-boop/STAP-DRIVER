@@ -1475,7 +1475,7 @@ app.delete('/api/drivers/gallery/:photoId',auth,only('DRIVER'),asyncRoute(async(
 
 app.get('/api/admin/drivers/:id/verification-profile',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{
-  id:true,name:true,email:true,phone:true,role:true,isVerified:true,isBlocked:true,createdAt:true,driverVerifiedAt:true,
+  id:true,name:true,email:true,phone:true,role:true,isVerified:true,isBlocked:true,createdAt:true,driverVerifiedAt:true,rating:true,balanceAmd:true,driverDeliveryEnabled:true,driverTransmission:true,
   driverFirstNameLatin:true,driverLastNameLatin:true,driverPatronymicLatin:true,driverLicenseSeries:true,driverLicenseIssuedAt:true,driverLicenseExpiresAt:true,driverLicenseCategories:true,driverExperienceMonths:true,driverDocumentsStatus:true,driverVerificationMessage:true,driverLicenseFront:true,driverLicenseBack:true,driverLicenseSelfie:true,
   dateOfBirth:true,passportDocumentType:true,passportNumberEncrypted:true,passportIssuedByEncrypted:true,passportIssueDate:true,passportExpiryDate:true,passportFront:true,passportBack:true,
   driverProfilePhoto:true,pendingDriverProfilePhoto:true,driverProfilePhotoStatus:true,driverPhotos:{orderBy:{createdAt:'asc'}},
