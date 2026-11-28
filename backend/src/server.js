@@ -923,6 +923,7 @@ app.patch('/api/orders/:id/arrival-estimate',auth,only('DRIVER'),verifiedDriver,
  const updated=await prisma.order.update({where:{id:order.id},data:{arrivalEstimateMinutes:minutes,arrivalEstimateStatus:'PENDING',customerRequestedEtaMinutes:null}});
  await prisma.notification.create({data:{userId:order.customerId,title:'Վարորդը նշել է ժամանման ժամանակը',message:'Վարորդն առաջարկում է հասնել '+minutes+' րոպեում։ Հաստատեք, մերժեք կամ առաջարկեք ավելի երկար ժամանակ։',type:'DRIVER_ETA_PROPOSED'}});
  io.to('user:'+order.customerId).emit('order:eta-updated',{id:order.id,status:updated.arrivalEstimateStatus,minutes});
+ emitOrderStatusChange({id:order.id,customerId:order.customerId,driverId:req.user.id},'ETA_UPDATED','Վարորդը կհասնի մոտ '+minutes+' րոպեից։');
  res.json({success:true,order:updated,message:'Ժամանման առաջարկն ուղարկվեց պատվիրատուին։'});
 }));
 app.post('/api/orders/:id/arrival-estimate-response',auth,only('CUSTOMER'),asyncRoute(async(req,res)=>{
@@ -936,6 +937,7 @@ app.post('/api/orders/:id/arrival-estimate-response',auth,only('CUSTOMER'),async
  const message=input.decision==='REQUEST_LONGER'?'Պատվիրատուն խնդրում է ժամանումը դարձնել '+input.requestedMinutes+' րոպե։ Նշեք նոր առաջարկ։':input.decision==='ACCEPTED'?'Պատվիրատուն հաստատել է '+order.arrivalEstimateMinutes+' րոպեն։':'Պատվիրատուն մերժել է '+order.arrivalEstimateMinutes+' րոպեանոց առաջարկը։ Նշեք նոր ժամանակ։';
  await prisma.notification.create({data:{userId:order.driverId,title,message,type:'CUSTOMER_ETA_'+input.decision}});
  io.to('user:'+order.driverId).emit('order:eta-updated',{id:order.id,status,minutes:order.arrivalEstimateMinutes,requestedMinutes:updated.customerRequestedEtaMinutes});
+ emitOrderStatusChange({id:order.id,customerId:req.user.id,driverId:order.driverId},'ETA_UPDATED',message);
  res.json({success:true,order:updated,message:'Պատասխանը ուղարկվեց վարորդին։'});
 }));
 app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
