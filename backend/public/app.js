@@ -119,10 +119,30 @@ function inspectionPhotoGroups(report,returnReport){
 }
 function inspectionPhotoMarkup(groups){
  if(!groups.length)return '<p class="inspection-no-photos">Այս պատվերի համար պահպանված լուսանկարներ չկան։</p>';
- return groups.map(group=>'<h4>'+esc(group.title)+' ('+group.photos.length+')</h4><div class="admin-inspection-images">'+group.photos.map((src,i)=>'<figure><img loading="lazy" src="'+esc(src)+'" alt="'+esc(group.title)+' '+(i+1)+'"><figcaption><a href="'+esc(src)+'" target="_blank" rel="noopener">Մեծ չափով բացել</a> · <a href="'+esc(src)+'" download="stap-order-photo-'+(i+1)+'.jpg">Պահպանել</a></figcaption></figure>').join('')+'</div>').join('');
+ return groups.map((group,groupIndex)=>'<h4>'+esc(group.title)+' ('+group.photos.length+')</h4><div class="admin-inspection-images">'+group.photos.map((src,i)=>'<figure><img loading="lazy" src="'+esc(src)+'" alt="'+esc(group.title)+' '+(i+1)+'"><figcaption><a href="'+esc(src)+'" target="_blank" rel="noopener">Մեծ չափով բացել</a><button type="button" class="action inspection-photo-save" data-save-inspection-photo="'+groupIndex+'-'+i+'" data-photo-name="stap-order-photo-'+(groupIndex+1)+'-'+(i+1)+'.jpg">⬇ ՊԱՀՊԱՆԵԼ ՀԵՌԱԽՈՍՈՒՄ</button><small class="inspection-save-hint">Եթե ներբեռնումը չսկսվի՝ բացված նկարին երկար սեղմեք և ընտրեք «Պահպանել նկարը»։</small></figcaption></figure>').join('')+'</div>').join('');
 }
 function bindInspectionPhotoControls(modal){
  modal.querySelectorAll('.admin-inspection-images img').forEach(img=>img.addEventListener('click',()=>img.classList.toggle('is-zoomed')));
+ modal.querySelectorAll('[data-save-inspection-photo]').forEach(button=>button.addEventListener('click',async()=>{
+  const figure=button.closest('figure'),img=figure?.querySelector('img');if(!img?.src)return;
+  const original=button.textContent;button.disabled=true;button.textContent='ՊԱՏՐԱՍՏՈՒՄ Է…';
+  let fallbackTab=null;
+  try{
+   const response=await fetch(img.src),blob=await response.blob();
+   const type=blob.type||'image/jpeg',extension=type.includes('png')?'png':type.includes('webp')?'webp':'jpg';
+   const filename=(button.dataset.photoName||'stap-order-photo.jpg').replace(/\.(jpg|jpeg|png|webp)$/i,'.'+extension);
+   const file=new File([blob],filename,{type});
+   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    await navigator.share({files:[file],title:'STAP DRIVER · Պատվերի լուսանկար'});button.textContent='✓ ՊԱՀՊԱՆՎԵՑ / ԿԻՍՎԵՑ';return;
+   }
+   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();a.remove();
+   button.textContent='✓ ՆԵՐԲԵՌՆՄԱՆ ՀՐԱՄԱՆԸ ՏՐՎԱԾ Է';
+   setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(error){
+   try{const a=document.createElement('a');a.href=img.src;a.target='_blank';a.rel='noopener';a.click();button.textContent='ՆԿԱՐԸ ԲԱՑՎԵՑ․ ԵՐԿԱՐ ՍԵՂՄԵՔ ԵՎ ՊԱՀՊԱՆԵՔ';}
+   catch(_){button.textContent='ԲԱՑԵՔ ՆԿԱՐԸ ԵՎ ԵՐԿԱՐ ՍԵՂՄԵՔ՝ ՊԱՀՊԱՆԵԼՈՒ ՀԱՄԱՐ';}
+  }finally{button.disabled=false;if(button.textContent==='ՊԱՏՐԱՍՏՈՒՄ Է…')button.textContent=original;}
+ }));
  const panel=modal.querySelector('.admin-inspection-modal-panel'),full=document.createElement('button');full.type='button';full.className='action';full.textContent='⛶ ԱՄԲՈՂՋ ԷԿՐԱՆՈՎ';full.addEventListener('click',()=>{if(panel.requestFullscreen)panel.requestFullscreen().catch(()=>{});else panel.classList.toggle('inspection-fullscreen-fallback')});
  modal.querySelector('[data-close-inspection]').insertAdjacentElement('afterend',full);
 }
