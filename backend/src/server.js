@@ -544,7 +544,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,totalExtraAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
   const fareAmd=route.baseFareAmd+totalExtraAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
+  const order=await prisma.order.create({data:{orderCode:await generateUniqueOrderCode(),customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   const event={id:order.id,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
   if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else io.to('drivers').emit('order:new',event);
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Պատվերը հրապարակվեց՝ ընտրված ծառայության և համապատասխան վարորդների պայմաններով։'});
@@ -641,7 +641,7 @@ app.get('/api/admin/orders/archive',auth,only('ADMIN'),asyncRoute(async(req,res)
   customer:{select:{id:true,name:true,phone:true}},
   driver:{select:{id:true,name:true,phone:true,isVerified:true}}
  }});
- const filtered=phoneDigits?orders.filter(order=>[order.phonePrimary,order.phoneSecondary,order.customer?.phone,order.driver?.phone].some(value=>String(value||'').replace(/\\D/g,'').includes(phoneDigits))):orders;
+ const orderCodeDigits=String(req.query.code||'').replace(/\\D/g,'');const filtered=orderCodeDigits.length===4?orders.filter(order=>String(order.orderCode||'')===orderCodeDigits):phoneDigits?orders.filter(order=>[order.phonePrimary,order.phoneSecondary,order.customer?.phone,order.driver?.phone].some(value=>String(value||'').replace(/\\D/g,'').includes(phoneDigits))):orders;
  res.json({orders:await withCustomerOrderNumbers(filtered),total:filtered.length,phoneSearch:phoneDigits||null,status});
 }));
 app.post('/api/admin/orders/:id/cancel', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
@@ -749,6 +749,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message});
 }));
+async function generateUniqueOrderCode(){for(let attempt=0;attempt<40;attempt++){const code=1000+randomInt(9000);const exists=await prisma.order.findUnique({where:{orderCode:code},select:{id:true}});if(!exists)return code;}throw new Error('Չհաջողվեց ստեղծել պատվերի եզակի քառանիշ կոդ։');}
 async function withCustomerOrderNumbers(orders){if(!orders?.length)return orders||[];const customerIds=[...new Set(orders.map(order=>order.customerId).filter(Boolean))];if(!customerIds.length)return orders;const history=await prisma.order.findMany({where:{customerId:{in:customerIds}},select:{id:true,customerId:true,createdAt:true},orderBy:[{createdAt:'asc'},{id:'asc'}]});const stats=new Map();for(const item of history){const current=stats.get(item.customerId)||{total:0,numbers:new Map()};current.total++;current.numbers.set(item.id,current.total);stats.set(item.customerId,current)}return orders.map(order=>{const current=stats.get(order.customerId);return current?{...order,customerOrderNumber:current.numbers.get(order.id)||current.total,customerOrderTotal:current.total}:order})}
 function maskDriverOrderContacts(order,now=new Date()){
  if(!order)return order;
@@ -759,7 +760,7 @@ function maskDriverOrderContacts(order,now=new Date()){
  const completedContactsExpired=Boolean(completedAt)&&now.getTime()>=completedAt.getTime()+6*60*60*1000;
  const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt)||completedContactsExpired;
  if(!contactHidden)return order;
- return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:null,destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:completedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:completedContactsExpired?'COMPLETED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
+ return {...order,phonePrimary:null,phoneSecondary:null,note:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:completedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:completedContactsExpired?'COMPLETED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
 }
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const categories=req.user.driverLicenseCategories||[];
@@ -800,7 +801,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   });
   const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => ({
     ...o,
-    ...(o.status==='COMPLETED'&&o.completedAt&&Date.now()>=new Date(o.completedAt).getTime()+6*60*60*1000?{phonePrimary:null,phoneSecondary:null,note:null,pickupNote:null,destinationNote:null,contactHidden:true,contactHiddenReason:'COMPLETED_RETENTION_EXPIRED'}:{}),
+    ...(o.status==='COMPLETED'&&o.completedAt&&Date.now()>=new Date(o.completedAt).getTime()+6*60*60*1000?{phonePrimary:null,phoneSecondary:null,note:null,contactHidden:true,contactHiddenReason:'COMPLETED_RETENTION_EXPIRED'}:{}),
     driver: o.driver ? {
       id:o.driver.id,name:o.driver.name,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
       driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
