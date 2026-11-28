@@ -1905,7 +1905,7 @@ body:not(.authenticated) #authPanel{margin-top:8px}
 .order-status-live-toast span{font-size:12px;line-height:1.45;color:#f5f1e7}
 
 /* Compact floating logout arrow for phone screens */
-.logout-bottom{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 7px)!important;right:10px!important;left:auto!important;bottom:auto!important;z-index:10050!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+.logout-bottom{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 54px)!important;right:10px!important;left:auto!important;bottom:auto!important;z-index:10050!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
 .logout-bottom #logout{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;font-size:0!important;line-height:1!important;color:#f2d58f!important;background:rgba(19,25,27,.92)!important;border:1px solid rgba(215,184,111,.75)!important;box-shadow:0 3px 12px rgba(0,0,0,.35)!important}
 .logout-bottom #logout::before{content:"↗";font-size:21px;font-weight:800;line-height:1}
 .logout-bottom #logout:active{transform:scale(.94)}
@@ -2030,3 +2030,12 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 #orderForm .booking-total-highlight>strong{font-size:clamp(27px,8vw,36px);line-height:1.12;font-weight:950;letter-spacing:.2px;color:#f1d69c;text-shadow:0 2px 12px rgba(226,190,116,.16);font-variant-numeric:tabular-nums}
 #orderForm .booking-total-highlight>small{font-size:10px;line-height:1.4;color:#c7c0b2}
 @media(max-width:480px){#orderForm .booking-choice-group{gap:6px}#orderForm .booking-service-chip{min-width:126px;min-height:60px}#orderForm .customer-choice-field .booking-choice-chip{font-size:11px;padding:9px 5px}#orderForm .booking-total-highlight{margin:6px 0 11px;padding:13px 9px}}
+
+
+/* Customer rating inside the personal profile */
+.customer-own-rating{display:flex;align-items:center;gap:13px;margin:4px 0 15px;padding:13px 15px;border:1px solid rgba(211,177,112,.48);border-radius:14px;background:linear-gradient(120deg,rgba(211,177,112,.16),rgba(20,23,28,.92));box-shadow:inset 0 1px rgba(255,255,255,.06)}
+.customer-own-rating-stars{font-size:25px;letter-spacing:2px;line-height:1;color:#d7b56e;text-shadow:0 2px 9px rgba(215,181,110,.22)}
+.customer-own-rating>div:last-child{display:grid;gap:3px}
+.customer-own-rating>div:last-child>span{font-size:9px;font-weight:850;letter-spacing:1.1px;color:#c9b78f}
+.customer-own-rating strong{font-size:22px;line-height:1.1;color:#f2d58f;font-variant-numeric:tabular-nums}
+.customer-own-rating strong small{font-size:11px;color:#c9b78f;font-weight:600}
