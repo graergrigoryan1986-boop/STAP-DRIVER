@@ -2487,3 +2487,13 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 
 
 .vehicle-shot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.vehicle-shot-button{min-height:62px;padding:12px;border:1px solid #c5a24b;border-radius:12px;background:#171717;color:#f2d27d;font-weight:800;cursor:pointer}.vehicle-shot-button.captured{border-color:#4d9b70;color:#9ce0b4}.vehicle-capture-thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.vehicle-shot-preview{min-width:0}.vehicle-shot-preview img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px}.vehicle-shot-preview span{display:block;font-size:11px;text-align:center;margin-top:4px}.vehicle-shot-grid button:disabled{opacity:.65}#vehicleSubmitButton:disabled{opacity:.45;cursor:not-allowed}@media(max-width:520px){.vehicle-shot-grid{grid-template-columns:1fr}.vehicle-capture-thumbs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Premium delivery: matched sender/recipient blocks */
+#orderForm.premium-delivery-mode .delivery-contact-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:stretch;margin:10px 0 16px}
+#orderForm.premium-delivery-mode .delivery-contact-card{display:flex;flex-direction:column;gap:11px;min-width:0;padding:15px;border:1px solid rgba(197,162,75,.55);border-radius:14px;background:rgba(197,162,75,.055)}
+#orderForm.premium-delivery-mode .delivery-contact-card h5{margin:0 0 2px;padding-bottom:9px;border-bottom:1px solid rgba(197,162,75,.35);color:#d9b65e;font-size:14px;letter-spacing:.08em}
+#orderForm.premium-delivery-mode .delivery-contact-card label{display:grid;gap:6px;margin:0;font-weight:700}
+#orderForm.premium-delivery-mode .delivery-contact-card input{box-sizing:border-box;width:100%;min-width:0;min-height:46px}
+#orderForm.premium-delivery-mode .delivery-consent-panel{margin-top:8px}
+@media(max-width:640px){#orderForm.premium-delivery-mode .delivery-contact-pair{grid-template-columns:1fr;gap:12px}}
