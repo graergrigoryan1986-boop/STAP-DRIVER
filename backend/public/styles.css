@@ -1903,3 +1903,12 @@ body:not(.authenticated) #authPanel{margin-top:8px}
 .order-status-live-toast.visible{opacity:1;transform:translateY(0)}
 .order-status-live-toast strong{font-size:14px;color:#f2d58f;letter-spacing:.02em}
 .order-status-live-toast span{font-size:12px;line-height:1.45;color:#f5f1e7}
+
+/* Compact floating logout arrow for phone screens */
+.logout-bottom{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 7px)!important;right:10px!important;left:auto!important;bottom:auto!important;z-index:10050!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+.logout-bottom #logout{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;font-size:0!important;line-height:1!important;color:#f2d58f!important;background:rgba(19,25,27,.92)!important;border:1px solid rgba(215,184,111,.75)!important;box-shadow:0 3px 12px rgba(0,0,0,.35)!important}
+.logout-bottom #logout::before{content:"↗";font-size:21px;font-weight:800;line-height:1}
+.logout-bottom #logout:active{transform:scale(.94)}
+.driver-bottom-menu button b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.driver-bottom-menu button{min-width:0;overflow:hidden}
+@media(max-width:480px){.driver-bottom-menu{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}.driver-bottom-menu button{padding:8px 4px!important;font-size:11px!important}}
