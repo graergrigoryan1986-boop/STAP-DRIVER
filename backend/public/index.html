@@ -8,9 +8,9 @@
 <title>STAP DRIVER — Executive Mobility</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=20261128-loginfix1">
+<link rel="stylesheet" href="/styles.css?v=20261128-authfix2">
 <script src="/socket.io/socket.io.js" defer></script>
-<script src="/app.js?v=20261128-loginfix1" defer></script>
+<script src="/app.js?v=20261128-authfix2" defer></script>
 </head>
 <body>
 <header class="topbar"><div class="container nav">
@@ -27,9 +27,9 @@
 <div class="eyebrow">STAP DRIVER · ACCOUNT</div><h3>Անձնական հաշիվ</h3><p>Մուտք գործեք կամ գրանցվեք՝ շարունակելու համար։</p>
 <div class="switcher mode-switch"><button class="switch mode-btn active" id="loginTab" type="button">Մուտք</button><button class="switch mode-btn" id="registerTab" type="button">Գրանցում</button></div>
 <form id="authForm">
-<div id="registerFields" class="hidden form-grid">
-<label class="field">Անուն Ազգանուն<input name="name" autocomplete="name" minlength="2" required placeholder="Ամբողջական անուն"></label>
-<label class="field">Հեռախոս<input name="phone" autocomplete="tel" type="tel" required placeholder="+374 ..."></label>
+<div id="registerFields" class="hidden form-grid" hidden>
+<label class="field">Անուն Ազգանուն<input name="name" autocomplete="name" minlength="2" disabled placeholder="Ամբողջական անուն"></label>
+<label class="field">Հեռախոս<input name="phone" autocomplete="tel" type="tel" disabled placeholder="+374 ..."></label>
 <input type="hidden" name="role" id="role" value="CUSTOMER">
 <label id="licenseField" class="field full hidden">Վարորդական իրավունքի տվյալներ<input name="driverLicense" placeholder="Վկայականի տվյալներ"></label><fieldset id="driverCapabilitiesField" class="field full hidden"><legend>Լրացուցիչ ծառայություններ մատուցելու հմտություններ (ըստ ցանկության)</legend><label><input type="checkbox" name="driverServiceCapabilities" value="ACCESSIBILITY_ASSIST"> Օգնություն հաշմանդամություն ունեցող անձանց</label><label><input type="checkbox" name="driverServiceCapabilities" value="WHEELCHAIR_ASSIST"> Սայլակով ուղևորի տեղափոխման աջակցություն</label><label><input type="checkbox" name="driverServiceCapabilities" value="ELDERLY_ASSIST"> Տարեց ուղևորների աջակցություն</label><label><input type="checkbox" name="driverServiceCapabilities" value="CHILD_ASSIST"> Երեխաների տեղափոխման աջակցություն</label><label><input type="checkbox" name="driverServiceCapabilities" value="LUGGAGE_ASSIST"> Ուղեբեռի տեղափոխման աջակցություն</label></fieldset>
 </div>
