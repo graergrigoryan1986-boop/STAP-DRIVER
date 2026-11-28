@@ -224,7 +224,7 @@ app.put('/api/admin/wallet-settings',auth,only('ADMIN'),asyncRoute(async(req,res
 
 app.get('/api/me', auth, (req, res) => res.json({ user: { ...publicUser(req.user), dateOfBirth: req.user.dateOfBirth } }));
 
-app.patch('/api/profile', auth, asyncRoute(async (req,res)=>{const {dateOfBirth}=z.object({dateOfBirth:z.iso.date().or(z.literal(''))}).parse(req.body);const user=await prisma.user.update({where:{id:req.user.id},data:{dateOfBirth:dateOfBirth?new Date(dateOfBirth+'T00:00:00.000Z'):null}});res.json({user:publicUser(user),message:'Ծննդյան ամսաթիվը պահպանվեց։'})}));
+app.patch('/api/profile', auth, asyncRoute(async (req,res)=>{const input=z.object({name:z.string().trim().min(2).max(120).optional(),phone:z.string().trim().min(5).max(30).optional(),dateOfBirth:z.iso.date().or(z.literal('')).optional()}).parse(req.body);const data={...(input.name!==undefined?{name:input.name}:{}),...(input.phone!==undefined?{phone:input.phone}:{}),...(input.dateOfBirth!==undefined?{dateOfBirth:input.dateOfBirth?new Date(input.dateOfBirth+'T00:00:00.000Z'):null}:{})};if(!Object.keys(data).length)return res.status(400).json({error:'Փոփոխության տվյալներ չկան։'});const user=await prisma.user.update({where:{id:req.user.id},data});res.json({user:publicUser(user),message:'Անձնական տվյալները պահպանվեցին։'})}));
 
 app.patch('/api/customer/profile', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const { driverLicenseIssuedAt, dateOfBirth } = z.object({ driverLicenseIssuedAt: z.iso.date().or(z.literal('')), dateOfBirth: z.iso.date().or(z.literal('')).optional() }).parse(req.body);
