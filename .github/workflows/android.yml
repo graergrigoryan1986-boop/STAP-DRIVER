@@ -1,4 +1,4 @@
-name: Build STAP customer, driver and admin APKs
+name: Build STAP admin, driver-courier and customer APKs
 
 on:
   workflow_dispatch:
