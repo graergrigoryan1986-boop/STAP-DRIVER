@@ -2484,3 +2484,6 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 #orderForm.premium-delivery-mode .premium-delivery-fields input:not([type=checkbox]){width:100%}
 #orderForm.premium-delivery-mode .delivery-consent-panel{margin-top:8px}
 #orderForm.premium-delivery-mode [name="fareAmd"]{font-size:1.2rem;font-weight:800;color:#d7b65e}
+
+
+.vehicle-shot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.vehicle-shot-button{min-height:62px;padding:12px;border:1px solid #c5a24b;border-radius:12px;background:#171717;color:#f2d27d;font-weight:800;cursor:pointer}.vehicle-shot-button.captured{border-color:#4d9b70;color:#9ce0b4}.vehicle-capture-thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.vehicle-shot-preview{min-width:0}.vehicle-shot-preview img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px}.vehicle-shot-preview span{display:block;font-size:11px;text-align:center;margin-top:4px}.vehicle-shot-grid button:disabled{opacity:.65}#vehicleSubmitButton:disabled{opacity:.45;cursor:not-allowed}@media(max-width:520px){.vehicle-shot-grid{grid-template-columns:1fr}.vehicle-capture-thumbs{grid-template-columns:repeat(2,minmax(0,1fr))}}
