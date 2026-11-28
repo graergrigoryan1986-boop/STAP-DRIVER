@@ -750,7 +750,32 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message});
 }));
 async function generateUniqueOrderCode(){for(let attempt=0;attempt<40;attempt++){const code=1000+(randomBytes(4).readUInt32BE(0)%9000);const exists=await prisma.order.findUnique({where:{orderCode:code},select:{id:true}});if(!exists)return code;}throw new Error('Չհաջողվեց ստեղծել պատվերի եզակի քառանիշ կոդ։');}
-async function ensureOrderCodes(orders){if(!orders?.length)return orders||[];const result=[];for(const order of orders){if(order.orderCode){result.push(order);continue;}const orderCode=await generateUniqueOrderCode();const updated=await prisma.order.update({where:{id:order.id},data:{orderCode},select:{orderCode:true}});result.push({...order,...updated});}return result;}
+let orderCodeBackfillPromise=null;
+async function ensureAllOrderCodes(){
+ if(!orderCodeBackfillPromise){
+  orderCodeBackfillPromise=(async()=>{
+   const legacy=await prisma.order.findMany({where:{OR:[{orderCode:null},{orderCode:{lt:1000}},{orderCode:{gt:9999}}]},select:{id:true}});
+   for(const order of legacy){
+    const orderCode=await generateUniqueOrderCode();
+    await prisma.order.update({where:{id:order.id},data:{orderCode}});
+   }
+   return legacy.length;
+  })().catch(error=>{orderCodeBackfillPromise=null;throw error});
+ }
+ return orderCodeBackfillPromise;
+}
+async function ensureOrderCodes(orders){
+ await ensureAllOrderCodes();
+ if(!orders?.length)return orders||[];
+ const result=[];
+ for(const order of orders){
+  if(Number.isInteger(order.orderCode)&&order.orderCode>=1000&&order.orderCode<=9999){result.push(order);continue;}
+  const orderCode=await generateUniqueOrderCode();
+  const updated=await prisma.order.update({where:{id:order.id},data:{orderCode},select:{orderCode:true}});
+  result.push({...order,...updated});
+ }
+ return result;
+}
 async function withCustomerOrderNumbers(orders){if(!orders?.length)return orders||[];orders=await ensureOrderCodes(orders);const customerIds=[...new Set(orders.map(order=>order.customerId).filter(Boolean))];if(!customerIds.length)return orders;const history=await prisma.order.findMany({where:{customerId:{in:customerIds}},select:{id:true,customerId:true,createdAt:true},orderBy:[{createdAt:'asc'},{id:'asc'}]});const stats=new Map();for(const item of history){const current=stats.get(item.customerId)||{total:0,numbers:new Map()};current.total++;current.numbers.set(item.id,current.total);stats.set(item.customerId,current)}return orders.map(order=>{const current=stats.get(order.customerId);return current?{...order,customerOrderNumber:current.numbers.get(order.id)||current.total,customerOrderTotal:current.total}:order})}
 function maskDriverOrderContacts(order,now=new Date()){
  if(!order)return order;
@@ -811,7 +836,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
       experienceLabel:(()=>{const m=Number.isInteger(o.driver.driverExperienceMonths)?o.driver.driverExperienceMonths:(o.driver.driverLicenseIssuedAt?Math.max(0,Math.floor((Date.now()-new Date(o.driver.driverLicenseIssuedAt).getTime())/(30.4375*86400000))):null);return m===null?'Նշված չէ':(Math.floor(m/12)?Math.floor(m/12)+' տարի ':'')+(m%12?m%12+' ամիս':'')||'0 ամիս'})(),profilePhoto:o.driver.driverProfilePhoto ? 'data:image/jpeg;base64,'+decryptPrivate(o.driver.driverProfilePhoto).toString('base64') : null
     } : null
   })) : orders;
-  res.json({ orders: safeOrders });
+  res.json({ orders: await withCustomerOrderNumbers(safeOrders) });
 }));
 
 app.post('/api/orders/:id/rate-driver',auth,only('CUSTOMER'),asyncRoute(async(req,res)=>{
