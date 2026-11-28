@@ -1005,15 +1005,15 @@ app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asy
   const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id}});
   if(!order)return res.status(404).json({error:'Պատվերը կապված չէ ձեր վարորդական հաշվի հետ։'});
   if(input.mode==='HANDOVER'){
-    if(order.status!=='ACCEPTED')return res.status(409).json({error:'Մեքենայի ընդունման ստուգումը հասանելի է միայն ընդունված պատվերի համար։'});
+    if(order.status!=='ARRIVED'||order.vehicleInspectionPassed)return res.status(409).json({error:'Նախ սեղմեք «Տեղում եմ»։ Զննումը հասանելի է միայն տեղ հասնելուց հետո և մեկ անգամ։'});
     if(input.checks.exteriorChecked!==true||input.checks.vehicleMatches!==true)return res.status(400).json({error:'Հաստատեք մեքենայի արտաքին զննումը և համարանիշի նույնականացումը։'});
     if(input.hasDamage&&input.damagePhotos.length===0)return res.status(400).json({error:'Վնասվածք նշելու դեպքում առնվազն մեկ լուսանկար պարտադիր է։'});
     if(!input.hasDamage&&input.damagePhotos.length>0)return res.status(400).json({error:'Վնասվածքի լուսանկարները կցելուց առաջ նշեք վնասվածքի առկայությունը։'});
     const report={...input,driverId:req.user.id,driverName:req.user.name,orderId:order.id,orderCode:order.orderCode,recordedAt:new Date().toISOString(),ip:req.ip};
-    const changed=await prisma.order.updateMany({where:{id:order.id,driverId:req.user.id,status:'ACCEPTED',vehicleInspectionPassed:false},data:{status:'ARRIVED',arrivedAt:new Date(),vehicleInspectionPassed:true,vehicleInspectionReport:report}});
+    const changed=await prisma.order.updateMany({where:{id:order.id,driverId:req.user.id,status:'ARRIVED',vehicleInspectionPassed:false},data:{vehicleInspectionPassed:true,vehicleInspectionReport:report}});
     if(!changed.count)return res.status(409).json({error:'Ստուգման արձանագրությունը արդեն պահպանվել է կամ պատվերի կարգավիճակը փոխվել է։'});
     const updated=await prisma.order.findUnique({where:{id:order.id}});
-    emitOrderStatusChange(updated,'ARRIVED','Մեքենայի ընդունման ստուգումն ու հաճախորդի հաստատումը գրանցվել են։');
+    emitOrderStatusChange(updated,'ARRIVED','Մեքենայի արտաքին զննումն ու լուսանկարները պահպանվել են։');
     return res.json({order:maskDriverOrderEvidence(maskDriverOrderContacts(updated)),message:'Ստուգումն ավարտված է։ Կարող եք շարունակել պատվերը։'});
   }
   if(order.status!=='IN_PROGRESS')return res.status(409).json({error:'Վերադարձի ստուգումը հասանելի է միայն ուղևորության ընթացքում։'});
@@ -1024,8 +1024,13 @@ app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asy
   res.json({success:true,order:maskDriverOrderEvidence(maskDriverOrderContacts(updated)),message:'Մեքենայի վերադարձի վիճակը լուսանկարներով պահպանվեց։ Այժմ կարող եք ավարտել պատվերը։'});
 }));
 
-app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (_req,res)=>{
-  return res.status(409).json({error:'Մինչև մեքենայի ընդունման ամբողջական ստուգումն ու հաճախորդի հաստատումը «Տեղում եմ» քայլը հասանելի չէ։ Լրացրեք ստուգման արձանագրությունը։'});
+app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req,res)=>{
+  const changed=await prisma.order.updateMany({where:{id:req.params.id,driverId:req.user.id,status:'ACCEPTED'},data:{status:'ARRIVED',arrivedAt:new Date()}});
+  const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id}});
+  if(!order)return res.status(404).json({error:'Այս պատվերը կապված չէ ձեր վարորդական հաշվի հետ։'});
+  if(order.status!=='ARRIVED')return res.status(409).json({error:'Պատվերի կարգավիճակը փոխվել է։ Թարմացրեք էջը։'});
+  if(changed.count)emitOrderStatusChange(order,'ARRIVED','Վարորդը հասել է պատվիրատուի նշած վայր։ Հաջորդ քայլը՝ մեքենայի զննումը։');
+  res.json({order:maskDriverOrderEvidence(maskDriverOrderContacts(order)),message:'Տեղ հասնելը գրանցվեց։ Հաջորդ քայլը՝ զննում և լուսանկարներ։'});
 }));
 
 app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
