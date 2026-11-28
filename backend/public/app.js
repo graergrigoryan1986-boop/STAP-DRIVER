@@ -363,8 +363,8 @@ function bindFareCalculator(form){
   select.classList.add('booking-native-select');sync();
  };
  addChoiceButtons(serviceSelect,'service');
- addChoiceButtons(form.querySelector('[name="transmissionType"]'),'transmission',[['MANUAL','⚙️ Մեխանիկական'],['AUTOMATIC','⚙️ Ավտոմատ']]);
- addChoiceButtons(form.querySelector('[name="vehicleFuelType"]'),'fuel',[['PETROL','⛽ Բենզին'],['ELECTRIC','⚡ Էլեկտրո'],['HYBRID','♻️ Հիբրիդ']]);
+ // Transmission and engine remain visible native selects for reliable Android WebView and browser selection.
+ form.querySelectorAll('[name="transmissionType"],[name="vehicleFuelType"]').forEach(select=>select.classList.remove('booking-native-select'));
  const fareLabel=fare.closest('label');
  if(fareLabel&&!form.querySelector('.booking-total-highlight')){const total=document.createElement('div');total.className='booking-total-highlight';total.innerHTML='<span>ՎԵՐՋՆԱԿԱՆ ԸՆԴՀԱՆՈՒՐ ԱՐԺԵՔ</span><strong data-booking-total>— ֏</strong><small>Գումարը թարմացվում է երթուղու և ընտրված ծառայության հիման վրա</small>';fareLabel.insertAdjacentElement('afterend',total)}
  const selectedService=()=>{const option=serviceSelect?.selectedOptions?.[0];return option?.value?{id:option.value,title:option.textContent.split(' · ')[0],priceAmd:Number(option.dataset.price||0),dispatchMode:option.dataset.dispatch||'NETWORK',requiredCapability:option.dataset.capability||'',requirements:option.dataset.requirement||'',extraInfo:option.dataset.extraInfo||''}:null};
