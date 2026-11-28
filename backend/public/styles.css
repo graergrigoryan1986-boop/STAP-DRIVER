@@ -2278,3 +2278,32 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .driver-stage-step span{color:#f3eee2;font-size:13px;line-height:1.5}
 .driver-inspection-stage .vehicle-inspection-form{margin:0}
 .driver-inspection-stage .vehicle-inspection-submit{width:100%;min-height:52px}
+
+
+/* Customer booking: ensure notes and tap choices are actually visible */
+.customer-user-mode #orderForm .route-note-field{display:block!important;visibility:visible!important}
+.customer-user-mode #orderForm label:has([name="transmissionType"]){display:flex!important}
+#orderForm .customer-choice-field select[name="transmissionType"].booking-native-select,#orderForm .customer-choice-field select[name="vehicleFuelType"].booking-native-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#orderForm .booking-choice-group[data-booking-choice-group="transmission"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+#orderForm .booking-choice-group[data-booking-choice-group="transmission"] .booking-choice-chip{display:flex!important;align-items:center!important;justify-content:center!important;min-height:50px!important}
+#orderForm .booking-choice-group[data-booking-choice-group="engine"]{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#orderForm .booking-choice-group[data-booking-choice-group="engine"] .booking-choice-chip{display:flex!important;align-items:center!important;justify-content:center!important}
+#orderForm .urgent-order-toggle{background:rgba(239,68,68,.08)!important;background-image:none!important;border:2px solid rgba(239,68,68,.72)!important;color:#fff!important;box-shadow:none!important;animation:none!important}
+#orderForm .urgent-order-toggle span,#orderForm .urgent-order-toggle small{color:#fff!important}
+#orderForm .urgent-order-toggle.is-selected{background:linear-gradient(135deg,#176b45,#159957)!important;border-color:#69e29a!important;color:#fff!important;box-shadow:0 0 0 3px rgba(105,226,154,.18),0 8px 20px rgba(0,0,0,.18)!important}
+#orderForm .urgent-order-toggle.is-selected span,#orderForm .urgent-order-toggle.is-selected small{color:#fff!important}
+.vehicle-inspection-choice-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.vehicle-inspection-choice{display:flex;align-items:center;gap:10px;min-height:74px;padding:13px;border:1px solid rgba(218,183,117,.5);border-radius:13px;background:#202c38;color:#f7f4ec;font-weight:800;font-size:13px;line-height:1.45;cursor:pointer}
+.vehicle-inspection-choice input{width:20px;height:20px;flex:0 0 20px;accent-color:#63d99a}
+.vehicle-inspection-choice:has(input:checked){border-color:#68dfa0;background:linear-gradient(135deg,#174b37,#1e6546);box-shadow:0 0 0 2px rgba(104,223,160,.17)}
+.damage-photo-actions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}
+.damage-photo-actions button{flex:1 1 170px;min-height:46px;border:1px solid #c5a56a;border-radius:10px;background:#293d4f;color:#fff;font-weight:850}
+.damage-photo-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.damage-photo-file{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:9px;background:#203c31;color:#eafff1;font-size:12px}
+.damage-photo-file button{border:0;background:transparent;color:#ffb5b5;font-weight:900}
+.admin-inspection-modal{position:fixed;z-index:99999;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.82)}
+.admin-inspection-modal-panel{width:min(900px,100%);max-height:90vh;overflow:auto;padding:20px;border:1px solid #c6a15f;border-radius:16px;background:#121b25;color:#f5f3ed}
+.admin-inspection-modal-panel h3{color:#f2cf7a}.admin-inspection-modal-panel h4{margin:16px 0 8px;color:#e5c98e}
+.admin-inspection-images{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.admin-inspection-images img{width:100%;max-height:260px;object-fit:contain;border:1px solid #53616f;border-radius:10px;background:#0a0e13}
+@media(max-width:600px){.vehicle-inspection-choice-group{grid-template-columns:1fr}.admin-inspection-modal-panel{padding:13px}}
