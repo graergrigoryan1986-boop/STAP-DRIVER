@@ -21,6 +21,22 @@ function playOrderStatusTone(){
   notes.forEach((frequency,index)=>{const start=now+index*.62,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.12,start+.045);gain.gain.exponentialRampToValueAtTime(.0001,start+.42);osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+.45)});
  }catch(error){console.warn('Status sound failed',error)}
 }
+function playUrgentSelectionTone(){
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;
+  orderStatusAudioContext=orderStatusAudioContext||new AudioCtx();
+  if(orderStatusAudioContext.state==='suspended'&&orderStatusAudioUnlocked)orderStatusAudioContext.resume();
+  if(orderStatusAudioContext.state!=='running')return;
+  const ctx=orderStatusAudioContext,now=ctx.currentTime;
+  [784,988,1175].forEach((frequency,index)=>{
+   const start=now+index*.105,osc=ctx.createOscillator(),gain=ctx.createGain();
+   osc.type='triangle';osc.frequency.setValueAtTime(frequency,start);
+   gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(.055,start+.018);
+   gain.gain.exponentialRampToValueAtTime(.0001,start+.19);
+   osc.connect(gain);gain.connect(ctx.destination);osc.start(start);osc.stop(start+.2);
+  });
+ }catch(error){console.warn('Urgent selection sound unavailable',error)}
+}
 function announceOrderStatus(data){
  const labels={OPEN:'Նոր պատվեր',ACCEPTED:'Վարորդն ընդունել է պատվերը',ARRIVED:'Վարորդը տեղում է',IN_PROGRESS:'Ուղևորությունը սկսվել է',COMPLETED:'Պատվերն ավարտվել է',CANCELLED:'Պատվերը չեղարկվել է'};
  const label=labels[data?.status]||'Պատվերի կարգավիճակը փոխվել է';
@@ -340,7 +356,7 @@ function bindFareCalculator(form){
    const label=select.closest('label');if(label)label.insertAdjacentElement('afterend',group);
   }else{
    labels.forEach(([value,title])=>{const button=document.createElement('button');button.type='button';button.className='booking-choice-chip';button.dataset.value=value;button.textContent=title;group.appendChild(button)});
-   const field=select.closest('.customer-choice-field');if(field)field.appendChild(group);
+   const field=select.closest('.customer-choice-field, .fare-field, .admin-form-field, label');if(field)field.appendChild(group);else select.insertAdjacentElement('afterend',group);
   }
   const sync=()=>group.querySelectorAll('button').forEach(button=>button.classList.toggle('selected',button.dataset.value===select.value));
   group.addEventListener('click',event=>{const button=event.target.closest('button[data-value]');if(!button)return;select.value=button.dataset.value;select.dispatchEvent(new Event('change',{bubbles:true}));sync()});
@@ -369,6 +385,18 @@ function bindFareCalculator(form){
  form._getFullAddress=field=>form._getDistrict(field)+' վարչական շրջան';
  form.querySelectorAll('[name="pickupNeighborhood"],[name="destinationNeighborhood"]').forEach(el=>el.remove());
  const urgent=form.querySelector('[name="isUrgent"]')||(()=>{const label=document.createElement('label');label.className='urgent-order-toggle';label.innerHTML='<input type="checkbox" name="isUrgent" aria-label="Շտապ պատվեր"><span>⚡ ՇՏԱՊ · ՀԵՆՑ ՀԻՄԱ · ՀՆԱՐԱՎՈՐԻՆՍ ԱՐԱԳ</span><small>Գործող պահանջարկի գործակցով</small>';const schedule=form.querySelector('.neon-schedule-group');(schedule||form).appendChild(label);return label.querySelector('input')})();
+ const urgentLabel=urgent.closest('label');
+ if(urgentLabel){
+  urgentLabel.classList.add('urgent-order-toggle');
+  const urgentText=urgentLabel.querySelector('span');if(urgentText)urgentText.textContent='⚡ ՇՏԱՊ';
+  const urgentHint=urgentLabel.querySelector('small');if(urgentHint)urgentHint.textContent='Անմիջապես գտնել վարորդ · +2 500 ֏ հավելավճար';
+  urgent.setAttribute('aria-label','ՇՏԱՊ պատվեր');
+  if(!urgent.dataset.urgentSoundBound){
+   urgent.addEventListener('change',()=>{playUrgentSelectionTone();urgentLabel.classList.toggle('is-selected',urgent.checked)});
+   urgent.dataset.urgentSoundBound='true';
+  }
+  urgentLabel.classList.toggle('is-selected',urgent.checked);
+ }
  const fareGuide=document.createElement('details');fareGuide.className='fare-guide';
  fareGuide.innerHTML='<summary>ԵՐԵՎԱՆԻ 12 ՎԱՐՉԱԿԱՆ ՇՐՋԱՆՆԵՐԻ ՍԱԿԱԳՆԵՐ</summary><p>Գինը որոշվում է միայն վարչական շրջանների քարտեզային հարևանությամբ։ Փողոցի անունը, շենքի համարը և կոնկրետ հասցեն չեն օգտագործվում։</p><div class="fare-guide-grid"><span>Նույն վարչական շրջան</span><strong>7 000 ֏</strong><span>Այլ շրջան՝ առանց միջանկյալի</span><strong>12 000 ֏</strong><span>1 միջանկյալ շրջան</span><strong>15 000 ֏</strong><span>2 միջանկյալ շրջան</span><strong>18 000 ֏</strong><span>3 միջանկյալ շրջան</span><strong>21 000 ֏</strong><span>4 միջանկյալ շրջան</span><strong>24 000 ֏</strong></div><p><strong>Օրինակ՝ Աջափնյակ → Մալաթիա-Սեբաստիա → Շենգավիթ</strong><br>Սովորական պատվեր՝ <strong>15 000 ֏</strong>։ Շտապ պատվեր՝ <strong>17 500 ֏</strong>՝ առանց պահանջարկի լրացուցիչ գործակցի։</p><small>Յուրաքանչյուր միջանկյալ շրջան՝ +3 000 ֏։ Շտապ պատվեր՝ +2 500 ֏։ Եթե միաժամանակ կան չընդունված շտապ պատվերներ, ավելանում է նաև 2.5% կամ 5% գործակիցը։</small>';
  if(preview&&form.id!=='adminTestOrderForm')preview.insertAdjacentElement('afterend',fareGuide);
