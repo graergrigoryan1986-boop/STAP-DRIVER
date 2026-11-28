@@ -2039,3 +2039,36 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .customer-own-rating>div:last-child>span{font-size:9px;font-weight:850;letter-spacing:1.1px;color:#c9b78f}
 .customer-own-rating strong{font-size:22px;line-height:1.1;color:#f2d58f;font-variant-numeric:tabular-nums}
 .customer-own-rating strong small{font-size:11px;color:#c9b78f;font-weight:600}
+
+
+/* STAP urgent control — clear single-word action, visible on web and every WebView APK */
+.urgent-order-toggle{
+ display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;
+ gap:11px!important;width:auto!important;min-width:0!important;height:auto!important;min-height:58px!important;
+ padding:13px 16px!important;border:1px solid rgba(220,74,65,.58)!important;border-radius:14px!important;
+ background:linear-gradient(115deg,rgba(143,34,31,.16),rgba(239,68,68,.07))!important;
+ color:#d94b43!important;font-weight:900!important;cursor:pointer!important;transition:background .2s,border-color .2s,box-shadow .2s,transform .2s;
+}
+.urgent-order-toggle input{
+ appearance:auto!important;-webkit-appearance:checkbox!important;display:block!important;flex:0 0 21px!important;
+ width:21px!important;height:21px!important;margin:0!important;accent-color:#d83b35!important;cursor:pointer!important;
+}
+.urgent-order-toggle span{font-size:16px!important;line-height:1.15!important;letter-spacing:.08em!important;font-weight:950!important}
+.urgent-order-toggle small{display:block!important;margin-left:auto!important;width:auto!important;padding:0!important;
+ color:inherit!important;opacity:.86!important;font-size:10px!important;line-height:1.35!important;font-weight:700!important;text-align:right}
+.urgent-order-toggle:has(input:checked),.urgent-order-toggle.is-selected{
+ border-color:#e34b43!important;background:linear-gradient(110deg,#a92d29,#d7443b)!important;color:#fff!important;
+ box-shadow:0 0 0 3px rgba(222,65,58,.13),0 0 22px rgba(222,65,58,.28)!important;animation:stapUrgentGlow 1.8s ease-in-out infinite;
+}
+.urgent-order-toggle:active{transform:scale(.99)}
+@keyframes stapUrgentGlow{0%,100%{box-shadow:0 0 0 2px rgba(222,65,58,.1),0 0 12px rgba(222,65,58,.18)}50%{box-shadow:0 0 0 4px rgba(222,65,58,.16),0 0 23px rgba(222,65,58,.34)}}
+#orderForm .customer-choice-field .booking-choice-group{display:flex;gap:7px;width:100%}
+#orderForm .customer-choice-field .booking-choice-chip{min-height:44px;border-radius:10px;font-size:12px;font-weight:900}
+#adminCreateOrderPanel .neon-vehicle-group .booking-choice-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+#adminCreateOrderPanel .neon-vehicle-group .booking-choice-chip{min-width:120px;min-height:42px;padding:9px 13px;border:1px solid rgba(200,166,107,.5);border-radius:10px;background:#20242b;color:#f2e8d4;font-weight:850}
+#adminCreateOrderPanel .neon-vehicle-group .booking-choice-chip.selected{background:linear-gradient(135deg,#e2c991,#b58c4e);color:#17130d;border-color:#e2c991}
+@media(max-width:520px){
+ .urgent-order-toggle{gap:8px!important;padding:12px!important;flex-wrap:wrap!important}
+ .urgent-order-toggle span{font-size:15px!important}
+ .urgent-order-toggle small{width:100%!important;margin-left:29px!important;text-align:left!important}
+}
