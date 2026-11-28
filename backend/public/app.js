@@ -255,10 +255,10 @@ async function driverView(){
   <nav class="driver-bottom-dock" aria-label="Վարորդի հիմնական գործիքներ">
    <button type="button" class="driver-menu-toggle" id="driverMenuToggle" aria-expanded="false">☰ ՄԵՆՅՈՒ <span>Բացել</span></button>
    <div class="driver-bottom-menu" id="driverBottomMenu" hidden>
-    <button type="button" data-driver-history="ALL"><span>Պատվերներ</span><b>\${mine.orders.length}</b></button>
-    <button type="button" id="driverRatingHistoryButton"><span>Վարկանիշ</span><b>★ \${Number(u.rating??5).toFixed(1)}</b></button>
-    <button type="button" id="driverBalanceMenuButton"><span>Հաշվեկշիռ</span><b id="driverBalanceAmount">\${money(u.balanceAmd)}</b></button>
-    <button type="button" data-driver-history="COMPLETED"><span>Արխիվ</span><b>\${mine.orders.filter(o=>o.status==='COMPLETED').length}</b></button>
+    <button type="button" data-driver-history="ALL"><span>Պատվերներ</span><b>${mine.orders.length}</b></button>
+    <button type="button" id="driverRatingHistoryButton"><span>Վարկանիշ</span><b>★ ${Number(u.rating??5).toFixed(1)}</b></button>
+    <button type="button" id="driverBalanceMenuButton"><span>Հաշվեկշիռ</span><b id="driverBalanceAmount">${money(u.balanceAmd)}</b></button>
+    <button type="button" data-driver-history="COMPLETED"><span>Արխիվ</span><b>${mine.orders.filter(o=>o.status==='COMPLETED').length}</b></button>
    </div>
   </nav>
  `;
