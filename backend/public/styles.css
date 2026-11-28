@@ -2041,13 +2041,14 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .customer-own-rating strong small{font-size:11px;color:#c9b78f;font-weight:600}
 
 
-/* STAP urgent control — clear single-word action, visible on web and every WebView APK */
+/* STAP urgent control — high contrast on customer, admin and APK screens */
 .urgent-order-toggle{
  display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;
- gap:11px!important;width:auto!important;min-width:0!important;height:auto!important;min-height:58px!important;
- padding:13px 16px!important;border:1px solid rgba(220,74,65,.58)!important;border-radius:14px!important;
- background:linear-gradient(115deg,rgba(143,34,31,.16),rgba(239,68,68,.07))!important;
- color:#d94b43!important;font-weight:900!important;cursor:pointer!important;transition:background .2s,border-color .2s,box-shadow .2s,transform .2s;
+ gap:11px!important;width:auto!important;min-width:0!important;height:auto!important;min-height:62px!important;
+ padding:13px 16px!important;border:2px solid #ff7770!important;border-radius:14px!important;
+ background:linear-gradient(115deg,#8f211e,#b92e29)!important;color:#fff!important;font-weight:900!important;
+ cursor:pointer!important;text-shadow:0 1px 2px rgba(0,0,0,.35)!important;
+ transition:background .2s,border-color .2s,box-shadow .2s,transform .2s;
 }
 .urgent-order-toggle input{
  appearance:auto!important;-webkit-appearance:checkbox!important;display:block!important;flex:0 0 21px!important;
@@ -2055,7 +2056,7 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 }
 .urgent-order-toggle span{font-size:16px!important;line-height:1.15!important;letter-spacing:.08em!important;font-weight:950!important}
 .urgent-order-toggle small{display:block!important;margin-left:auto!important;width:auto!important;padding:0!important;
- color:inherit!important;opacity:.86!important;font-size:10px!important;line-height:1.35!important;font-weight:700!important;text-align:right}
+ color:#fff!important;opacity:1!important;font-size:11px!important;line-height:1.4!important;font-weight:800!important;text-align:right;text-shadow:0 1px 2px rgba(0,0,0,.45)}
 .urgent-order-toggle:has(input:checked),.urgent-order-toggle.is-selected{
  border-color:#e34b43!important;background:linear-gradient(110deg,#a92d29,#d7443b)!important;color:#fff!important;
  box-shadow:0 0 0 3px rgba(222,65,58,.13),0 0 22px rgba(222,65,58,.28)!important;animation:stapUrgentGlow 1.8s ease-in-out infinite;
@@ -2359,3 +2360,14 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 .vehicle-inspection-choice:nth-child(2)>span:before{content:"⚠"!important;color:#f3c56b!important;font-size:25px!important}
 .vehicle-inspection-choice:has(input:checked)>span:before{background:transparent!important;color:#8fffb9!important;text-shadow:0 0 12px rgba(100,255,165,.42)}
 .vehicle-inspection-choice:nth-child(2):has(input:checked)>span:before{color:#ffd47b!important;text-shadow:0 0 12px rgba(255,190,80,.35)}
+
+.admin-inspection-modal-panel{max-height:94vh;overflow:auto}
+.admin-inspection-images{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;overflow:auto;padding:6px}
+.admin-inspection-images figure{margin:0;min-width:0;padding:8px;border:1px solid rgba(200,166,107,.28);border-radius:12px;background:#17191e}
+.admin-inspection-images img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:8px;cursor:zoom-in;transition:transform .2s ease;transform-origin:center}
+.admin-inspection-images img.is-zoomed{transform:scale(1.65);cursor:zoom-out;position:relative;z-index:2}
+.admin-inspection-images figcaption{display:flex;gap:10px;flex-wrap:wrap;padding-top:8px;font-size:12px}
+.admin-inspection-images a{color:#f0d49a;font-weight:800;text-decoration:underline}
+.inspection-view-hint,.inspection-no-photos{padding:10px 12px;border-radius:9px;background:rgba(200,166,107,.1);color:#f2e8d4}
+.admin-inspection-modal-panel:fullscreen{background:#121419;color:#fff;padding:22px;overflow:auto}
+@media(max-width:520px){.admin-inspection-images{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-inspection-images img{max-height:220px}.urgent-order-toggle{flex-wrap:wrap!important}.urgent-order-toggle small{width:100%!important;margin-left:32px!important;text-align:left!important}}
