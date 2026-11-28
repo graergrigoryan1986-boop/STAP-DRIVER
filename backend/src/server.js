@@ -989,7 +989,7 @@ app.post('/api/orders/:id/arrival-estimate-response',auth,only('CUSTOMER'),async
  emitOrderStatusChange({id:order.id,customerId:req.user.id,driverId:order.driverId},'ETA_UPDATED',message);
  res.json({success:true,order:updated,message:'Պատասխանը ուղարկվեց վարորդին։'});
 }));
-app.get('/api/orders/:id/inspection',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id},select:{id:true,orderCode:true,vehicleInspectionReport:true,vehicleInspectionPassed:true}});if(!order)return res.status(404).json({error:'Պատվերը չի գտնվել ձեր պատվերներում։'});if(!order.vehicleInspectionPassed||!order.vehicleInspectionReport)return res.status(404).json({error:'Այս պատվերի զննման լուսանկարները դեռ պահպանված չեն։'});res.json({inspection:order.vehicleInspectionReport,order:{id:order.id,orderCode:order.orderCode,vehicleInspectionPassed:order.vehicleInspectionPassed}});}));
+app.get('/api/orders/:id/inspection',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id},select:{id:true,orderCode:true,vehicleInspectionReport:true,vehicleReturnInspection:true,vehicleInspectionPassed:true,completedAt:true}});if(!order)return res.status(404).json({error:'Պատվերը չի գտնվել ձեր պատվերներում։'});if(!order.vehicleInspectionPassed||!order.vehicleInspectionReport)return res.status(404).json({error:'Այս պատվերի զննման լուսանկարները դեռ պահպանված չեն։'});res.json({inspection:order.vehicleInspectionReport,returnInspection:order.vehicleReturnInspection,order:{id:order.id,orderCode:order.orderCode,vehicleInspectionPassed:order.vehicleInspectionPassed,completedAt:order.completedAt}});}));
 app.get('/api/admin/orders/:id/inspection',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const order=await prisma.order.findUnique({where:{id:req.params.id},select:{id:true,orderCode:true,driverId:true,customerId:true,vehicleInspectionReport:true,vehicleReturnInspection:true,vehicleInspectionPassed:true,arrivedAt:true,completedAt:true}});
  if(!order)return res.status(404).json({error:'Պատվերը չի գտնվել։'});
@@ -1582,6 +1582,17 @@ setInterval(async()=>{
   }
  }catch(error){console.error('Daily rating refresh failed:',error)}
 },15000).unref();
+
+async function purgeExpiredOrderInspectionPhotos(){
+ const cutoff=new Date(Date.now()-72*60*60*1000);
+ const orders=await prisma.order.findMany({where:{status:'COMPLETED',completedAt:{lt:cutoff},OR:[{vehicleInspectionReport:{not:null}},{vehicleReturnInspection:{not:null}}]},select:{id:true,vehicleInspectionReport:true,vehicleReturnInspection:true}});
+ for(const order of orders){
+  const strip=report=>{if(!report||typeof report!=='object')return report;const next={...report};for(const key of Object.keys(next)){if(Array.isArray(next[key])&&next[key].some(value=>typeof value==='string'&&value.startsWith('data:image/')))next[key]=[];}return next;};
+  const handover=strip(order.vehicleInspectionReport),returned=strip(order.vehicleReturnInspection);
+  if(JSON.stringify(handover)!==JSON.stringify(order.vehicleInspectionReport)||JSON.stringify(returned)!==JSON.stringify(order.vehicleReturnInspection))await prisma.order.update({where:{id:order.id},data:{vehicleInspectionReport:handover,vehicleReturnInspection:returned}});
+ }
+}
+setInterval(()=>purgeExpiredOrderInspectionPhotos().catch(error=>console.error('72-hour order photo cleanup failed:',error)),10*60*1000).unref();
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('STAP DRIVER API listening on ' + PORT);
