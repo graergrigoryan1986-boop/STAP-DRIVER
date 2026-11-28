@@ -1979,3 +1979,24 @@ body:not(.authenticated) #authPanel{margin-top:8px}
 #dashboard .driver-order-card .driver-order-route{border:1px dashed rgba(215,181,112,.35);background:rgba(215,181,112,.045)}
 #dashboard .driver-order-card .driver-route-point strong{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
 @media(max-width:520px){.customer-ticket-head{padding:12px}.customer-ticket-route{padding:12px}.customer-ticket-meta{gap:5px}.customer-ticket-meta span{font-size:9px;padding:6px}.customer-ticket-price strong{font-size:24px}#dashboard .customer-order-ticket{border-radius:14px}}
+
+
+/* Customer app: compact fixed bottom navigation and profile */
+body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inset-bottom,0px))}
+.customer-bottom-nav{position:fixed;z-index:120;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,760px);display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(13,15,18,.97);border-top:1px solid rgba(211,177,112,.48);box-shadow:0 -10px 30px rgba(0,0,0,.28);backdrop-filter:blur(14px)}
+.customer-bottom-nav button{min-height:48px;border:1px solid rgba(211,177,112,.22);border-radius:13px;background:transparent;color:#f4ead7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:18px}
+.customer-bottom-nav button span{font-size:11px;font-weight:700;letter-spacing:.02em}
+.customer-bottom-nav button.active{background:rgba(211,177,112,.16);border-color:#d3b170;color:#f0cf8a}
+.customer-bottom-rating{min-height:48px;display:flex;align-items:center;justify-content:center;gap:7px;border:1px solid rgba(211,177,112,.42);border-radius:13px;color:#f0cf8a}
+.customer-bottom-rating span{font-size:20px}
+.customer-bottom-rating strong{font-size:21px;line-height:1;font-weight:800}
+.customer-profile-panel{margin-bottom:18px}
+.customer-profile-form{display:grid;gap:12px}
+.customer-profile-form label{display:grid;gap:6px;color:var(--text,#f2eee6);font-size:13px;font-weight:700}
+.customer-profile-form input{width:100%;min-height:46px;border:1px solid rgba(211,177,112,.35);border-radius:11px;padding:10px 12px;background:rgba(255,255,255,.06);color:inherit}
+.customer-profile-form button{margin-top:6px}
+.customer-driver-profile-info{display:flex;flex-direction:column;gap:4px;min-width:0}
+.customer-driver-transmission{display:inline-flex;align-items:center;gap:5px;color:#d9c18e;font-size:12px;font-weight:700}
+.customer-driver-rating{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800}
+.customer-driver-rating>span:first-child{color:#d3b170}
+@media(min-width:761px){.customer-bottom-nav{bottom:12px;border:1px solid rgba(211,177,112,.48);border-radius:18px;padding-bottom:10px}}
