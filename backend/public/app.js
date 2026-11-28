@@ -667,9 +667,15 @@ function renderOrders(root,orders,kind){
   try{
    const data=await api('/api/orders/'+button.dataset.driverInspection+'/inspection'),report=data.inspection||{};
    const groups=inspectionPhotoGroups(report,data.returnInspection);
+   const completedAt=data.order?.completedAt||data.returnInspection?.recordedAt||report.recordedAt;
+   const expiresAt=completedAt?new Date(completedAt).getTime()+72*60*60*1000:null;
    const modal=document.createElement('div');modal.className='admin-inspection-modal';
-   modal.innerHTML='<section class="admin-inspection-modal-panel"><button type="button" class="action" data-close-inspection>ՓԱԿԵԼ ✕</button><h3>Պատվերի զննման լուսանկարներ · #'+esc(String(data.order?.orderCode||'----'))+'</h3><p>Արդյունք՝ '+(report.hasDamage?'Կան վնասվածքներ':'Թերություններ չեն նշվել')+' · Ամսաթիվ՝ '+esc(report.recordedAt?new Date(report.recordedAt).toLocaleString('hy-AM'):'—')+'</p>'+inspectionPhotoMarkup(groups)+'</section>';
-   document.body.appendChild(modal);bindInspectionPhotoControls(modal);modal.querySelector('[data-close-inspection]').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove()});
+   modal.innerHTML='<section class="admin-inspection-modal-panel"><button type="button" class="action" data-close-inspection>ՓԱԿԵԼ ✕</button><h3>Պատվերի զննման լուսանկարներ · #'+esc(String(data.order?.orderCode||'----'))+'</h3><div class="inspection-countdown" role="status"><span class="inspection-countdown-label">Լուսանկարների պահպանման մնացած ժամանակը</span><strong data-inspection-countdown>Հաշվարկվում է…</strong></div><p>Արդյունք՝ '+(report.hasDamage?'Կան վնասվածքներ':'Թերություններ չեն նշվել')+' · Ամսաթիվ՝ '+esc(report.recordedAt?new Date(report.recordedAt).toLocaleString('hy-AM'):'—')+'</p>'+inspectionPhotoMarkup(groups)+'</section>';
+   document.body.appendChild(modal);bindInspectionPhotoControls(modal);
+   const countdown=modal.querySelector('[data-inspection-countdown]');
+   const updateCountdown=()=>{if(!expiresAt||!Number.isFinite(expiresAt)){countdown.textContent='Ժամկետը հասանելի չէ';return}const left=expiresAt-Date.now();if(left<=0){countdown.textContent='Ժամկետն ավարտվել է';countdown.classList.add('is-expired');return}const total=Math.floor(left/1000),days=Math.floor(total/86400),hours=Math.floor(total%86400/3600),minutes=Math.floor(total%3600/60),seconds=total%60;countdown.textContent=(days?days+' օր ':'')+String(hours).padStart(2,'0')+':'+String(minutes).padStart(2,'0')+':'+String(seconds).padStart(2,'0')};
+   updateCountdown();const countdownTimer=setInterval(updateCountdown,1000);
+   const closeModal=()=>{clearInterval(countdownTimer);modal.remove()};modal.querySelector('[data-close-inspection]').onclick=closeModal;modal.addEventListener('click',event=>{if(event.target===modal)closeModal()});
   }catch(error){message('#appMessage',error.message,true)}finally{button.disabled=false}
  });
  root.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>orderAction(b,'/api/orders/'+b.dataset.start+'/start'));
