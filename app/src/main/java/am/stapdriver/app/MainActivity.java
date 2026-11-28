@@ -165,6 +165,10 @@ public class MainActivity extends Activity {
         android.content.SharedPreferences prefs = getSharedPreferences("stap_permissions", MODE_PRIVATE);
         if (prefs.getBoolean("initial_permissions_requested", false)) return;
         java.util.ArrayList<String> required = new java.util.ArrayList<>();
+        if (android.os.Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            required.add(Manifest.permission.POST_NOTIFICATIONS);
+        }
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) required.add(Manifest.permission.CAMERA);
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) required.add(Manifest.permission.ACCESS_FINE_LOCATION);
         if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) required.add(Manifest.permission.ACCESS_COARSE_LOCATION);
