@@ -2139,3 +2139,53 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
 .public-tariff-feature-head>span{color:#e4c88f;font-size:10px;font-weight:900;letter-spacing:1.4px}.public-tariff-feature-head h3{margin:0;color:#fff1d4;font-size:25px;letter-spacing:.06em}.public-tariff-feature-head>strong{color:#f4d99f;font-size:clamp(34px,6vw,46px);line-height:1.1;font-variant-numeric:tabular-nums}.public-tariff-feature-head>small{color:#c7bda9;font-size:12px}
 .public-tariff-rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:22px 28px}.public-tariff-rules>div{display:grid;gap:4px;padding:13px;border:1px solid rgba(218,185,123,.18);border-radius:12px;background:rgba(255,255,255,.035)}.public-tariff-rules b{color:#f0d39a;font-size:20px}.public-tariff-rules span{color:#e2ded5;font-size:12px;line-height:1.45}.public-tariff-note{margin:0;padding:0 28px 23px;color:#bdb5a7;font-size:11px;line-height:1.65}
 @media(max-width:560px){#orderForm .customer-vehicle-options{grid-template-columns:1fr!important}#adminCreateOrderPanel .neon-vehicle-group{grid-template-columns:1fr!important}.public-tariff-rules{grid-template-columns:1fr;padding:15px}.public-tariff-feature-head{padding:20px}.public-tariff-note{padding:0 18px 18px}}
+
+
+/* STAP DRIVER booking UI refresh — high contrast, compact, Android WebView safe */
+:root{--stap-ink:#111923;--stap-panel:#1a2632;--stap-panel-2:#223242;--stap-gold:#e5bd70;--stap-gold-bright:#f4d89b;--stap-text:#f7f3e9;--stap-muted:#c1cbd5;--stap-line:rgba(229,189,112,.42)}
+.section{padding:clamp(34px,5vw,62px) 0}
+.section-head h2,.booking-card h3{color:#fff4dc!important;font-size:clamp(25px,4vw,34px)!important;font-weight:900!important;letter-spacing:.015em!important;line-height:1.18!important;text-shadow:0 2px 16px rgba(0,0,0,.35)}
+.section-head p,.booking-card>p{color:#d2dbe3!important;font-size:14px!important;line-height:1.6}
+.booking-card{background:linear-gradient(145deg,#202e3b 0%,#141d27 72%)!important;border:1px solid rgba(229,189,112,.38)!important;border-radius:19px!important;box-shadow:0 18px 48px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.055)!important;padding:clamp(16px,3vw,25px)!important}
+#orderForm{display:grid;gap:11px!important}
+#orderForm>label,#orderForm .customer-choice-field,#orderForm .district-picker-wrap,#orderForm .customer-passenger-picker{background:linear-gradient(145deg,rgba(42,59,74,.96),rgba(25,37,49,.98))!important;border:1px solid rgba(229,189,112,.34)!important;border-radius:13px!important;padding:11px 12px!important;min-width:0!important}
+#orderForm label>span,#orderForm .district-picker-wrap>span,#orderForm .customer-choice-field>span,#orderForm legend{color:#ffe1a5!important;font-size:12px!important;font-weight:900!important;line-height:1.4!important;letter-spacing:.025em!important}
+#orderForm input:not([type=radio]),#orderForm select,#orderForm textarea{background:#f4f1e9!important;color:#172331!important;border:1px solid #b8c4ce!important;border-radius:9px!important;min-height:43px!important;font-size:14px!important;font-weight:700!important;padding:9px 11px!important}
+#orderForm input::placeholder,#orderForm textarea::placeholder{color:#667482!important;opacity:1!important}
+#orderForm select option{background:#f4f1e9!important;color:#172331!important}
+#orderForm input:focus,#orderForm select:focus,#orderForm textarea:focus{outline:3px solid rgba(229,189,112,.35)!important;border-color:#e5bd70!important}
+/* Always show transmission and engine dropdowns: no hidden native select or fragile generated chips */
+#orderForm .customer-vehicle-options{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;align-items:stretch!important;margin:0!important}
+#orderForm .customer-choice-field{display:flex!important;flex-direction:column!important;gap:8px!important;overflow:visible!important}
+#orderForm .customer-choice-field select[name="transmissionType"],#orderForm .customer-choice-field select[name="vehicleFuelType"]{position:static!important;display:block!important;clip:auto!important;width:100%!important;height:auto!important;margin:0!important;overflow:visible!important;white-space:normal!important}
+#orderForm .customer-choice-field select[name="transmissionType"].booking-native-select,#orderForm .customer-choice-field select[name="vehicleFuelType"].booking-native-select{position:static!important;width:100%!important;height:43px!important;clip:auto!important;margin:0!important;overflow:visible!important}
+#orderForm .customer-choice-field>span{min-height:34px;display:flex;align-items:center}
+#orderForm .customer-passenger-picker{margin:0!important;padding:12px!important}
+#orderForm .customer-passenger-options{gap:8px!important}
+#orderForm .customer-passenger-options span{background:#edf1f4!important;color:#172331!important;border:1px solid #a9b7c4!important;min-height:46px!important;font-size:17px!important;font-weight:950!important}
+#orderForm .customer-passenger-options input:checked+span{background:linear-gradient(135deg,#f5d99d,#d3a653)!important;color:#18212a!important;border-color:#f4d89b!important}
+#orderForm .booking-form-heading{padding:14px 15px!important;margin-bottom:4px!important;border:1px solid rgba(229,189,112,.44)!important;border-radius:14px!important;background:linear-gradient(110deg,#263b4d,#172432)!important}
+#orderForm .booking-form-heading h3{color:#fff1cf!important;font-size:20px!important;font-weight:950!important;margin:4px 0!important}
+#orderForm .booking-form-heading p{color:#d2dce5!important;font-size:12px!important;line-height:1.5!important}
+#orderForm .booking-kicker{color:#f0c978!important;font-weight:950!important;letter-spacing:.12em!important}
+#orderForm .booking-choice-chip{background:#293d4f!important;color:#f5f7fa!important;border:1px solid rgba(229,189,112,.55)!important;border-radius:10px!important;min-height:42px!important;font-weight:900!important}
+#orderForm .booking-choice-chip.selected{background:linear-gradient(135deg,#f3d99f,#d4a958)!important;color:#172331!important;border-color:#ffe2a4!important}
+#orderForm .district-picker-wrap{box-shadow:inset 0 1px rgba(255,255,255,.04)!important}
+#orderForm .fare-breakdown,#orderForm .route-preview{color:#e8eef3!important;font-size:12px!important;line-height:1.55!important}
+#orderForm .booking-total-highlight{border:1px solid #f0cb82!important;background:linear-gradient(135deg,#263d50,#152431)!important}
+#orderForm .booking-total-highlight>span{color:#ffe0a0!important;font-size:11px!important}
+#orderForm .booking-total-highlight>strong{color:#ffdfa0!important;font-size:clamp(29px,7vw,38px)!important}
+#orderForm button[type=submit]{min-height:48px!important;border-radius:12px!important;font-size:14px!important;font-weight:950!important;letter-spacing:.025em!important;box-shadow:0 8px 20px rgba(0,0,0,.28)!important}
+#adminCreateOrderPanel .neon-form-group{background:linear-gradient(145deg,#1e2c39,#141e28)!important;border:1px solid rgba(229,189,112,.36)!important;border-radius:15px!important;padding:13px!important;gap:10px!important}
+#adminCreateOrderPanel .neon-form-group h4{color:#ffe0a0!important;font-size:13px!important;font-weight:950!important;line-height:1.4!important;margin:0 0 3px!important}
+#adminCreateOrderPanel .neon-form-group label>span{color:#f6dca9!important;font-size:12px!important;font-weight:900!important}
+#adminCreateOrderPanel .neon-form-group input,#adminCreateOrderPanel .neon-form-group select,#adminCreateOrderPanel .neon-form-group textarea{background:#f4f1e9!important;color:#172331!important;border:1px solid #b8c4ce!important;border-radius:9px!important;min-height:43px!important;font-size:14px!important;font-weight:700!important}
+#adminCreateOrderPanel .neon-vehicle-group select[name="transmissionType"],#adminCreateOrderPanel .neon-vehicle-group select[name="vehicleFuelType"]{display:block!important;position:static!important;width:100%!important;height:auto!important;clip:auto!important;overflow:visible!important;margin:0!important}
+#adminCreateOrderPanel .neon-vehicle-group>label{background:rgba(255,255,255,.045)!important;border-color:rgba(229,189,112,.35)!important}
+#adminCreateOrderPanel .neon-vehicle-group>label>span{color:#ffe0a0!important}
+#adminCreateOrderPanel .neon-create-order{background:linear-gradient(135deg,#f3d99f,#c79a4d)!important;color:#17212b!important;border:1px solid #f8dfa9!important;font-weight:950!important}
+#dashboard h3,#dashboard h4,.customer-panel-head h3{color:#fff0ce!important;font-weight:950!important;letter-spacing:.02em}
+#dashboard .customer-panel,.customer-current-order-section,.driver-profile-card,.admin-panel{background:linear-gradient(145deg,#202f3d,#151f2a)!important;border:1px solid rgba(229,189,112,.32)!important;border-radius:15px!important}
+#dashboard label,#dashboard .muted{color:#d4dde5!important}
+#dashboard input,#dashboard select,#dashboard textarea{background:#f4f1e9!important;color:#172331!important;border:1px solid #b8c4ce!important;border-radius:9px!important;min-height:42px!important;font-weight:700!important}
+@media(max-width:560px){#orderForm .customer-vehicle-options{grid-template-columns:1fr!important;gap:8px!important}#orderForm .customer-choice-field{padding:10px!important}#orderForm .customer-choice-field>span{min-height:0!important;font-size:12px!important}#orderForm .customer-passenger-options{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important}#orderForm .customer-passenger-options span{min-height:44px!important}.booking-card{padding:14px!important}#adminCreateOrderPanel .neon-form-group{padding:10px!important}}
