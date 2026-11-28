@@ -784,7 +784,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
     where, orderBy: { createdAt: 'desc' },
     include: req.user.role === 'CUSTOMER' ? { driver: { select: {
       id:true,name:true,rating:true,driverFirstNameLatin:true,driverLastNameLatin:true,
-      driverLicenseIssuedAt:true,driverLicenseCategories:true,driverTransmission:true,dateOfBirth:true,
+      driverLicenseIssuedAt:true,driverExperienceMonths:true,driverLicenseCategories:true,driverTransmission:true,dateOfBirth:true,
       isVerified:true,driverProfilePhoto:true
     }},ratings:{where:{fromUserId:req.user.id},select:{id:true,score:true,reasonTags:true,comment:true}}} : undefined
   });
@@ -792,9 +792,9 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
     ...o, driver: o.driver ? {
       id:o.driver.id,name:o.driver.name,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
       driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
-      driverLicenseIssuedAt:o.driver.driverLicenseIssuedAt,driverLicenseCategories:o.driver.driverLicenseCategories,
+      driverLicenseIssuedAt:o.driver.driverLicenseIssuedAt,driverExperienceMonths:o.driver.driverExperienceMonths,driverLicenseCategories:o.driver.driverLicenseCategories,
       driverTransmission:o.driver.driverTransmission,isVerified:o.driver.isVerified,
-      profilePhoto:o.driver.driverProfilePhoto ? 'data:image/jpeg;base64,'+decryptPrivate(o.driver.driverProfilePhoto).toString('base64') : null
+      experienceLabel:(()=>{const m=Number.isInteger(o.driver.driverExperienceMonths)?o.driver.driverExperienceMonths:(o.driver.driverLicenseIssuedAt?Math.max(0,Math.floor((Date.now()-new Date(o.driver.driverLicenseIssuedAt).getTime())/(30.4375*86400000))):null);return m===null?'Նշված չէ':(Math.floor(m/12)?Math.floor(m/12)+' տարի ':'')+(m%12?m%12+' ամիս':'')||'0 ամիս'})(),profilePhoto:o.driver.driverProfilePhoto ? 'data:image/jpeg;base64,'+decryptPrivate(o.driver.driverProfilePhoto).toString('base64') : null
     } : null
   })) : orders;
   res.json({ orders: safeOrders });
@@ -906,6 +906,28 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   res.json({...result,order:maskDriverOrderContacts(result.order)});
 }));
 
+app.patch('/api/orders/:id/arrival-estimate',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{
+ const {minutes}=z.object({minutes:z.number().int().refine(v=>[10,20,30,40,50,60].includes(v))}).parse(req.body);
+ const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id,status:'ACCEPTED'},select:{id:true,customerId:true}});
+ if(!order)return res.status(409).json({error:'Ժամանումը կարող եք նշել միայն ընդունված պատվերի համար։'});
+ const updated=await prisma.order.update({where:{id:order.id},data:{arrivalEstimateMinutes:minutes,arrivalEstimateStatus:'PENDING',customerRequestedEtaMinutes:null}});
+ await prisma.notification.create({data:{userId:order.customerId,title:'Վարորդը նշել է ժամանման ժամանակը',message:'Վարորդն առաջարկում է հասնել '+minutes+' րոպեում։ Հաստատեք, մերժեք կամ առաջարկեք ավելի երկար ժամանակ։',type:'DRIVER_ETA_PROPOSED'}});
+ io.to('user:'+order.customerId).emit('order:eta-updated',{id:order.id,status:updated.arrivalEstimateStatus,minutes});
+ res.json({success:true,order:updated,message:'Ժամանման առաջարկն ուղարկվեց պատվիրատուին։'});
+}));
+app.post('/api/orders/:id/arrival-estimate-response',auth,only('CUSTOMER'),asyncRoute(async(req,res)=>{
+ const input=z.object({decision:z.enum(['ACCEPTED','REJECTED','REQUEST_LONGER']),requestedMinutes:z.number().int().refine(v=>[20,30,40,50,60].includes(v)).optional()}).parse(req.body);
+ const order=await prisma.order.findFirst({where:{id:req.params.id,customerId:req.user.id,status:'ACCEPTED',driverId:{not:null}});
+ if(!order||!order.arrivalEstimateMinutes||order.arrivalEstimateStatus!=='PENDING')return res.status(409).json({error:'Հաստատման սպասող առաջարկ չկա։'});
+ if(input.decision==='REQUEST_LONGER'&&!input.requestedMinutes)return res.status(400).json({error:'Ընտրեք ավելի երկար ժամանակ։'});
+ const status=input.decision==='REQUEST_LONGER'?'COUNTER_REQUESTED':input.decision;
+ const updated=await prisma.order.update({where:{id:order.id},data:{arrivalEstimateStatus:status,customerRequestedEtaMinutes:input.decision==='REQUEST_LONGER'?input.requestedMinutes:null}});
+ const title=input.decision==='ACCEPTED'?'Պատվիրատուն հաստատել է ժամանումը':input.decision==='REJECTED'?'Պատվիրատուն մերժել է ժամանման առաջարկը':'Պատվիրատուն խնդրել է ավելի երկար ժամանակ';
+ const message=input.decision==='REQUEST_LONGER'?'Պատվիրատուն խնդրում է ժամանումը դարձնել '+input.requestedMinutes+' րոպե։ Նշեք նոր առաջարկ։':input.decision==='ACCEPTED'?'Պատվիրատուն հաստատել է '+order.arrivalEstimateMinutes+' րոպեն։':'Պատվիրատուն մերժել է '+order.arrivalEstimateMinutes+' րոպեանոց առաջարկը։ Նշեք նոր ժամանակ։';
+ await prisma.notification.create({data:{userId:order.driverId,title,message,type:'CUSTOMER_ETA_'+input.decision}});
+ io.to('user:'+order.driverId).emit('order:eta-updated',{id:order.id,status,minutes:order.arrivalEstimateMinutes,requestedMinutes:updated.customerRequestedEtaMinutes});
+ res.json({success:true,order:updated,message:'Պատասխանը ուղարկվեց վարորդին։'});
+}));
 app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const existing = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
   if (!existing) return res.status(404).json({ error: 'Այս պատվերը կապված չէ ձեր վարորդական հաշվի հետ։' });
