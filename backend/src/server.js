@@ -218,7 +218,7 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
 
 app.get('/api/site-content',asyncRoute(async(_req,res)=>{const r=await prisma.siteContent.findUnique({where:{id:'main'}});res.json({content:r?.content||{}})}));
 app.put('/api/admin/site-content',auth,only('ADMIN'),asyncRoute(async(req,res)=>{const input=z.object({content:z.record(z.string(),z.string())}).parse(req.body);const existing=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(existing?.content&&typeof existing.content==='object'?existing.content:{}),...Object.fromEntries(Object.entries(input.content).map(([k,v])=>[k,v.slice(0,12000)]))};const r=await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});io.emit('site-content:updated',{updatedAt:r.updatedAt});res.json({success:true,content:r.content,updatedAt:r.updatedAt,message:'Կայքի բովանդակությունը պահպանվեց և հրապարակվեց։'})}));
-app.get('/api/tariffs',asyncRoute(async(_req,res)=>{const row=await prisma.siteContent.findUnique({where:{id:'main'}});const tariffs=Array.isArray(row?.content?.tariffs)?row.content.tariffs:[];res.json({tariffs:tariffs.filter(item=>item&&item.active!==false)});}));
+app.get('/api/tariffs',asyncRoute(async(_req,res)=>{const row=await prisma.siteContent.findUnique({where:{id:'main'}});const content={...(row?.content&&typeof row.content==='object'?row.content:{})};const tariffs=Array.isArray(content.tariffs)?[...content.tariffs]:[];if(!tariffs.some(item=>item?.id==='premium-delivery')){tariffs.push({id:'premium-delivery',title:'ՊՐԵՄԻՈՒՄ ԱՌԱՔՈՒՄ',description:'ԱՌԱՔՈՒՄԸ ԱՄԲՈՂՋ ԵՐԵՎԱՆՈՒՄ՝ ՖԻՔՍՎԱԾ 5,000 ԴՐԱՄ',requirements:'ԱՌԱՔԱՆԻՆ ՊԵՏՔ Է ԼԻՆԻ ԲԱՑ, ՏԵՍԱՆԵԼԻ ԵՎ ՍՏՈՒԳԵԼԻ, ԹԱՓԱՆՑԻԿ, ՉԿՈՏՐՎՈՂ, ՉՓՉԱՑՈՂ։',extraInfo:'ԱՊԱՀՈՎ ԵՎ ՎՍՏԱՀԵԼԻ ԱՌԱՔՈՒՄ՝ ՖԻՔՍՎԱԾ ԳՈՐԾԸՆԿԵՐՆԵՐԻ ԿՈՂՄԻՑ։',dispatchMode:'NETWORK',requiredLicenseCategory:'',requiredCapability:'',priceAmd:5000,image:'',active:true});content.tariffs=tariffs;await prisma.siteContent.upsert({where:{id:'main'},create:{id:'main',content},update:{content}});}res.json({tariffs:tariffs.filter(item=>item&&item.active!==false)});}));
 app.put('/api/admin/tariffs',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const input=z.object({tariffs:z.array(z.object({id:z.string().trim().min(1).max(80),title:z.string().trim().min(2).max(120),description:z.string().trim().max(2000),requirements:z.string().trim().max(2000).optional().default(''),extraInfo:z.string().trim().max(1500).optional().default(''),dispatchMode:z.enum(['NETWORK','CATEGORY','CAPABILITY']).optional().default('NETWORK'),requiredLicenseCategory:z.string().trim().max(5).optional().default(''),requiredCapability:z.union([z.enum(['ACCESSIBILITY_ASSIST','WHEELCHAIR_ASSIST','ELDERLY_ASSIST','CHILD_ASSIST','LUGGAGE_ASSIST']),z.literal('')]).optional().default(''),priceAmd:z.number().int().min(0).max(100000000),image:z.string().max(5_000_000).optional().default(''),active:z.boolean().default(true)}).refine(item=>item.dispatchMode!=='CATEGORY'||Boolean(item.requiredLicenseCategory),{message:'Ընտրեք պարտադիր վարորդական կարգը։'}).refine(item=>item.dispatchMode!=='CAPABILITY'||Boolean(item.requiredCapability),{message:'Ընտրեք վարորդի պարտադիր հմտությունը։'})).max(100)}).parse(req.body);
  const row=await prisma.siteContent.findUnique({where:{id:'main'}});
@@ -526,17 +526,19 @@ app.post('/api/routes/quote',asyncRoute(async(req,res)=>{
 
 app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const input = z.object({
-    pickupDistrict:z.string().trim().min(2).max(80),destinationDistrict:z.string().trim().min(2).max(80),
+    pickupDistrict:z.string().trim().min(2).max(80).optional(),destinationDistrict:z.string().trim().min(2).max(80).optional(),pickupAddress:z.string().trim().min(3).max(300).optional(),destinationAddress:z.string().trim().min(3).max(300).optional(),senderPhone:z.string().trim().max(30).optional(),recipientPhone:z.string().trim().max(30).optional(),recipientName:z.string().trim().max(120).optional(),parcelAccepted:z.boolean().optional(),
     serviceId:z.string().trim().min(1).max(80).optional(),
     extraChargeAmd:z.number().int().min(0).max(1000000).default(0),isUrgent:z.boolean().default(false),
     requiredLicenseCategory:z.string().trim().min(1).max(5).default('B'),transmissionType:z.enum(['AUTOMATIC','MANUAL']).default('AUTOMATIC'),vehicleFuelType:z.enum(['PETROL','ELECTRIC','HYBRID']).default('PETROL'),passengerCount:z.number().int().min(1).max(5).default(1),
     note:z.string().max(1000).optional(),pickupNote:z.string().trim().max(500).optional().or(z.literal('')),destinationNote:z.string().trim().max(500).optional().or(z.literal('')),isTest:z.boolean().default(false)
   }).parse(req.body);
-  const route=await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
   const contentRow=await prisma.siteContent.findUnique({where:{id:'main'}});
   const catalogue=Array.isArray(contentRow?.content?.tariffs)?contentRow.content.tariffs:[];
   const service=input.serviceId?catalogue.find(item=>item?.id===input.serviceId&&item.active!==false):null;
   if(input.serviceId&&!service)return res.status(400).json({error:'Ընտրված ծառայությունն այլևս հասանելի չէ։ Թարմացրեք էջը։'});
+  const isPremiumDelivery=service?.id==='premium-delivery';
+  if(isPremiumDelivery){if(!input.parcelAccepted)return res.status(400).json({error:'Հաստատեք առաքանու ընդունելի պայմանները։'});for(const [label,value] of [['ուղարկողի',input.senderPhone],['ստացողի',input.recipientPhone]])if(!value||normalizePhone(value).replace(/\\D/g,'').length<7)return res.status(400).json({error:'Մուտքագրեք '+label+' ճիշտ հեռախոսահամարը։'});if(!input.pickupAddress||!input.destinationAddress)return res.status(400).json({error:'Լրացրեք ուղարկողի և ստացողի ամբողջական հասցեները։'});}
+  const route=isPremiumDelivery?{baseFareAmd:0,pickupDistrict:'Առաքում',destinationDistrict:'Երևան',routeDistricts:[],districtCount:0,intermediateDistricts:[]}:await calculateYerevanDistrictFare(input.pickupDistrict,input.destinationDistrict);
   const servicePriceAmd=Number.isInteger(service?.priceAmd)?service.priceAmd:0;
   const dispatchMode=['CATEGORY','CAPABILITY'].includes(service?.dispatchMode)?service.dispatchMode:'NETWORK';
   const requiredLicenseCategory=dispatchMode==='CATEGORY'?(service?.requiredLicenseCategory||'B'):input.requiredLicenseCategory;
@@ -547,12 +549,13 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
    if(!eligibleDrivers.length)return res.status(409).json({error:dispatchMode==='CAPABILITY'?'Այս հատուկ հմտությունն ունեցող հաստատված վարորդ այս պահին չկա։ Վարորդները պետք է իրենց պրոֆիլում նշեն այդ հմտությունը։':'Այս վարորդական կարգով հաստատված վարորդ այս պահին չկա։ Ընտրեք այլ ծառայություն կամ կապվեք ադմինի հետ։'});
   }
   const totalExtraAmd=input.extraChargeAmd+servicePriceAmd;
-  const pickupAddress=route.pickupDistrict+' վարչական շրջան',destinationAddress=route.destinationDistrict+' վարչական շրջան';
+  const pickupAddress=isPremiumDelivery?input.pickupAddress.trim():route.pickupDistrict+' վարչական շրջան',destinationAddress=isPremiumDelivery?input.destinationAddress.trim():route.destinationDistrict+' վարչական շրջան';
+  const orderNote=isPremiumDelivery?['ՊՐԵՄԻՈՒՄ ԱՌԱՔՈՒՄ','Ուղարկողի հեռախոս՝ '+input.senderPhone,'Ստացողի անուն՝ '+(input.recipientName||'նշված չէ'),'Ստացողի հեռախոս՝ '+input.recipientPhone,'Առաքանու պայմաններ՝ բաց, տեսանելի, ստուգելի, թափանցիկ, չկոտրվող, չփչացող',input.note||''].filter(Boolean).join(' | ').slice(0,1000):input.note;
   const demand=await getUrgentDemandCoefficient(input.isUrgent);
   const demandExtraChargeAmd=calculateUrgentDemandCharge(route.baseFareAmd,totalExtraAmd,input.isUrgent,demand.demandCoefficientPercent);
   const urgentExtraChargeAmd=input.isUrgent?2500+demandExtraChargeAmd:0;
-  const fareAmd=route.baseFareAmd+totalExtraAmd+urgentExtraChargeAmd;
-  const order=await prisma.order.create({data:{orderCode:await generateUniqueOrderCode(),customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,vehicleFuelType:input.vehicleFuelType,passengerCount:input.passengerCount,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
+  const fareAmd=(isPremiumDelivery?5000:route.baseFareAmd)+input.extraChargeAmd+(isPremiumDelivery?0:servicePriceAmd)+urgentExtraChargeAmd;
+  const order=await prisma.order.create({data:{orderCode:await generateUniqueOrderCode(),customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,vehicleFuelType:input.vehicleFuelType,passengerCount:input.passengerCount,note:orderNote,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   const event={id:order.id,orderCode:order.orderCode,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
   if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else io.to('drivers').emit('order:new',event);
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Պատվերը հրապարակվեց՝ ընտրված ծառայության և համապատասխան վարորդների պայմաններով։'});
@@ -930,21 +933,22 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
           } });
       const urgentSurchargeAmd = Math.max(0, requestedOrder.urgentExtraChargeAmd || 0);
       const commissionBaseAmd = Math.max(0, requestedOrder.fareAmd - urgentSurchargeAmd);
-      const baseCommissionAmd = requestedOrder.isTest ? 0 : Math.round(commissionBaseAmd * 0.25);
+      const serviceCommissionRate = requestedOrder.serviceId === 'premium-delivery' ? 15 : 25;
+      const baseCommissionAmd = requestedOrder.isTest ? 0 : Math.round(commissionBaseAmd * serviceCommissionRate / 100);
       const surchargeCommissionAmd = requestedOrder.isTest || previousCompletedSurchargeOrders < 1
         ? 0 : Math.round(urgentSurchargeAmd * 0.01);
       const commissionAmd = baseCommissionAmd + surchargeCommissionAmd;
       const claimed = await tx.order.updateMany({
         where: { id: req.params.id, status: 'OPEN', OR: [{ driverId: null }, { driverId: req.user.id }] },
-        data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt, commissionRate: requestedOrder.isTest ? 0 : 25, commissionAmd, commissionSurchargeAmd: surchargeCommissionAmd, driverEarningAmd: requestedOrder.isTest ? 0 : urgentSurchargeAmd }
+        data: { status: 'ACCEPTED', driverId: req.user.id, acceptedAt, commissionRate: requestedOrder.isTest ? 0 : serviceCommissionRate, commissionAmd, commissionSurchargeAmd: surchargeCommissionAmd, driverEarningAmd: requestedOrder.isTest ? 0 : urgentSurchargeAmd }
       });
       if (!claimed.count) return null;
       if (commissionAmd > 0) {
         const debited = await tx.user.updateMany({ where: { id: req.user.id, balanceAmd: { gte: commissionAmd + minimumAllowedBalanceAmd } }, data: { balanceAmd: { decrement: commissionAmd } } });
         if (!debited.count) throw new Error('WALLET_MINIMUM_NOT_MET');
         const description = surchargeCommissionAmd > 0
-          ? 'Պատվերի միջնորդավճար՝ հիմնական արժեքի 25% + հավելավճարի 1%'
-          : 'Պատվերի միջնորդավճար՝ հիմնական արժեքի 25%';
+          ? 'Պատվերի միջնորդավճար՝ հիմնական արժեքի '+serviceCommissionRate+'% + հավելավճարի 1%'
+          : 'Պատվերի միջնորդավճար՝ հիմնական արժեքի '+serviceCommissionRate+'%';
         await tx.walletTransaction.create({ data: { userId: req.user.id, amountAmd: -commissionAmd, type: 'ORDER_COMMISSION', description, orderId: requestedOrder.id } });
       }
       const [order, driver] = await Promise.all([

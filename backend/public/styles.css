@@ -2452,3 +2452,14 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
  .neon-dispatch-form label.urgent-order-toggle:has(input:checked),
  #adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked){animation:none!important}
 }
+
+
+/* Premium brand lockup */
+.brand-logo{display:block;width:min(270px,48vw);height:auto;max-height:64px;object-fit:contain}
+.premium-delivery-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px;border:1px solid rgba(202,164,91,.5);border-radius:16px;background:linear-gradient(145deg,rgba(25,22,17,.98),rgba(8,9,11,.98));}
+.premium-delivery-fields[hidden]{display:none!important}.premium-delivery-heading{grid-column:1/-1}.premium-delivery-heading span{font-size:11px;letter-spacing:.18em;color:#d8b66f}.premium-delivery-heading h4{margin:7px 0;color:#f6e6c2;font-size:21px}.premium-delivery-heading strong{color:#e8bd69;font-size:23px}.premium-delivery-heading p{color:#d0c7b7}.parcel-acceptance{grid-column:1/-1;display:flex!important;align-items:flex-start;gap:10px;padding:13px;border:1px solid rgba(215,178,105,.45);border-radius:10px;background:rgba(215,178,105,.08)}.parcel-acceptance input{width:20px;height:20px;flex:0 0 auto;accent-color:#c9a35e}.parcel-acceptance span{color:#f5eddf;font-weight:700}.premium-delivery-public-card{border-color:rgba(208,169,97,.55)}.premium-delivery-public-card a{display:inline-block;margin-top:12px;color:#e6c17d;font-weight:800}.premium-delivery-tariff{margin-top:22px}
+/* Force urgent order button to be unmistakably dark red with white lettering. */
+#orderForm label.urgent-order-toggle,#adminCreateOrderPanel label.urgent-order-toggle,.booking-form label.urgent-order-toggle,.neon-dispatch-form label.urgent-order-toggle,.neon-route-group label.urgent-order-toggle{background:#8b0000!important;background-image:none!important;color:#fff!important;border:2px solid #ff4242!important;box-shadow:0 0 0 2px rgba(139,0,0,.24),0 8px 22px rgba(139,0,0,.38)!important;opacity:1!important;filter:none!important}
+#orderForm label.urgent-order-toggle span,#orderForm label.urgent-order-toggle small,#adminCreateOrderPanel label.urgent-order-toggle span,#adminCreateOrderPanel label.urgent-order-toggle small,.booking-form label.urgent-order-toggle span,.booking-form label.urgent-order-toggle small,.neon-dispatch-form label.urgent-order-toggle span,.neon-dispatch-form label.urgent-order-toggle small{color:#fff!important;text-shadow:none!important;opacity:1!important}
+#orderForm label.urgent-order-toggle.is-selected,#adminCreateOrderPanel label.urgent-order-toggle.is-selected,.booking-form label.urgent-order-toggle.is-selected{background:#087b39!important;border-color:#42ef87!important;animation:urgentSelectedGreenFlash .9s ease-in-out infinite}
+@media(max-width:650px){.premium-delivery-fields{grid-template-columns:1fr}.brand-logo{width:min(205px,58vw);max-height:52px}}
