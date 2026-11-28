@@ -11,8 +11,8 @@ android {
         applicationId 'am.stapdriver.app'
         minSdk 23
         targetSdk 35
-        versionCode 2
-        versionName '1.1'
+        versionCode 3
+        versionName '1.2'
     }
 
     flavorDimensions += 'audience'
@@ -29,7 +29,7 @@ android {
             applicationIdSuffix '.driver'
             versionNameSuffix '-driver'
             buildConfigField 'String', 'APP_ROLE', '"DRIVER"'
-            resValue 'string', 'app_name', 'STAP Վարորդ'
+            resValue 'string', 'app_name', 'STAP Վարորդ · Առաքիչ'
         }
         admin {
             dimension 'audience'
