@@ -2072,3 +2072,43 @@ body.customer-user-mode #dashboard{padding-bottom:calc(94px + env(safe-area-inse
  .urgent-order-toggle span{font-size:15px!important}
  .urgent-order-toggle small{width:100%!important;margin-left:29px!important;text-align:left!important}
 }
+
+
+/* Softer, low-glare booking palette for service and district selection */
+#orderForm .service-select-field>span,
+#orderForm .customer-choice-field>span,
+#orderForm .district-picker-wrap>span{color:#e5d8bd;font-weight:800;letter-spacing:.015em}
+#orderForm .service-select-field select,
+#orderForm .customer-choice-field select,
+#orderForm .district-picker-wrap select{
+ background:linear-gradient(145deg,#292a2d,#222326)!important;color:#f3eee4!important;
+ border:1px solid rgba(196,171,125,.43)!important;border-radius:12px!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+}
+#orderForm .district-picker-wrap select:focus,
+#orderForm .customer-choice-field select:focus,
+#orderForm .service-select-field select:focus{outline:2px solid rgba(201,174,126,.32)!important;border-color:#c9ae7e!important}
+#orderForm select option{background:#252629;color:#f4eee4}
+#orderForm .booking-choice-group{gap:8px!important}
+#orderForm .booking-choice-chip{
+ background:linear-gradient(145deg,#292a2d,#242528)!important;color:#e8e0d2!important;
+ border:1px solid rgba(190,168,130,.32)!important;border-radius:11px!important;
+ box-shadow:0 2px 8px rgba(0,0,0,.12)!important;transition:background .18s,border-color .18s,transform .18s!important
+}
+#orderForm .booking-choice-chip:hover{border-color:rgba(213,190,150,.72)!important;transform:translateY(-1px)}
+#orderForm .booking-choice-chip.selected{
+ background:linear-gradient(135deg,#bca477,#9c855d)!important;color:#171613!important;
+ border-color:#d4bd91!important;box-shadow:0 3px 12px rgba(176,148,99,.2)!important
+}
+#orderForm .booking-service-chip small{color:inherit!important;opacity:.8}
+#orderForm .district-picker-wrap{padding:12px!important;border:1px solid rgba(195,171,130,.2)!important;border-radius:14px!important;background:rgba(235,225,204,.035)!important}
+#adminCreateOrderPanel .neon-route-group .district-picker-wrap,
+#adminCreateOrderPanel .neon-vehicle-group .admin-form-field{
+ border-color:rgba(195,171,130,.3)!important;background:rgba(235,225,204,.035)!important
+}
+#adminCreateOrderPanel .neon-route-group .district-picker-wrap select,
+#adminCreateOrderPanel .neon-vehicle-group select{
+ background:#292a2d!important;color:#f3eee4!important;border:1px solid rgba(196,171,125,.43)!important;border-radius:10px!important
+}
+.customer-driver-phone{display:block;margin-top:5px;color:#d6c39e;font-size:13px;font-weight:750}
+.customer-driver-phone a{color:inherit;text-decoration:none;border-bottom:1px dashed currentColor}
