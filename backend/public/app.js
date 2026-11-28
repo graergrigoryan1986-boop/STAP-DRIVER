@@ -344,8 +344,8 @@ async function driverView(){
   <section class="driver-profile-summary" aria-label="Վարորդի պրոֆիլ">
    <div class="driver-profile-summary-heading"><span>ԻՄ ՊՐՈՖԻԼԸ</span><strong>${esc(u.name||'Վարորդ')}</strong></div>
    <div class="driver-profile-summary-stats">
-    <article><small>★ ՎԱՐԿԱՆԻՇ</small><strong>${Number(u.rating??u.averageRating??5).toFixed(2)} / 5</strong><button type="button" id="driverRatingHistoryButton" aria-expanded="false">Վարկանիշի պատմություն</button></article>
-    <article><small>₽ ՀԱՇՎԵԿՇԻՌ</small><strong id="driverBalanceAmount">${money(u.balanceAmd||0)}</strong><button type="button" id="driverBalanceMenuButton">Հաշվեկշռի պատմություն</button></article>
+    <article><small>★ ՎԱՐԿԱՆԻՇ</small><strong>${Number(u.rating??u.averageRating??5).toFixed(2)} / 5</strong><button type="button" id="driverRatingHistoryButton" aria-expanded="false" hidden>Վարկանիշի պատմություն</button></article>
+    <article><small>₽ ՀԱՇՎԵԿՇԻՌ</small><strong id="driverBalanceAmount">${money(u.balanceAmd||0)}</strong><button type="button" id="driverBalanceMenuButton" hidden>Հաշվեկշռի պատմություն</button></article>
    </div>
   </section>
   <section class="driver-pending-compact">
@@ -376,14 +376,10 @@ async function driverView(){
     </form>
    </details></section>`}
   </section>
-  <nav class="driver-bottom-dock" aria-label="Վարորդի հիմնական մենյու">
-   <button type="button" id="driverMenuToggle" class="driver-menu-toggle" aria-expanded="false"><span>Բացել</span> ☰ ԳԼԽԱՎՈՐ ՄԵՆՅՈՒ</button>
-   <div id="driverBottomMenu" class="driver-bottom-menu" hidden>
-    <button type="button" data-driver-home><b>⌂</b><span>Գլխավոր</span></button>
-    <button type="button" id="driverRatingMenuButton"><b>★</b><span>Վարկանիշ</span></button>
-    <button type="button" id="driverBalanceMenuButtonAlt"><b>₽</b><span>Հաշվեկշիռ</span></button>
-    <button type="button" data-driver-history="ALL"><b>▤</b><span>Պատվերներ</span></button>
-   </div>
+  <nav class="driver-bottom-dock" aria-label="Վարորդի հիմնական բաժիններ">
+   <button type="button" data-driver-bottom-tab="rating"><b>★</b><span>Վարկանիշ / պատմություն</span></button>
+   <button type="button" data-driver-bottom-tab="balance"><b>₽</b><span>Հաշվեկշիռ / պատմություն</span></button>
+   <button type="button" data-driver-bottom-tab="orders"><b>▤</b><span>Պատվերներ / պատմություն</span></button>
   </nav>
   ${((u.vehicleMake&&u.vehicleModel&&u.vehiclePlate)&&u.vehicleDocumentsStatus!=='REJECTED')||['PENDING_REVIEW','APPROVED'].includes(u.vehicleDocumentsStatus)?'':`<section class="driver-vehicle-panel">
    <details open><summary>🚘 ԻՄ ՄԵՔԵՆԱՆ ԵՎ ՓԱՍՏԱԹՂԹԵՐԸ</summary>
@@ -483,11 +479,16 @@ const deliveryToggle=$('#driverDeliveryToggle');if(deliveryToggle)deliveryToggle
 const periodicForm=$('#driverPeriodicVerificationForm');if(periodicForm)periodicForm.onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,button=form.querySelector('button[type="submit"]'),fields=['front','back','left','right','selfie'],payload={};for(const name of fields){const file=form.elements[name].files[0];if(!file){message('#appMessage','Ընտրեք բոլոր 5 լուսանկարները։',true);return}if(file.size>2.5*1024*1024){message('#appMessage','Յուրաքանչյուր լուսանկարը պետք է լինի առավելագույնը 2.5 ՄԲ։',true);return}payload[name]=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('Լուսանկարը կարդալ չհաջողվեց։'));reader.readAsDataURL(file)})}button.disabled=true;try{const r=await api('/api/drivers/periodic-verification',{method:'POST',body:JSON.stringify(payload)});currentUser=r.user;message('#appMessage',r.message);await driverView()}catch(err){message('#appMessage',err.message,true);button.disabled=false}};
 
 
-$('#driverMenuToggle')?.addEventListener('click',()=>{const menu=$('#driverBottomMenu'),toggle=$('#driverMenuToggle');if(!menu||!toggle)return;menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden));toggle.querySelector('span').textContent=menu.hidden?'Բացել':'Փակել'});
- document.querySelectorAll('[data-driver-close]').forEach(button=>button.addEventListener('click',()=>{const panel=$('#'+button.dataset.driverClose);if(panel)panel.hidden=true}));
- $('#driverRatingMenuButton')?.addEventListener('click',()=>$('#driverRatingHistoryButton')?.click());
- $('#driverBalanceMenuButtonAlt')?.addEventListener('click',()=>$('#driverBalanceMenuButton')?.click());
- document.querySelector('[data-driver-home]')?.addEventListener('click',()=>{['driverBalanceHistoryPanel','driverRatingHistoryPanel','myOrders','driverPendingPanel'].forEach(id=>{const panel=$('#'+id);if(panel)panel.hidden=true});$('#dashboard')?.scrollIntoView({behavior:'smooth',block:'start'})});
+document.querySelectorAll('[data-driver-close]').forEach(button=>button.addEventListener('click',()=>{const panel=$('#'+button.dataset.driverClose);if(panel)panel.hidden=true}));
+ document.querySelectorAll('[data-driver-bottom-tab]').forEach(button=>button.addEventListener('click',()=>{
+  const tab=button.dataset.driverBottomTab;
+  if(tab==='rating')$('#driverRatingHistoryButton')?.click();
+  else if(tab==='balance')$('#driverBalanceMenuButton')?.click();
+  else if(tab==='orders'){
+   const panel=$('#myOrders');if(panel){panel.hidden=false;drawOrders('ALL');$('#driverOrdersPanelTitle').textContent='Պատվերների ամբողջական պատմություն';panel.scrollIntoView({behavior:'smooth',block:'nearest'})}
+  }
+  document.querySelectorAll('[data-driver-bottom-tab]').forEach(item=>item.classList.toggle('active',item===button));
+ }));
  $('#driverPendingToggle')?.addEventListener('click',()=>{const panel=$('#driverPendingPanel');panel.hidden=!panel.hidden;$('#driverPendingToggle').classList.toggle('active',!panel.hidden);$('#driverPendingToggle').setAttribute('aria-expanded',String(!panel.hidden))});
  document.querySelectorAll('[data-driver-history]').forEach(button=>button.addEventListener('click',()=>{const panel=$('#myOrders');panel.hidden=false;drawOrders(button.dataset.driverHistory);$('#driverOrdersPanelTitle').textContent=button.dataset.driverHistory==='REJECTED'?'Չեղարկված պատվերներ':button.dataset.driverHistory==='ALL'?'Պատվերների ամբողջական պատմություն':'Կատարված պատվերներ';panel.scrollIntoView({behavior:'smooth',block:'nearest'})}));
 
@@ -538,6 +539,7 @@ const YEREVAN_DISTRICTS=['Աջափնյակ','Ավան','Արաբկիր','Դավ�
 function bindFareCalculator(form){
  if(!form)return;
  form.classList.add('booking-form');
+ if(form.id==='orderForm')form.noValidate=true;
  if(!form.querySelector('.booking-form-heading'))form.insertAdjacentHTML('afterbegin','<div class="booking-form-heading"><span class="booking-kicker">STAP DRIVER · ԱՄՐԱԳՐՈՒՄ</span><h3>Կազմակերպեք ձեր ուղևորությունը</h3><p>Ընտրեք միայն մեկնարկային և վերջնակետային վարչական շրջանները։ Փողոցը և շենքի համարը սակագնի վրա չեն ազդում։</p></div>');
  const pickup=form.querySelector('[name="pickupAddress"]'),destination=form.querySelector('[name="destinationAddress"]'),extra=form.querySelector('[name="extraChargeAmd"]'),fare=form.querySelector('[name="fareAmd"]'),summary=form.querySelector('[data-fare-breakdown]'),preview=form.querySelector('[data-route-preview]'),serviceSelect=form.querySelector('[name="serviceId"]'),serviceDetails=form.querySelector('#customerServiceDetails');
  const addChoiceButtons=(select,kind,labels)=>{
@@ -733,6 +735,13 @@ async function customerView(){
   if(submitButton){submitButton.disabled=true;submitButton.textContent='ՊԱՏՎԵՐԸ ՈՒՂԱՐԿՎՈՒՄ Է…'}
   try{
    const f=new FormData(bookingForm),isDelivery=f.get('serviceId')==='premium-delivery';
+   if(!isDelivery){
+    const pickupDistrict=bookingForm.querySelector('[name="pickupDistrict"]')?.value||'';
+    const destinationDistrict=bookingForm.querySelector('[name="destinationDistrict"]')?.value||'';
+    if(!pickupDistrict||!destinationDistrict)throw new Error('Ընտրեք մեկնարկային և նպատակակետի վարչական շրջանները։');
+    const pickupAddress=String(f.get('pickupAddress')||'').trim(),destinationAddress=String(f.get('destinationAddress')||'').trim();
+    if(pickupAddress.length<3||destinationAddress.length<3)throw new Error('Լրացրեք մեկնարկի և նպատակակետի հասցեների մանրամասները։');
+   }
    if(isDelivery){if(!f.get('parcelAccepted'))throw new Error('Նախ հաստատեք առաքանու պայմանները։');if(!f.get('senderName')||!f.get('senderPhone')||!f.get('recipientName')||!f.get('recipientPhone'))throw new Error('Լրացրեք ուղարկողի և ստացողի անուններն ու հեռախոսահամարները։');if(!([...e.currentTarget.querySelectorAll('[name="pickupAddress"]')].find(field=>!field.disabled)?.value||'').trim()||!([...e.currentTarget.querySelectorAll('[name="destinationAddress"]')].find(field=>!field.disabled)?.value||'').trim())throw new Error('Լրացրեք երկու ամբողջական հասցեները։');}
    else if(!await e.currentTarget._refreshRouteQuote?.())throw new Error('Նախ պետք է ճիշտ հաշվարկել երթուղին։');
    await api('/api/orders',{method:'POST',body:JSON.stringify({
