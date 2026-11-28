@@ -739,8 +739,6 @@ async function customerView(){
     const pickupDistrict=bookingForm.querySelector('[name="pickupDistrict"]')?.value||'';
     const destinationDistrict=bookingForm.querySelector('[name="destinationDistrict"]')?.value||'';
     if(!pickupDistrict||!destinationDistrict)throw new Error('Ընտրեք մեկնարկային և նպատակակետի վարչական շրջանները։');
-    const pickupAddress=String(f.get('pickupAddress')||'').trim(),destinationAddress=String(f.get('destinationAddress')||'').trim();
-    if(pickupAddress.length<3||destinationAddress.length<3)throw new Error('Լրացրեք մեկնարկի և նպատակակետի հասցեների մանրամասները։');
    }
    if(isDelivery){if(!f.get('parcelAccepted'))throw new Error('Նախ հաստատեք առաքանու պայմանները։');if(!f.get('senderName')||!f.get('senderPhone')||!f.get('recipientName')||!f.get('recipientPhone'))throw new Error('Լրացրեք ուղարկողի և ստացողի անուններն ու հեռախոսահամարները։');if(!([...e.currentTarget.querySelectorAll('[name="pickupAddress"]')].find(field=>!field.disabled)?.value||'').trim()||!([...e.currentTarget.querySelectorAll('[name="destinationAddress"]')].find(field=>!field.disabled)?.value||'').trim())throw new Error('Լրացրեք երկու ամբողջական հասցեները։');}
    else if(!await e.currentTarget._refreshRouteQuote?.())throw new Error('Նախ պետք է ճիշտ հաշվարկել երթուղին։');
