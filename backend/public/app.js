@@ -46,6 +46,7 @@ function connectRealtime(){
  };
  realtimeSocket.on('driver:balance-updated',data=>{if(currentUser?.role==='DRIVER'&&data?.driverId===currentUser.id&&Number.isFinite(Number(data.balanceAmd))){currentUser.balanceAmd=Number(data.balanceAmd);const amount=$('#driverBalanceAmount');if(amount)amount.textContent=money(currentUser.balanceAmd);}});
   realtimeSocket.on('order:status-changed',data=>{announceOrderStatus(data);refresh()});
+  realtimeSocket.on('order:new',data=>{if(currentUser?.role==='DRIVER')announceOrderStatus({...data,status:'OPEN',message:'Նոր պատվեր է հասանելի։'});});
   ['order:new','order:cancelled','order:accepted','order:eta-updated','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));  ['order:new','order:cancelled','order:accepted','order:eta-updated','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
  realtimeSocket.on('rating:updated',()=>{if(currentUser?.role==='ADMIN'){if($('#adminCustomersPanel'))loadAdminCustomers();const ratingsTab=$('#dashboard [data-admin-tab="ratings"]');if(ratingsTab?.classList.contains('active'))ratingsTab.click();}});
  realtimeSocket.on('connect_error',error=>console.warn('STAP live connection:',error.message));
