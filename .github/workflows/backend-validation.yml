@@ -16,7 +16,7 @@ jobs:
         working-directory: backend
     env:
       DATABASE_URL: postgresql://stap_driver:stap_driver@localhost:5432/stap_driver
-      JWT_SECRET: 01234567890123456789012345678901
+      JWT_SECRET: '01234567890123456789012345678901'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
