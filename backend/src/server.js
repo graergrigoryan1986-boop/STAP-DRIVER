@@ -1054,7 +1054,22 @@ app.post('/api/orders/:id/inspection', auth, only('DRIVER'), verifiedDriver, asy
   res.json({success:true,order:maskDriverOrderEvidence(maskDriverOrderContacts(updated)),message:'Մեքենայի վերադարձի վիճակը լուսանկարներով պահպանվեց։ Այժմ կարող եք ավարտել պատվերը։'});
 }));
 
+app.post('/api/orders/:id/delivery-accept',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{
+ const input=z.object({packageMatches:z.literal(true)}).parse(req.body);
+ const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id,status:'ACCEPTED'}});
+ if(!order)return res.status(409).json({error:'Առաքման պատվերը հասանելի չէ կամ արդեն փոխվել է։'});
+ if(order.serviceId!=='premium-delivery')return res.status(400).json({error:'Այս գործողությունը նախատեսված է միայն առաքման պատվերի համար։'});
+ const report={mode:'DELIVERY',checks:{packageMatches:true},driverId:req.user.id,driverName:req.user.name,orderId:order.id,orderCode:order.orderCode,acceptedAt:new Date().toISOString()};
+ const changed=await prisma.order.updateMany({where:{id:order.id,driverId:req.user.id,status:'ACCEPTED'},data:{status:'ARRIVED',arrivedAt:new Date(),vehicleInspectionReport:report}});
+ if(!changed.count)return res.status(409).json({error:'Առաքանին արդեն ընդունվել է կամ պատվերի կարգավիճակը փոխվել է։'});
+ const updated=await prisma.order.findUnique({where:{id:order.id}});
+ emitOrderStatusChange(updated,'ARRIVED','Առաքանին ստուգվել և ընդունվել է առաքիչի կողմից։ Հաջորդ քայլը՝ շարժվել։');
+ res.json({order:maskDriverOrderEvidence(maskDriverOrderContacts(updated)),message:'Առաքանին ընդունվեց։ Կարող եք նշել՝ «Շարժվեցի»։'});
+}));
+
 app.post('/api/orders/:id/arrive', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req,res)=>{
+  const orderType=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id},select:{serviceId:true}});
+  if(orderType?.serviceId==='premium-delivery')return res.status(409).json({error:'Առաքման պատվերի համար օգտագործեք «Ստուգեցի և ընդունեցի առաքանին» քայլը։'});
   const changed=await prisma.order.updateMany({where:{id:req.params.id,driverId:req.user.id,status:'ACCEPTED'},data:{status:'ARRIVED',arrivedAt:new Date()}});
   const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id}});
   if(!order)return res.status(404).json({error:'Այս պատվերը կապված չէ ձեր վարորդական հաշվի հետ։'});
@@ -1067,7 +1082,8 @@ app.post('/api/orders/:id/start', auth, only('DRIVER'), verifiedDriver, asyncRou
   const existing = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
   if (!existing) return res.status(404).json({ error: 'Այս պատվերը կապված չէ ձեր վարորդական հաշվի հետ։' });
   if (existing.status === 'IN_PROGRESS') return res.json({ order: existing, message: 'Ուղևորությունն արդեն սկսված է։' });
-  if (existing.status !== 'ARRIVED' || !existing.vehicleInspectionPassed || !existing.vehicleInspectionReport) return res.status(409).json({ error: 'Նախ լրացրեք մեքենայի ընդունման ստուգման արձանագրությունը և հաճախորդի հաստատումը։' });
+  const deliveryCargoAccepted=existing.serviceId==='premium-delivery'&&existing.vehicleInspectionReport?.mode==='DELIVERY'&&existing.vehicleInspectionReport?.checks?.packageMatches===true;
+  if (existing.status !== 'ARRIVED' || (!deliveryCargoAccepted&&(!existing.vehicleInspectionPassed || !existing.vehicleInspectionReport))) return res.status(409).json({ error: existing.serviceId==='premium-delivery'?'Նախ ստուգեք և ընդունեք առաքանին։':'Նախ լրացրեք մեքենայի ընդունման ստուգման արձանագրությունը և հաճախորդի հաստատումը։' });
   const changed = await prisma.order.updateMany({ where: { id: req.params.id, driverId: req.user.id, status: 'ARRIVED', vehicleInspectionPassed: true }, data: { status: 'IN_PROGRESS' } });
   const order = await prisma.order.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
   if(order?.status==='IN_PROGRESS'){if(changed.count)emitOrderStatusChange(order,'IN_PROGRESS','Ուղևորությունը սկսվել է։');return res.json({order:maskDriverOrderEvidence(maskDriverOrderContacts(order)),message:changed.count?'Ուղևորությունը սկսվեց։':'Ուղևորությունն արդեն սկսված է։'});}
