@@ -53,6 +53,7 @@ model User {
   vehicleModel String?
   vehicleYear Int?
   vehiclePlate String?
+  vehicleColor String?
   vehicleDocumentsStatus String @default("NOT_SUBMITTED")
   vehicleVerificationMessage String?
   vehiclePhotosFront Bytes?
