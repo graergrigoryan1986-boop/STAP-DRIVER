@@ -59,6 +59,12 @@ app.use('/api/drivers/documents', rateLimit({ windowMs: 60 * 60 * 1000, limit: 5
 const DOCUMENT_KEY = createHash('sha256').update(JWT_SECRET).digest();
 function encryptPrivate(value){if(value==null)return null;const nonce=randomBytes(12),cipher=createCipheriv('aes-256-gcm',DOCUMENT_KEY,nonce),encrypted=Buffer.concat([cipher.update(Buffer.isBuffer(value)?value:Buffer.from(String(value),'utf8')),cipher.final()]);return Buffer.concat([Buffer.from('STAP1'),nonce,cipher.getAuthTag(),encrypted])}
 function decryptPrivate(value){if(!value)return null;const data=Buffer.from(value);if(data.subarray(0,5).toString()!=='STAP1')return data;const nonce=data.subarray(5,17),tag=data.subarray(17,33),body=data.subarray(33),decipher=createDecipheriv('aes-256-gcm',DOCUMENT_KEY,nonce);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(body),decipher.final()])}
+async function emitOrderToEligibleDrivers(drivers,event) {
+  const ids=(drivers||[]).map(driver=>driver.id).filter(Boolean);
+  if(!ids.length)return;
+  const current=await prisma.user.findMany({where:{id:{in:ids},role:'DRIVER',isVerified:true,isBlocked:false}});
+  for(const driver of current)if(!periodicVerificationState(driver).required)io.to('user:'+driver.id).emit('order:new',event);
+}
 async function emitNetworkOrderToEligibleDrivers(event) {
   const drivers = await prisma.user.findMany({where:{role:'DRIVER',isVerified:true},select:{id:true,isVerified:true,driverVerifiedAt:true,periodicVehicleVerificationDueAt:true,periodicVehicleVerificationStatus:true}});
   for (const driver of drivers) if (!periodicVerificationState(driver).required) io.to('user:'+driver.id).emit('order:new',event);
@@ -561,7 +567,7 @@ app.post('/api/orders', auth, only('CUSTOMER'), asyncRoute(async (req, res) => {
   const fareAmd=(isPremiumDelivery?5000:route.baseFareAmd)+(isPremiumDelivery?0:input.extraChargeAmd)+(isPremiumDelivery?0:servicePriceAmd)+urgentExtraChargeAmd;
   const order=await prisma.order.create({data:{orderCode:await generateUniqueOrderCode(),customerId:req.user.id,isUrgent:input.isUrgent,urgentExtraChargeAmd,demandCoefficientChargeAmd:demandExtraChargeAmd,dispatchMode,serviceId:service?.id||null,serviceCapability:requiredCapability||null,serviceTitle:service?.title||null,serviceRequirements:service?.requirements||service?.description||null,servicePriceAmd,pickupAddress,destinationAddress,routeDistricts:route.routeDistricts,routeNeighborhoods:[],routeDistanceMeters:null,fareAmd,requiredLicenseCategory,transmissionType:input.transmissionType,vehicleFuelType:input.vehicleFuelType,passengerCount:input.passengerCount,note:orderNote,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null,isTest:input.isTest}});
   const event={id:order.id,orderCode:order.orderCode,isTest:order.isTest,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
-  if(dispatchMode==='CATEGORY')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',event);else await emitNetworkOrderToEligibleDrivers(event);
+  if(dispatchMode==='CATEGORY')await emitOrderToEligibleDrivers(eligibleDrivers,event);else await emitNetworkOrderToEligibleDrivers(event);
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message:'Պատվերը հրապարակվեց՝ ընտրված ծառայության և համապատասխան վարորդների պայմաններով։'});
 }));
 
@@ -611,7 +617,7 @@ app.post('/api/orders/guest',rateLimit({windowMs:15*60*1000,limit:12,standardHea
   transmissionType:input.transmissionType,note:input.note,pickupNote:input.pickupNote||null,destinationNote:input.destinationNote||null
  }});
  const guestEvent={id:order.id,isTest:false,pickupAddress:order.pickupAddress,destinationAddress:order.destinationAddress,fareAmd:order.fareAmd,isUrgent:order.isUrgent,serviceTitle:order.serviceTitle,createdAt:order.createdAt};
-  if(dispatchMode!=='NETWORK')for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',guestEvent);else await emitNetworkOrderToEligibleDrivers(guestEvent);
+  if(dispatchMode!=='NETWORK')await emitOrderToEligibleDrivers(eligibleDrivers,guestEvent);else await emitNetworkOrderToEligibleDrivers(guestEvent);
  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
  const title='Նոր պատվեր՝ առանց գրանցման',notificationMessage='Հաճախորդ՝ '+input.name+' · '+input.phone+' · '+order.pickupAddress+' → '+order.destinationAddress;
  if(admins.length){await prisma.notification.createMany({data:admins.map(admin=>({userId:admin.id,title,message:notificationMessage,type:'NEW_GUEST_ORDER'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title,message:notificationMessage,type:'NEW_GUEST_ORDER',orderId:order.id,createdAt:new Date()});}
@@ -759,7 +765,7 @@ app.post('/api/admin/orders', auth, only('ADMIN'), asyncRoute(async (req,res)=>{
   }
   if(!scheduledAt){
     if(input.dispatchMode==='NETWORK')await emitNetworkOrderToEligibleDrivers({id:order.id,isTest:order.isTest});
-    else for(const driver of eligibleDrivers)io.to('user:'+driver.id).emit('order:new',{id:order.id,isTest:order.isTest});
+    else await emitOrderToEligibleDrivers(eligibleDrivers,{id:order.id,isTest:order.isTest});
   }
   const message=input.dispatchMode==='DIRECT'?'Պատվերը նշանակվեց ընտրված վարորդին։':input.dispatchMode==='CATEGORY'?'Պատվերը տեղադրվեց ցանցում՝ ըստ վարորդական կարգի։':'Պատվերը տեղադրվեց վարորդների ընդհանուր ցանցում։';
   res.status(201).json({order,routeDistricts:route.routeDistricts,districtCount:route.districtCount,message});
