@@ -65,7 +65,7 @@ const publicUser = user => ({
   balanceAmd: user.balanceAmd, driverNegativeBalanceLimitAmd: user.driverNegativeBalanceLimitAmd ?? 0, rating: user.rating, driverLicense: user.driverLicense,
   driverFirstNameLatin: user.driverFirstNameLatin, driverLastNameLatin: user.driverLastNameLatin,
   driverPatronymicLatin: user.driverPatronymicLatin, driverLicenseSeries: user.driverLicenseSeries,
-  driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, vehicleMake:user.vehicleMake, vehicleModel:user.vehicleModel, vehicleYear:user.vehicleYear, vehiclePlate:user.vehiclePlate, vehicleDocumentsStatus:user.vehicleDocumentsStatus, vehicleVerificationMessage:user.vehicleVerificationMessage, driverDeliveryEnabled:user.driverDeliveryEnabled, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, driverExperienceMonths: user.driverExperienceMonths, dateOfBirth: user.dateOfBirth, createdAt: user.createdAt
+  driverLicenseExpiresAt: user.driverLicenseExpiresAt, driverLicenseIssuedAt: user.driverLicenseIssuedAt, driverLicenseCategories: user.driverLicenseCategories, driverTransmission: user.driverTransmission, vehicleMake:user.vehicleMake, vehicleModel:user.vehicleModel, vehicleYear:user.vehicleYear, vehiclePlate:user.vehiclePlate, vehicleColor:user.vehicleColor, vehicleDocumentsStatus:user.vehicleDocumentsStatus, vehicleVerificationMessage:user.vehicleVerificationMessage, driverDeliveryEnabled:user.driverDeliveryEnabled, driverDocumentsStatus: user.driverDocumentsStatus, driverVerifiedAt: user.driverVerifiedAt, driverVerificationMessage: user.driverVerificationMessage, driverExperienceMonths: user.driverExperienceMonths, dateOfBirth: user.dateOfBirth, createdAt: user.createdAt
 });
 const normalizePhone = value => { let digits=String(value||'').replace(/\D/g,''); if(digits.startsWith('00'))digits=digits.slice(2); if(digits.startsWith('374'))return '+374'+digits.slice(3); if(digits.startsWith('0')&&digits.length===9)return '+374'+digits.slice(1); return digits?'+'+digits:''; };
 const guestEmailForPhone = phone => 'guest+' + createHash('sha256').update(normalizePhone(phone)).digest('hex').slice(0,32) + '@guest.stap.invalid';
@@ -837,7 +837,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
   const orders = await prisma.order.findMany({
     where, orderBy: { createdAt: 'desc' },
     include: req.user.role === 'CUSTOMER' ? { driver: { select: {
-      id:true,name:true,rating:true,driverFirstNameLatin:true,driverLastNameLatin:true,
+      id:true,name:true,rating:true,vehicleMake:true,vehicleModel:true,vehicleYear:true,vehiclePlate:true,vehicleColor:true,vehicleDocumentsStatus:true,driverFirstNameLatin:true,driverLastNameLatin:true,
       driverLicenseIssuedAt:true,driverExperienceMonths:true,driverLicenseCategories:true,driverTransmission:true,dateOfBirth:true,
       isVerified:true,driverProfilePhoto:true,phone:true
     }},ratings:{where:{fromUserId:req.user.id},select:{id:true,score:true,reasonTags:true,comment:true}}} : undefined
@@ -852,7 +852,7 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
       id:o.driver.id,name:o.driver.name,phone:contactExpired?null:o.driver.phone,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
       driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
       driverLicenseIssuedAt:o.driver.driverLicenseIssuedAt,driverExperienceMonths:o.driver.driverExperienceMonths,driverLicenseCategories:o.driver.driverLicenseCategories,
-      driverTransmission:o.driver.driverTransmission,isVerified:o.driver.isVerified,
+      driverTransmission:o.driver.driverTransmission,isVerified:o.driver.isVerified,vehicle:o.driver.vehicleDocumentsStatus==='APPROVED'?{make:o.driver.vehicleMake,model:o.driver.vehicleModel,year:o.driver.vehicleYear,plate:o.driver.vehiclePlate,color:o.driver.vehicleColor}:null,
       experienceLabel:(()=>{const m=Number.isInteger(o.driver.driverExperienceMonths)?o.driver.driverExperienceMonths:(o.driver.driverLicenseIssuedAt?Math.max(0,Math.floor((Date.now()-new Date(o.driver.driverLicenseIssuedAt).getTime())/(30.4375*86400000))):null);return m===null?'Նշված չէ':(Math.floor(m/12)?Math.floor(m/12)+' տարի ':'')+(m%12?m%12+' ամիս':'')||'0 ամիս'})(),profilePhoto:o.driver.driverProfilePhoto ? 'data:image/jpeg;base64,'+decryptPrivate(o.driver.driverProfilePhoto).toString('base64') : null
     } : null,
     ...(contactExpired?{contactHidden:true}: {})
@@ -1321,11 +1321,12 @@ app.post('/api/drivers/documents', auth, only('DRIVER'), asyncRoute(async (req, 
  res.json({success:true,user:publicUser(user),message:'Բոլոր 5 լուսանկարներն ուղարկվել են ադմինին՝ ձեռքով ստուգման։ OCR ստուգում չի կատարվում։'});
 }));
 app.post('/api/drivers/vehicle',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
- const input=z.object({make:z.string().trim().min(2).max(80),model:z.string().trim().min(1).max(80),year:z.number().int().min(1980).max(new Date().getFullYear()+1),plate:z.string().trim().min(4).max(20),front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),left:z.string().min(100).max(3500000),right:z.string().min(100).max(3500000),registrationFront:z.string().min(100).max(3500000),registrationBack:z.string().min(100).max(3500000)}).parse(req.body);
+ const input=z.object({make:z.string().trim().min(2).max(80),model:z.string().trim().min(1).max(80),color:z.string().trim().min(2).max(60),year:z.number().int().min(1980).max(new Date().getFullYear()+1),plate:z.string().trim().min(4).max(20),front:z.string().min(100).max(3500000),back:z.string().min(100).max(3500000),left:z.string().min(100).max(3500000),right:z.string().min(100).max(3500000),registrationFront:z.string().min(100).max(3500000),registrationBack:z.string().min(100).max(3500000)}).parse(req.body);
  const decode=value=>{const m=value.startsWith('data:image/jpeg;base64,')?['',value.slice('data:image/jpeg;base64,'.length)]:null;if(!m)throw new Error('Լուսանկարները պետք է արվեն տեսախցիկով՝ JPEG ձևաչափով։');const b=Buffer.from(m[1],'base64');if(b[0]!==255||b[1]!==216||!b.length||b.length>2500000)throw new Error('Յուրաքանչյուր լուսանկարը պետք է լինի JPEG՝ առավելագույնը 2.5 ՄԲ։');return encryptPrivate(b)};
  const p={front:decode(input.front),back:decode(input.back),left:decode(input.left),right:decode(input.right),registrationFront:decode(input.registrationFront),registrationBack:decode(input.registrationBack)};
- const user=await prisma.user.update({where:{id:req.user.id},data:{vehicleMake:input.make,vehicleModel:input.model,vehicleYear:input.year,vehiclePlate:input.plate,vehiclePhotosFront:p.front,vehiclePhotosBack:p.back,vehiclePhotosLeft:p.left,vehiclePhotosRight:p.right,vehicleRegistrationFront:p.registrationFront,vehicleRegistrationBack:p.registrationBack,vehicleDocumentsStatus:'PENDING_REVIEW',vehicleVerificationMessage:'Մեքենայի տվյալներն ու փաստաթղթերը սպասում են ադմինի ստուգմանը։',driverDeliveryEnabled:false}});
- res.json({success:true,user:publicUser(user),message:'Մեքենայի 4 կողմերի և տեխնիկական փաստաթղթերի լուսանկարներն ուղարկվել են ադմինին։'});
+ const user=await prisma.user.update({where:{id:req.user.id},data:{vehicleMake:input.make,vehicleModel:input.model,vehicleYear:input.year,vehiclePlate:input.plate,vehicleColor:input.color,vehiclePhotosFront:p.front,vehiclePhotosBack:p.back,vehiclePhotosLeft:p.left,vehiclePhotosRight:p.right,vehicleRegistrationFront:p.registrationFront,vehicleRegistrationBack:p.registrationBack,vehicleDocumentsStatus:'PENDING_REVIEW',vehicleVerificationMessage:'Մեքենայի տվյալներն ու փաստաթղթերը սպասում են ադմինի ստուգմանը։',driverDeliveryEnabled:false}});
+ const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});const notificationMessage='Վարորդ '+req.user.name+' ('+req.user.phone+') ուղարկել է մեքենայի 4 կողմերի և տեխնիկական անձնագրի 2 լուսանկար՝ ստուգման և հաստատման համար։';if(admins.length){await prisma.notification.createMany({data:admins.map(a=>({userId:a.id,title:'ՖՈՏՈՍՏՈՒԳՄԱՆ ՀԱՍՏԱՏՄԱՆ ՊԱՀԱՆՋ',message:notificationMessage,type:'VEHICLE_PHOTO_REVIEW'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title:'ՖՈՏՈՍՏՈՒԳՄԱՆ ՀԱՍՏԱՏՄԱՆ ՊԱՀԱՆՋ',message:notificationMessage,type:'VEHICLE_PHOTO_REVIEW',createdAt:new Date()});}
+ res.json({success:true,user:publicUser(user),message:'Բոլոր 6 լուսանկարներն ուղարկվել են ադմինին՝ ֆոտոստուգման։ Դրանք կհաստատվեն և կպահպանվեն վարորդի մեքենայի պրոֆիլում միայն ադմինի հաստատումից հետո։'});
 }));
 app.patch('/api/drivers/delivery-mode',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{
  const enabled=z.object({enabled:z.boolean()}).parse(req.body).enabled;
@@ -1334,7 +1335,7 @@ app.patch('/api/drivers/delivery-mode',auth,only('DRIVER'),verifiedDriver,asyncR
  res.json({success:true,user:publicUser(user),message:enabled?'Առաքիչ ռեժիմն ակտիվ է։':'Առաքիչ ռեժիմն անջատված է։'});
 }));
 app.get('/api/admin/drivers/:id/vehicle',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
- const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{id:true,name:true,vehicleMake:true,vehicleModel:true,vehicleYear:true,vehiclePlate:true,vehicleDocumentsStatus:true,vehiclePhotosFront:true,vehiclePhotosBack:true,vehiclePhotosLeft:true,vehiclePhotosRight:true,vehicleRegistrationFront:true,vehicleRegistrationBack:true}});
+ const d=await prisma.user.findFirst({where:{id:req.params.id,role:'DRIVER'},select:{id:true,name:true,vehicleMake:true,vehicleModel:true,vehicleYear:true,vehiclePlate:true,vehicleColor:true,driverProfilePhotoStatus:true,vehicleDocumentsStatus:true,vehiclePhotosFront:true,vehiclePhotosBack:true,vehiclePhotosLeft:true,vehiclePhotosRight:true,vehicleRegistrationFront:true,vehicleRegistrationBack:true}});
  if(!d)return res.status(404).json({error:'Վարորդը չի գտնվել։'});
  const image=b=>b?'data:image/jpeg;base64,'+decryptPrivate(b).toString('base64'):null;
  res.json({vehicle:{...d,photos:{front:image(d.vehiclePhotosFront),back:image(d.vehiclePhotosBack),left:image(d.vehiclePhotosLeft),right:image(d.vehiclePhotosRight)},registration:{front:image(d.vehicleRegistrationFront),back:image(d.vehicleRegistrationBack)}}});
@@ -1357,7 +1358,7 @@ app.post('/api/drivers/profile-photo', auth, only('DRIVER'), asyncRoute(async(re
  const data=Buffer.from(m[2],'base64');if(!data.length||data.length>2500000)return res.status(400).json({error:'Լուսանկարը պետք է լինի առավելագույնը 2.5 ՄԲ։'});
  await prisma.user.update({where:{id:req.user.id},data:{pendingDriverProfilePhoto:encryptPrivate(data),driverProfilePhotoStatus:'PENDING_REVIEW'}});
  const admins=await prisma.user.findMany({where:{role:'ADMIN'},select:{id:true}});
- if(admins.length)await prisma.notification.createMany({data:admins.map(a=>({userId:a.id,title:'Պրոֆիլի նոր լուսանկար',message:'Վարորդ '+req.user.name+' ուղարկել է նոր պրոֆիլի լուսանկար՝ հաստատման համար։',type:'PROFILE_PHOTO_REVIEW'}))});
+ if(admins.length){const notificationMessage='Վարորդ '+req.user.name+' ուղարկել է նոր պրոֆիլի լուսանկար՝ հաստատման համար։';await prisma.notification.createMany({data:admins.map(a=>({userId:a.id,title:'Պրոֆիլի նոր լուսանկար',message:notificationMessage,type:'PROFILE_PHOTO_REVIEW'}))});for(const admin of admins)io.to('user:'+admin.id).emit('notification:new',{title:'Պրոֆիլի նոր լուսանկար',message:notificationMessage,type:'PROFILE_PHOTO_REVIEW',createdAt:new Date()});}
  res.json({success:true,message:'Լուսանկարը ուղարկվել է ադմինիստրատորին։ Գլխավոր նկարը կփոխվի միայն հաստատումից հետո։'});
 }));
 app.get('/api/drivers/profile-photo',auth,only('DRIVER'),asyncRoute(async(req,res)=>{
