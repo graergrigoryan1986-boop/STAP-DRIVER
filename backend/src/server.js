@@ -917,7 +917,7 @@ app.patch('/api/orders/:id/arrival-estimate',auth,only('DRIVER'),verifiedDriver,
 }));
 app.post('/api/orders/:id/arrival-estimate-response',auth,only('CUSTOMER'),asyncRoute(async(req,res)=>{
  const input=z.object({decision:z.enum(['ACCEPTED','REJECTED','REQUEST_LONGER']),requestedMinutes:z.number().int().refine(v=>[20,30,40,50,60].includes(v)).optional()}).parse(req.body);
- const order=await prisma.order.findFirst({where:{id:req.params.id,customerId:req.user.id,status:'ACCEPTED',driverId:{not:null}});
+ const order=await prisma.order.findFirst({where:{id:req.params.id,customerId:req.user.id,status:'ACCEPTED',driverId:{not:null}}});
  if(!order||!order.arrivalEstimateMinutes||order.arrivalEstimateStatus!=='PENDING')return res.status(409).json({error:'Հաստատման սպասող առաջարկ չկա։'});
  if(input.decision==='REQUEST_LONGER'&&!input.requestedMinutes)return res.status(400).json({error:'Ընտրեք ավելի երկար ժամանակ։'});
  const status=input.decision==='REQUEST_LONGER'?'COUNTER_REQUESTED':input.decision;
