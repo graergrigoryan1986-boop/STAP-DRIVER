@@ -2408,3 +2408,36 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 .inspection-photo-save:disabled{opacity:.65;cursor:wait}
 .inspection-save-hint{display:block;flex:1 1 100%;color:#e6d7b8;font-size:11px;line-height:1.5}
 @media(max-width:600px){.inspection-photo-save{width:100%;min-height:48px;font-size:13px!important}.inspection-save-hint{font-size:12px}}
+
+
+/* Final contrast override for urgent option in every booking form, including admin's neon form. */
+.booking-form label.urgent-order-toggle,
+.neon-dispatch-form label.urgent-order-toggle,
+#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle{
+ background:#fff!important;color:#991b1b!important;border:3px solid #dc2626!important;
+ opacity:1!important;text-shadow:none!important;filter:none!important;
+}
+.booking-form label.urgent-order-toggle span,
+.neon-dispatch-form label.urgent-order-toggle span,
+#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle span{
+ display:inline-block!important;color:#991b1b!important;font-size:17px!important;font-weight:1000!important;
+ line-height:1.35!important;text-shadow:none!important;opacity:1!important;
+}
+.booking-form label.urgent-order-toggle small,
+.neon-dispatch-form label.urgent-order-toggle small,
+#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle small{
+ display:block!important;flex:1 1 240px!important;min-width:0!important;width:auto!important;
+ color:#7f1d1d!important;font-size:15px!important;font-weight:900!important;
+ line-height:1.5!important;opacity:1!important;text-shadow:none!important;
+}
+.booking-form label.urgent-order-toggle:has(input:checked),
+.neon-dispatch-form label.urgent-order-toggle:has(input:checked),
+#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked){
+ background:#dcfce7!important;border-color:#15803d!important;
+}
+.booking-form label.urgent-order-toggle:has(input:checked) span,
+.booking-form label.urgent-order-toggle:has(input:checked) small,
+.neon-dispatch-form label.urgent-order-toggle:has(input:checked) span,
+.neon-dispatch-form label.urgent-order-toggle:has(input:checked) small,
+#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked) span,
+#adminCreateOrderPanel .neon-route-group label.urgent-order-toggle:has(input:checked) small{color:#14532d!important}
