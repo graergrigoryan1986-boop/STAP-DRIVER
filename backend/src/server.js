@@ -755,9 +755,11 @@ function maskDriverOrderContacts(order,now=new Date()){
  const scheduled=order.scheduleType!=='NOW'&&order.scheduledAt?new Date(order.scheduledAt):null;
  const revealAt=scheduled?new Date(scheduled.getTime()-3*60*60*1000):null;
  const isOpen=order.status==='OPEN'||order.status==='SKIPPED';
- const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt);
+ const completedAt=order.status==='COMPLETED'&&order.completedAt?new Date(order.completedAt):null;
+ const completedContactsExpired=Boolean(completedAt)&&now.getTime()>=completedAt.getTime()+6*60*60*1000;
+ const contactHidden=isOpen||(Boolean(revealAt)&&now<revealAt)||completedContactsExpired;
  if(!contactHidden)return order;
- return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:null,destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:revealAt?.toISOString()||null};
+ return {...order,phonePrimary:null,phoneSecondary:null,note:null,pickupNote:null,destinationNote:null,customer:order.customer?{...order.customer,phone:null}:order.customer,contactHidden:true,contactRevealAt:completedContactsExpired?null:revealAt?.toISOString()||null,contactHiddenReason:completedContactsExpired?'COMPLETED_RETENTION_EXPIRED':isOpen?'WAITING_FOR_ACCEPTANCE':'SCHEDULED'};
 }
 app.get('/api/orders/open', auth, only('DRIVER'), verifiedDriver, asyncRoute(async (req, res) => {
   const categories=req.user.driverLicenseCategories||[];
@@ -797,7 +799,9 @@ app.get('/api/orders/mine', auth, asyncRoute(async (req, res) => {
     }},ratings:{where:{fromUserId:req.user.id},select:{id:true,score:true,reasonTags:true,comment:true}}} : undefined
   });
   const safeOrders = req.user.role === 'CUSTOMER' ? orders.map(o => ({
-    ...o, driver: o.driver ? {
+    ...o,
+    ...(o.status==='COMPLETED'&&o.completedAt&&Date.now()>=new Date(o.completedAt).getTime()+6*60*60*1000?{phonePrimary:null,phoneSecondary:null,note:null,pickupNote:null,destinationNote:null,contactHidden:true,contactHiddenReason:'COMPLETED_RETENTION_EXPIRED'}:{}),
+    driver: o.driver ? {
       id:o.driver.id,name:o.driver.name,rating:o.driver.rating,age:o.driver.dateOfBirth?Math.max(0,new Date().getUTCFullYear()-new Date(o.driver.dateOfBirth).getUTCFullYear()-((new Date().getUTCMonth()<new Date(o.driver.dateOfBirth).getUTCMonth()||(new Date().getUTCMonth()===new Date(o.driver.dateOfBirth).getUTCMonth()&&new Date().getUTCDate()<new Date(o.driver.dateOfBirth).getUTCDate()))?1:0)):null,
       driverFirstNameLatin:o.driver.driverFirstNameLatin,driverLastNameLatin:o.driver.driverLastNameLatin,
       driverLicenseIssuedAt:o.driver.driverLicenseIssuedAt,driverExperienceMonths:o.driver.driverExperienceMonths,driverLicenseCategories:o.driver.driverLicenseCategories,
