@@ -8,6 +8,9 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.content.Intent;
 import android.net.Uri;
+import android.provider.MediaStore;
+import androidx.core.content.FileProvider;
+import java.io.File;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -33,6 +36,7 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 1002;
     private PermissionRequest pendingCameraPermissionRequest;
+    private Uri pendingCameraCaptureUri;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -78,7 +82,22 @@ public class MainActivity extends Activity {
                 if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
                 fileChooserCallback = callback;
                 try {
-                    Intent chooserIntent = params.createIntent();
+                    Intent contentIntent = params.createIntent();
+                    Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+                    chooserIntent.putExtra(Intent.EXTRA_INTENT, contentIntent);
+                    if (params.isCaptureEnabled()) {
+                        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        if (cameraIntent.resolveActivity(getPackageManager()) != null) {
+                            File pictures = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
+                            if (pictures != null) {
+                                File photo = File.createTempFile("stap_camera_", ".jpg", pictures);
+                                pendingCameraCaptureUri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", photo);
+                                cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, pendingCameraCaptureUri);
+                                cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cameraIntent});
+                            }
+                        }
+                    }
                     startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
                     return true;
                 } catch (Exception error) {
@@ -176,8 +195,12 @@ public class MainActivity extends Activity {
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (fileChooserCallback == null) return;
             Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+            if ((results == null || results.length == 0) && resultCode == RESULT_OK && pendingCameraCaptureUri != null) {
+                results = new Uri[]{pendingCameraCaptureUri};
+            }
             fileChooserCallback.onReceiveValue(results);
             fileChooserCallback = null;
+            pendingCameraCaptureUri = null;
         }
     }
 
