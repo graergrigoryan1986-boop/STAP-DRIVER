@@ -989,6 +989,7 @@ app.post('/api/orders/:id/arrival-estimate-response',auth,only('CUSTOMER'),async
  emitOrderStatusChange({id:order.id,customerId:req.user.id,driverId:order.driverId},'ETA_UPDATED',message);
  res.json({success:true,order:updated,message:'Պատասխանը ուղարկվեց վարորդին։'});
 }));
+app.get('/api/orders/:id/inspection',auth,only('DRIVER'),verifiedDriver,asyncRoute(async(req,res)=>{const order=await prisma.order.findFirst({where:{id:req.params.id,driverId:req.user.id},select:{id:true,orderCode:true,vehicleInspectionReport:true,vehicleInspectionPassed:true}});if(!order)return res.status(404).json({error:'Պատվերը չի գտնվել ձեր պատվերներում։'});if(!order.vehicleInspectionPassed||!order.vehicleInspectionReport)return res.status(404).json({error:'Այս պատվերի զննման լուսանկարները դեռ պահպանված չեն։'});res.json({inspection:order.vehicleInspectionReport,order:{id:order.id,orderCode:order.orderCode,vehicleInspectionPassed:order.vehicleInspectionPassed}});}));
 app.get('/api/admin/orders/:id/inspection',auth,only('ADMIN'),asyncRoute(async(req,res)=>{
  const order=await prisma.order.findUnique({where:{id:req.params.id},select:{id:true,orderCode:true,driverId:true,customerId:true,vehicleInspectionReport:true,vehicleReturnInspection:true,vehicleInspectionPassed:true,arrivedAt:true,completedAt:true}});
  if(!order)return res.status(404).json({error:'Պատվերը չի գտնվել։'});
