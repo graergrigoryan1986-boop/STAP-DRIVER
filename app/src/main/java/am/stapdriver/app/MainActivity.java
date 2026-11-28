@@ -7,6 +7,7 @@ import android.webkit.PermissionRequest;
 import android.app.Activity;
 import android.graphics.Color;
 import android.content.Intent;
+import android.content.ClipData;
 import android.net.Uri;
 import android.provider.MediaStore;
 import androidx.core.content.FileProvider;
@@ -93,6 +94,7 @@ public class MainActivity extends Activity {
                                 File photo = File.createTempFile("stap_camera_", ".jpg", pictures);
                                 pendingCameraCaptureUri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", photo);
                                 cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, pendingCameraCaptureUri);
+                                cameraIntent.setClipData(ClipData.newRawUri("STAP camera photo", pendingCameraCaptureUri));
                                 cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                                 chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cameraIntent});
                             }
