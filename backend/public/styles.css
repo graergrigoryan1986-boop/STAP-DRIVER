@@ -1843,3 +1843,13 @@ body.driver-portal-mode #dashboard .driver-pending-toggle>small{font-size:12px}
  .navlinks .nav-link{padding:11px 8px;text-align:center;font-size:12px;min-height:42px}
  .navlinks .nav-link:last-child{grid-column:1/-1}
 }
+
+
+/* Customer area: keep booking and order history, suppress operational extras */
+.customer-user-mode #accountMeta{display:none!important}
+.customer-user-mode #orderForm .route-note-field,
+.customer-user-mode #orderForm .test-order-toggle,
+.customer-user-mode #orderForm label:has([name="extraChargeAmd"]),
+.customer-user-mode #orderForm label:has([name="requiredLicenseCategory"]),
+.customer-user-mode #orderForm label:has([name="transmissionType"]){display:none!important}
+.customer-user-mode #orderForm .customer-service-details:empty{display:none!important}
