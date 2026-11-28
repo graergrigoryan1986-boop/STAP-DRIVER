@@ -906,7 +906,6 @@ app.post('/api/orders/:id/accept', auth, only('DRIVER'), verifiedDriver, asyncRo
   io.to('user:'+req.user.id).emit('driver:balance-updated',{driverId:req.user.id,balanceAmd:result.balanceAmd,updatedAt:new Date().toISOString()});
   io.emit('order:accepted', { id: result.order.id, driverId: req.user.id, status: result.order.status });
   io.emit('order:status-changed',{id:result.order.id,status:'ACCEPTED',message:'Վարորդը ընդունել է պատվերը։',changedAt:new Date().toISOString()});
-  io.emit('order:status-changed',{id:result.order.id,status:'ACCEPTED',message:'Վարորդը ընդունել է պատվերը։',changedAt:new Date().toISOString()});
   res.json({...result,order:maskDriverOrderContacts(result.order)});
 }));
 
