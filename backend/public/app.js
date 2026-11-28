@@ -54,12 +54,10 @@ function connectRealtime(){
  if(realtimeSocket)realtimeSocket.disconnect();
  realtimeSocket=window.io({auth:{token},transports:['websocket','polling']});
  const refresh=()=>{
-  if(realtimeRefreshTimer)clearTimeout(realtimeRefreshTimer);
-  realtimeRefreshTimer=setTimeout(async()=>{
-   if(!currentUser)return;
-   if(currentUser.role==='CUSTOMER'&&document.querySelector('[data-customer-content="new"]:not([hidden])'))return;
-   try{if(currentUser.role==='ADMIN')await adminView();else if(currentUser.role==='DRIVER')await driverView();else await customerView()}catch(error){console.warn('Live refresh failed',error)}
-  },450);
+  // Never rebuild an active page because of a realtime event. This preserves
+  // open menus, panels, completed-order views, photo viewers and touch state.
+  // Dedicated order polling updates list contents without replacing the screen.
+  return;
  };
  realtimeSocket.on('driver:balance-updated',data=>{if(currentUser?.role==='DRIVER'&&data?.driverId===currentUser.id&&Number.isFinite(Number(data.balanceAmd))){currentUser.balanceAmd=Number(data.balanceAmd);const amount=$('#driverBalanceAmount');if(amount)amount.textContent=money(currentUser.balanceAmd);}});
   realtimeSocket.on('order:status-changed',data=>{announceOrderStatus(data);refresh()});
@@ -68,7 +66,7 @@ function connectRealtime(){
   ['order:cancelled','order:accepted','order:fare-updated','order:completed','notification:new','site-content:updated'].forEach(eventName=>realtimeSocket.on(eventName,refresh));
   if(realtimeFallbackTimer)clearInterval(realtimeFallbackTimer);
   realtimeFallbackTimer=setInterval(()=>{if(!realtimeSocket?.connected)refresh()},5000);
-  realtimeSocket.on('connect',()=>refresh());
+  // Socket reconnects must not reset the user's current screen.
 
  realtimeSocket.on('rating:updated',()=>{if(currentUser?.role==='ADMIN'){if($('#adminCustomersPanel'))loadAdminCustomers();const ratingsTab=$('#dashboard [data-admin-tab="ratings"]');if(ratingsTab?.classList.contains('active'))ratingsTab.click();}});
  realtimeSocket.on('connect_error',error=>console.warn('STAP live connection:',error.message));
@@ -145,7 +143,7 @@ async function loadAdminOrderHistory(){
     const groups=inspectionPhotoGroups(report,data.returnInspection);
     const modal=document.createElement('div');modal.className='admin-inspection-modal';
     modal.innerHTML='<section class="admin-inspection-modal-panel"><button type="button" class="action" data-close-inspection>ՓԱԿԵԼ ✕</button><h3>Պատվերի բոլոր զննման լուսանկարները · #'+esc(String(data.order?.orderCode||'----'))+'</h3><p>Վարորդ՝ '+esc(report.driverName||data.returnInspection?.driverName||'—')+' · Ավարտվել է՝ '+esc(data.order?.completedAt?new Date(data.order.completedAt).toLocaleString('hy-AM'):'—')+'</p><p class="inspection-view-hint">Սեղմեք նկարի վրա՝ մեծացնելու համար։ Կարող եք բացել առանձին պատուհանում, ամբողջ էկրանով դիտել կամ պահպանել։</p>'+inspectionPhotoMarkup(groups)+'</section>';
-    document.body.appendChild(modal);bindInspectionPhotoControls(modal);modal.querySelector('[data-close-inspection]').onclick=()=>modal.remove();modal.addEventListener('click',event=>{if(event.target===modal)modal.remove()});
+    document.body.appendChild(modal);bindInspectionPhotoControls(modal);modal.querySelector('[data-close-inspection]').onclick=()=>modal.remove();/* This view closes only when its explicit close button is pressed. */
    }catch(error){message('#appMessage',error.message,true)}finally{button.disabled=false}
   });
   box.querySelectorAll('[data-admin-cancel-order]').forEach(button=>button.onclick=async()=>{if(!confirm('Չեղարկե՞լ պատվերը ցանկացած ընթացիկ փուլում։ Ուղևորը և վարորդները ծանուցում կստանան։'))return;button.disabled=true;try{const result=await api('/api/admin/orders/'+button.dataset.adminCancelOrder+'/cancel',{method:'POST',body:'{}'});message('#appMessage',result.message||'Պատվերը չեղարկվեց։');await loadAdminOrderHistory()}catch(error){button.disabled=false;message('#appMessage',error.message,true)}});
@@ -675,7 +673,7 @@ function renderOrders(root,orders,kind){
    const countdown=modal.querySelector('[data-inspection-countdown]');
    const updateCountdown=()=>{if(!expiresAt||!Number.isFinite(expiresAt)){countdown.textContent='Ժամկետը հասանելի չէ';return}const left=expiresAt-Date.now();if(left<=0){countdown.textContent='Ժամկետն ավարտվել է';countdown.classList.add('is-expired');return}const total=Math.floor(left/1000),days=Math.floor(total/86400),hours=Math.floor(total%86400/3600),minutes=Math.floor(total%3600/60),seconds=total%60;countdown.textContent=(days?days+' օր ':'')+String(hours).padStart(2,'0')+':'+String(minutes).padStart(2,'0')+':'+String(seconds).padStart(2,'0')};
    updateCountdown();const countdownTimer=setInterval(updateCountdown,1000);
-   const closeModal=()=>{clearInterval(countdownTimer);modal.remove()};modal.querySelector('[data-close-inspection]').onclick=closeModal;modal.addEventListener('click',event=>{if(event.target===modal)closeModal()});
+   const closeModal=()=>{clearInterval(countdownTimer);modal.remove()};modal.querySelector('[data-close-inspection]').onclick=closeModal;/* This view closes only when its explicit close button is pressed. */
   }catch(error){message('#appMessage',error.message,true)}finally{button.disabled=false}
  });
  root.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>orderAction(b,'/api/orders/'+b.dataset.start+'/start'));
