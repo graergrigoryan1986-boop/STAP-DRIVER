@@ -2400,3 +2400,11 @@ body.driver-user-mode #dashboard .driver-order-card>.driver-status-action-stack+
 .inspection-countdown strong{white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:.04em;color:#f0d49a}
 .inspection-countdown strong.is-expired{color:#ff8c83}
 @media(max-width:520px){.inspection-countdown{max-width:100%;font-size:10px}.inspection-countdown strong{font-size:11px}}
+
+
+/* Mobile-friendly inspection photo saving controls */
+.admin-inspection-images figcaption{align-items:flex-start}
+.inspection-photo-save{display:inline-flex!important;align-items:center;justify-content:center;min-height:42px;padding:10px 13px!important;border:1px solid #d8b675!important;border-radius:9px!important;background:#d8b675!important;color:#17191d!important;font-size:12px!important;font-weight:950!important;white-space:normal!important}
+.inspection-photo-save:disabled{opacity:.65;cursor:wait}
+.inspection-save-hint{display:block;flex:1 1 100%;color:#e6d7b8;font-size:11px;line-height:1.5}
+@media(max-width:600px){.inspection-photo-save{width:100%;min-height:48px;font-size:13px!important}.inspection-save-hint{font-size:12px}}
